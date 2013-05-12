@@ -16,10 +16,6 @@
 
 package android.telephony.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -27,10 +23,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.telephony.SmsManager;
+import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
 import android.test.AndroidTestCase;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,10 +40,9 @@ import java.util.List;
  *
  * Structured so tests can be reused to test {@link android.telephony.gsm.SmsManager}
  */
-@TestTargetClass(SmsManager.class)
 public class SmsManagerTest extends AndroidTestCase {
 
-    private static final int NUM_TEXT_PARTS = 3;
+    private static final String TAG = "SmsManagerTest";
     private static final String LONG_TEXT =
         "This is a very long text. This text should be broken into three " +
         "separate messages.This is a very long text. This text should be broken into " +
@@ -54,6 +52,7 @@ public class SmsManagerTest extends AndroidTestCase {
 
     private static final String SMS_SEND_ACTION = "CTS_SMS_SEND_ACTION";
     private static final String SMS_DELIVERY_ACTION = "CTS_SMS_DELIVERY_ACTION";
+    private static final String DATA_SMS_RECEIVED_ACTION = "android.intent.action.DATA_SMS_RECEIVED";
 
     // List of network operators that don't support SMS delivery report
     private static final List<String> NO_DELIVERY_REPORTS =
@@ -74,21 +73,93 @@ public class SmsManagerTest extends AndroidTestCase {
                     "44073",    // KDDI
                     "44074",    // KDDI
                     "44075",    // KDDI
-                    "44076"     // KDDI
+                    "44076",    // KDDI
+                    "311870",   // Boost Mobile
+                    "311220",   // USCC
+                    "311225",   // USCC LTE
+                    "311580",   // USCC LTE
+                    "302720",   // Rogers
+                    "30272",    // Rogers
+                    "302370",   // Fido
+                    "30237",    // Fido
+                    "311490",   // Virgin Mobile
+                    "310000",   // Tracfone
+                    "46003",    // China Telecom
+                    "311230",   // C SPire Wireless + Celluar South
+                    "310600",    // Cellcom
+                    "31000",     // Republic Wireless US
+                    // Verizon
+                    "310004",
+                    "310012",
+                    "311280",
+                    "311281",
+                    "311282",
+                    "311283",
+                    "311284",
+                    "311285",
+                    "311286",
+                    "311287",
+                    "311288",
+                    "311289",
+                    "311480",
+                    "311481",
+                    "311482",
+                    "311483",
+                    "311484",
+                    "311485",
+                    "311486",
+                    "311487",
+                    "311488",
+                    "311489"
             );
 
     // List of network operators that doesn't support Data(binary) SMS message
     private static final List<String> UNSUPPORT_DATA_SMS_MESSAGES =
             Arrays.asList(
                     "44010",    // NTT DOCOMO
-                    "44020"     // SBM
+                    "44020",    // SBM
+                    "302720",   // Rogers
+                    "30272",    // Rogers
+                    "302370",   // Fido
+                    "30237",    // Fido
+                    "45008",    // KT
+                    "45005",    // SKT Mobility
+                    "45002",     // SKT Mobility
+                    // Verizon
+                    "310004",
+                    "310012",
+                    "311280",
+                    "311281",
+                    "311282",
+                    "311283",
+                    "311284",
+                    "311285",
+                    "311286",
+                    "311287",
+                    "311288",
+                    "311289",
+                    "311480",
+                    "311481",
+                    "311482",
+                    "311483",
+                    "311484",
+                    "311485",
+                    "311486",
+                    "311487",
+                    "311488",
+                    "311489"
             );
 
     // List of network operators that doesn't support Maltipart SMS message
     private static final List<String> UNSUPPORT_MULTIPART_SMS_MESSAGES =
             Arrays.asList(
                     "44010",    // NTT DOCOMO
-                    "44020"     // SBM
+                    "44020",    // SBM
+                    "302720",   // Rogers
+                    "30272",    // Rogers
+                    "302370",   // Fido
+                    "30237",    // Fido
+                    "45008"     // KT
             );
 
     private TelephonyManager mTelephonyManager;
@@ -97,11 +168,14 @@ public class SmsManagerTest extends AndroidTestCase {
     private String mText;
     private SmsBroadcastReceiver mSendReceiver;
     private SmsBroadcastReceiver mDeliveryReceiver;
+    private SmsBroadcastReceiver mDataSmsReceiver;
     private PendingIntent mSentIntent;
     private PendingIntent mDeliveredIntent;
     private Intent mSendIntent;
     private Intent mDeliveryIntent;
     private boolean mDeliveryReportSupported;
+    private static boolean mReceivedDataSms;
+    private static String mReceivedText;
 
     private static final int TIME_OUT = 1000 * 60 * 5;
 
@@ -123,38 +197,31 @@ public class SmsManagerTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "divideMessage",
-        args = {String.class}
-    )
     public void testDivideMessage() {
         ArrayList<String> dividedMessages = divideMessage(LONG_TEXT);
         assertNotNull(dividedMessages);
-        assertEquals(NUM_TEXT_PARTS, dividedMessages.size());
-        assertEquals(LONG_TEXT,
-                dividedMessages.get(0) + dividedMessages.get(1) + dividedMessages.get(2));
+        int numParts;
+        if (TelephonyUtils.isSkt(mTelephonyManager)) {
+            assertTrue(isComplete(dividedMessages, 5) || isComplete(dividedMessages, 3));
+        } else if (TelephonyUtils.isKt(mTelephonyManager)) {
+            assertTrue(isComplete(dividedMessages, 4) || isComplete(dividedMessages, 3));
+        } else {
+            assertTrue(isComplete(dividedMessages, 3));
+        }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "sendDataMessage",
-            args = {String.class, String.class, short.class, byte[].class,
-                    PendingIntent.class, PendingIntent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "sendTextMessage",
-            args = {String.class, String.class, String.class, PendingIntent.class,
-                    PendingIntent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "sendMultipartTextMessage",
-            args = {String.class, String.class, ArrayList.class, ArrayList.class, ArrayList.class}
-        )
-    })
+    private boolean isComplete(List<String> dividedMessages, int numParts) {
+        if (dividedMessages.size() != numParts) {
+            return false;
+        }
+
+        String actualMessage = "";
+        for (int i = 0; i < numParts; i++) {
+            actualMessage += dividedMessages.get(i);
+        }
+        return LONG_TEXT.equals(actualMessage);
+    }
+
     public void testSendMessages() throws InterruptedException {
         if (!mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) {
             return;
@@ -167,12 +234,17 @@ public class SmsManagerTest extends AndroidTestCase {
 
         IntentFilter sendIntentFilter = new IntentFilter(SMS_SEND_ACTION);
         IntentFilter deliveryIntentFilter = new IntentFilter(SMS_DELIVERY_ACTION);
+        IntentFilter dataSmsReceivedIntentFilter = new IntentFilter(DATA_SMS_RECEIVED_ACTION);
+        dataSmsReceivedIntentFilter.addDataScheme("sms");
+        dataSmsReceivedIntentFilter.addDataAuthority("localhost", "19989");
 
         mSendReceiver = new SmsBroadcastReceiver(SMS_SEND_ACTION);
         mDeliveryReceiver = new SmsBroadcastReceiver(SMS_DELIVERY_ACTION);
+        mDataSmsReceiver = new SmsBroadcastReceiver(DATA_SMS_RECEIVED_ACTION);
 
         getContext().registerReceiver(mSendReceiver, sendIntentFilter);
         getContext().registerReceiver(mDeliveryReceiver, deliveryIntentFilter);
+        getContext().registerReceiver(mDataSmsReceiver, dataSmsReceivedIntentFilter);
 
         // send single text sms
         init();
@@ -198,6 +270,9 @@ public class SmsManagerTest extends AndroidTestCase {
             if (mDeliveryReportSupported) {
                 assertTrue(mDeliveryReceiver.waitForCalls(1, TIME_OUT));
             }
+            mDataSmsReceiver.waitForCalls(1, TIME_OUT);
+            assertTrue(mReceivedDataSms);
+            assertEquals(mReceivedText, mText);
         } else {
             // This GSM network doesn't support Data(binary) SMS message.
             // Skip the test.
@@ -228,17 +303,14 @@ public class SmsManagerTest extends AndroidTestCase {
     private void init() {
         mSendReceiver.reset();
         mDeliveryReceiver.reset();
+        mDataSmsReceiver.reset();
+        mReceivedDataSms = false;
         mSentIntent = PendingIntent.getBroadcast(getContext(), 0, mSendIntent,
                 PendingIntent.FLAG_ONE_SHOT);
         mDeliveredIntent = PendingIntent.getBroadcast(getContext(), 0, mDeliveryIntent,
                 PendingIntent.FLAG_ONE_SHOT);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDefault",
-        args = {}
-    )
     public void testGetDefault() {
         assertNotNull(getSmsManager());
     }
@@ -283,12 +355,30 @@ public class SmsManagerTest extends AndroidTestCase {
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            if(mAction.equals(DATA_SMS_RECEIVED_ACTION)){
+                StringBuilder sb = new StringBuilder();
+                Bundle bundle = intent.getExtras();
+                if (bundle != null) {
+                    Object[] obj = (Object[]) bundle.get("pdus");
+                    SmsMessage[] message = new SmsMessage[obj.length];
+                    for (int i = 0; i < obj.length; i++) {
+                        message[i] = SmsMessage.createFromPdu((byte[]) obj[i]);
+                    }
+
+                    for (SmsMessage currentMessage : message) {
+                        byte[] binaryContent = currentMessage.getUserData();
+                        String readableContent = new String(binaryContent);
+                        sb.append(readableContent);
+                    }
+                }
+                mReceivedDataSms = true;
+                mReceivedText=sb.toString();
+            }
+            Log.i(TAG, "onReceive " + intent.getAction());
             if (intent.getAction().equals(mAction)) {
                 synchronized (mLock) {
                     mCalls += 1;
-                    if (mCalls >= mExpectedCalls) {
-                        mLock.notify();
-                    }
+                    mLock.notify();
                 }
             }
         }

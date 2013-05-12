@@ -18,22 +18,14 @@ package android.net.wifi.cts;
 
 import android.net.wifi.SupplicantState;
 import android.test.AndroidTestCase;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(SupplicantState.class)
 public class SupplicantStateTest extends AndroidTestCase {
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isValidState",
-            args = {android.net.wifi.SupplicantState.class}
-        )
-    })
     public void testIsValidState() {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         assertTrue(SupplicantState.isValidState(SupplicantState.DISCONNECTED));
         assertTrue(SupplicantState.isValidState(SupplicantState.INACTIVE));
         assertTrue(SupplicantState.isValidState(SupplicantState.SCANNING));

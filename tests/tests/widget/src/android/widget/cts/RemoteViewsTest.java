@@ -18,11 +18,6 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -40,6 +35,7 @@ import android.text.style.cts.MockURLSpanTestActivity;
 import android.view.View;
 import android.widget.AbsoluteLayout;
 import android.widget.Chronometer;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -60,7 +56,6 @@ import java.io.OutputStream;
 /**
  * Test {@link RemoteViews}.
  */
-@TestTargetClass(RemoteViews.class)
 public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteViewsStubActivity> {
     private static final String PACKAGE_NAME = "com.android.cts.stub";
 
@@ -86,29 +81,12 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         mResult = mRemoteViews.apply(mActivity, null);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "RemoteViews",
-            args = {java.lang.String.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "RemoteViews",
-            args = {android.os.Parcel.class}
-        )
-    })
     public void testConstructor() {
         new RemoteViews(PACKAGE_NAME, R.layout.remoteviews_good);
 
         new RemoteViews(Parcel.obtain());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getPackage",
-        args = {}
-    )
     public void testGetPackage() {
         assertEquals(PACKAGE_NAME, mRemoteViews.getPackage());
 
@@ -116,11 +94,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         assertNull(mRemoteViews.getPackage());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getLayoutId",
-        args = {}
-    )
     public void testGetLayoutId() {
         assertEquals(R.layout.remoteviews_good, mRemoteViews.getLayoutId());
 
@@ -134,11 +107,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         assertEquals(0, mRemoteViews.getLayoutId());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setViewVisibility",
-        args = {int.class, int.class}
-    )
     public void testSetViewVisibility() {
         View view = mResult.findViewById(R.id.remoteView_chronometer);
         assertEquals(View.VISIBLE, view.getVisibility());
@@ -156,14 +124,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         assertEquals(View.VISIBLE, view.getVisibility());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setTextViewText",
-        args = {int.class, java.lang.CharSequence.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "should add @throws clause into javadoc of "
-            + "RemoteViews#reapply(Context, View) if the action cannot apply to any view "
-            + "because of the ClassCastException")
     public void testSetTextViewText() {
         TextView textView = (TextView) mResult.findViewById(R.id.remoteView_text);
         assertEquals("", textView.getText().toString());
@@ -186,11 +146,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setImageViewResource",
-        args = {int.class, int.class}
-    )
     public void testSetImageViewResource() {
         ImageView image = (ImageView) mResult.findViewById(R.id.remoteView_image);
         assertNull(image.getDrawable());
@@ -212,11 +167,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setImageViewUri",
-        args = {int.class, android.net.Uri.class}
-    )
     public void testSetImageViewUri() throws IOException {
         String path = getTestImagePath();
         File imageFile = new File(path);
@@ -247,14 +197,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         return getInstrumentation().getTargetContext().getFilesDir() + "/test.jpg";
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setChronometer",
-        args = {int.class, long.class, java.lang.String.class, boolean.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "should add @throws clause into javadoc of "
-            + "RemoteViews#reapply(Context, View) if the action cannot apply to any view "
-            + "because of the ClassCastException")
     public void testSetChronometer() {
         long base1 = 50;
         long base2 = -50;
@@ -287,14 +229,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setProgressBar",
-        args = {int.class, int.class, int.class, boolean.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "should add @throws clause into javadoc of "
-            + "RemoteViews#reapply(Context, View) if the action cannot apply to any view "
-            + "because of the ClassCastException")
     public void testSetProgressBar() {
         ProgressBar progress = (ProgressBar) mResult.findViewById(R.id.remoteView_progress);
         assertEquals(100, progress.getMax());
@@ -324,11 +258,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "apply",
-        args = {android.content.Context.class, android.view.ViewGroup.class}
-    )
     public void testApply() {
         assertNotNull(mResult);
         assertNotNull(mResult.findViewById(R.id.remoteViews_good));
@@ -342,11 +271,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         assertNotNull(mResult.findViewById(R.id.remoteView_text));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "reapply",
-        args = {android.content.Context.class, android.view.View.class}
-    )
     public void testReapply() {
         TextView text = new TextView(mActivity);
         ImageView image = (ImageView) mResult.findViewById(R.id.remoteView_image);
@@ -359,20 +283,8 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
                 .getResources().getDrawable(R.drawable.testimage);
         WidgetTestUtils.assertEquals(d.getBitmap(),
                 ((BitmapDrawable) image.getDrawable()).getBitmap());
-
-        try {
-            mRemoteViews.reapply(mActivity, text);
-            fail("Should throw ActionException");
-        } catch (ActionException e) {
-            // expected
-        }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onLoadClass",
-        args = {java.lang.Class.class}
-    )
     public void testOnLoadClass() {
         mRemoteViews = new RemoteViews(Parcel.obtain());
 
@@ -384,27 +296,18 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         assertTrue(mRemoteViews.onLoadClass(ImageView.class));
         assertTrue(mRemoteViews.onLoadClass(ProgressBar.class));
         assertTrue(mRemoteViews.onLoadClass(Chronometer.class));
+        assertTrue(mRemoteViews.onLoadClass(ListView.class));
+        assertTrue(mRemoteViews.onLoadClass(GridView.class));
 
         // those classes without annotation @RemoteView
-        assertFalse(mRemoteViews.onLoadClass(ListView.class));
-        assertFalse(mRemoteViews.onLoadClass(GridView.class));
+        assertFalse(mRemoteViews.onLoadClass(EditText.class));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "describeContents",
-        args = {}
-    )
     public void testDescribeContents() {
         mRemoteViews = new RemoteViews(Parcel.obtain());
         mRemoteViews.describeContents();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {android.os.Parcel.class, int.class}
-    )
     public void testWriteToParcel() {
         mRemoteViews.setTextViewText(R.id.remoteView_text, "This is content");
         mRemoteViews.setViewVisibility(R.id.remoteView_frame, View.GONE);
@@ -446,11 +349,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setImageViewBitmap",
-        args = {int.class, android.graphics.Bitmap.class}
-    )
     public void testSetImageViewBitmap() {
         ImageView image = (ImageView) mResult.findViewById(R.id.remoteView_image);
         assertNull(image.getDrawable());
@@ -471,11 +369,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setBitmap",
-        args = {int.class, java.lang.String.class, android.graphics.Bitmap.class}
-    )
     public void testSetBitmap() {
         ImageView image = (ImageView) mResult.findViewById(R.id.remoteView_image);
         assertNull(image.getDrawable());
@@ -496,11 +389,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setBoolean",
-        args = {int.class, java.lang.String.class, boolean.class}
-    )
     public void testSetBoolean() {
         ProgressBar progress = (ProgressBar) mResult.findViewById(R.id.remoteView_progress);
         // the view uses style progressBarHorizontal, so the default is false
@@ -519,11 +407,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setCharSequence",
-        args = {int.class, java.lang.String.class, java.lang.CharSequence.class}
-    )
     public void testSetCharSequence() {
         TextView textView = (TextView) mResult.findViewById(R.id.remoteView_text);
         assertEquals("", textView.getText().toString());
@@ -546,11 +429,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setInt",
-        args = {int.class, java.lang.String.class, int.class}
-    )
     public void testSetInt() {
         View view = mResult.findViewById(R.id.remoteView_chronometer);
         assertEquals(View.VISIBLE, view.getVisibility());
@@ -568,11 +446,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         assertEquals(View.VISIBLE, view.getVisibility());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setString",
-        args = {int.class, java.lang.String.class, java.lang.String.class}
-    )
     public void testSetString() {
         String format = "HH:MM:SS";
         Chronometer chronometer = (Chronometer) mResult.findViewById(R.id.remoteView_chronometer);
@@ -591,11 +464,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setUri",
-        args = {int.class, java.lang.String.class, android.net.Uri.class}
-    )
     public void testSetUri() throws IOException {
         String path = getTestImagePath();
         File imagefile = new File(path);
@@ -628,11 +496,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setTextColor",
-        args = {int.class, int.class}
-    )
     public void testSetTextColor() {
         TextView textView = (TextView) mResult.findViewById(R.id.remoteView_text);
 
@@ -653,11 +516,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setOnClickPendingIntent",
-        args = {int.class, android.app.PendingIntent.class}
-    )
     public void testSetOnClickPendingIntent() {
         Uri uri = Uri.parse("ctstest://RemoteView/test");
         Instrumentation instrumentation = getInstrumentation();
@@ -678,11 +536,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         newActivity.finish();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setLong",
-        args = {int.class, java.lang.String.class, long.class}
-    )
     public void testSetLong() {
         long base1 = 50;
         long base2 = -50;
@@ -705,11 +558,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setFloat",
-        args = {int.class, java.lang.String.class, float.class}
-    )
     public void testSetFloat() {
         LinearLayout linearLayout = (LinearLayout) mResult.findViewById(R.id.remoteView_linear);
         assertTrue(linearLayout.getWeightSum() <= 0.0f);
@@ -727,28 +575,6 @@ public class RemoteViewsTest extends ActivityInstrumentationTestCase2<RemoteView
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "setByte",
-            args = {int.class, java.lang.String.class, byte.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "setChar",
-            args = {int.class, java.lang.String.class, char.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "setShort",
-            args = {int.class, java.lang.String.class, short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "setDouble",
-            args = {int.class, java.lang.String.class, double.class}
-        )
-    })
     public void testNotFeasibleSetters() {
         // there is no RemotableViewMethods to use them, how to test?
     }

@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -68,14 +69,47 @@ public class PackageSignatureTest extends AndroidTestCase {
         wellKnownSignatures.add(getSignature(R.raw.sig_platform));
         wellKnownSignatures.add(getSignature(R.raw.sig_shared));
         wellKnownSignatures.add(getSignature(R.raw.sig_testkey));
+        wellKnownSignatures.add(getSignature(R.raw.sig_devkeys));
+        wellKnownSignatures.add(getSignature(R.raw.sig_devkeys_media));
+        wellKnownSignatures.add(getSignature(R.raw.sig_devkeys_platform));
+        wellKnownSignatures.add(getSignature(R.raw.sig_devkeys_shared));
         return wellKnownSignatures;
     }
+
+    private static final Set<String> WHITELISTED_PACKAGES = new HashSet<String>(Arrays.asList(
+            // The accessibility APK required to be installed while running CTS
+            "android.accessibilityservice.delegate",
+
+            // The device management APK required to be installed while running CTS
+            "android.deviceadmin.cts",
+
+            // APK for an activity that collects information printed in the CTS report header
+            "android.tests.devicesetup",
+
+            // APK for the Android core tests runner used only during CTS
+            "android.core.tests.runner",
+
+            // Wifi test utility used by Tradefed...
+            "com.android.tradefed.utils.wifi",
+
+            // Game used for CTS testing...
+            "com.replica.replicaisland",
+
+            // CTS test
+            "android.core.tests.libcore.package.com",
+            "android.core.tests.libcore.package.dalvik",
+            "android.core.tests.libcore.package.libcore",
+            "android.core.tests.libcore.package.org",
+            "android.core.tests.libcore.package.sun",
+            "android.core.tests.libcore.package.tests"
+
+            ));
 
     private boolean isWhitelistedPackage(String packageName) {
         // Don't check the signatures of CTS test packages on the device.
         // devicesetup is the APK CTS loads to collect information needed in the final report
         return packageName.startsWith("com.android.cts")
-                || packageName.equalsIgnoreCase("android.tests.devicesetup");
+                || WHITELISTED_PACKAGES.contains(packageName);
     }
 
     private static final int DEFAULT_BUFFER_BYTES = 1024 * 4;
@@ -99,7 +133,14 @@ public class PackageSignatureTest extends AndroidTestCase {
 
     /**
      * Writes a package's signature to a file on the device's external storage.
-     * This method was used to generate the well known signatures used by this test.
+     * This method was used to generate the well known signatures used by
+     * this test.
+     *
+     * As an alternative, you can use openssl to create the
+     * DER encoded certificate file.
+     *
+     * openssl x509 -in $ANDROID_HOME/build/target/product/security/media.x509.pem \
+     *     -out sig_media.bin -outform DER
      */
     @SuppressWarnings("unused")
     private void writeSignature(String packageName, String fileName)

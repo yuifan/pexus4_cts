@@ -20,16 +20,8 @@ import android.content.Context;
 import android.os.Handler;
 import android.test.ActivityInstrumentationTestCase2;
 import android.view.GestureDetector;
-import android.view.MotionEvent;
-import android.view.GestureDetector.OnDoubleTapListener;
-import android.view.GestureDetector.OnGestureListener;
 import android.view.GestureDetector.SimpleOnGestureListener;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(GestureDetector.class)
 public class GestureDetectorTest extends
         ActivityInstrumentationTestCase2<GestureDetectorStubActivity> {
 
@@ -58,32 +50,6 @@ public class GestureDetectorTest extends
         mActivity.onSingleTapConfirmed = false;
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test method GestureDetector",
-            method = "GestureDetector",
-            args = {OnGestureListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test method GestureDetector",
-            method = "GestureDetector",
-            args = {OnGestureListener.class, Handler.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test method GestureDetector",
-            method = "GestureDetector",
-            args = {Context.class, OnGestureListener.class, Handler.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test method GestureDetector",
-            method = "GestureDetector",
-            args = {Context.class, OnGestureListener.class}
-         )
-    })
     public void testConstructor() {
 
         new GestureDetector(mContext, new SimpleOnGestureListener(), new Handler());
@@ -99,38 +65,6 @@ public class GestureDetectorTest extends
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test method onTouchEvent",
-            method = "onTouchEvent",
-            args = {MotionEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test method onTouchEvent",
-            method = "setOnDoubleTapListener",
-            args = {OnDoubleTapListener.class}
-        )
-    })
-    public void testOnTouchEvent() {
-        GestureDetectorTestUtil.testGestureDetector(this, mActivity);
-    }
-
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test setIsLongpressEnabled",
-            method = "setIsLongpressEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test setIsLongpressEnabled",
-            method = "isLongpressEnabled",
-            args = {}
-        )
-    })
     public void testLongpressEnabled() {
         mGestureDetector.setIsLongpressEnabled(true);
         assertTrue(mGestureDetector.isLongpressEnabled());

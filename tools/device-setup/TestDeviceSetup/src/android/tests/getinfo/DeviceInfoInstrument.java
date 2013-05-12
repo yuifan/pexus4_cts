@@ -39,44 +39,10 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
-public class DeviceInfoInstrument extends Instrumentation {
+public class DeviceInfoInstrument extends Instrumentation implements DeviceInfoConstants {
 
     private static final String TAG = "DeviceInfoInstrument";
 
-    // constants for device info attributes to be sent as instrumentation keys
-    // these values should correspond to attributes defined in cts_result.xsd
-    private static final String PARTITIONS = "partitions";
-    private static final String OPEN_GL_ES_VERSION = "openGlEsVersion";
-    private static final String PROCESSES = "processes";
-    private static final String FEATURES = "features";
-    private static final String PHONE_NUMBER = "phoneNumber";
-    public static final String LOCALES = "locales";
-    private static final String IMSI = "imsi";
-    private static final String IMEI = "imei";
-    private static final String NETWORK = "network";
-    public static final String KEYPAD = "keypad";
-    public static final String NAVIGATION = "navigation";
-    public static final String TOUCH_SCREEN = "touch";
-    private static final String SCREEN_Y_DENSITY = "Ydpi";
-    private static final String SCREEN_X_DENSITY = "Xdpi";
-    private static final String SCREEN_SIZE = "screen_size";
-    private static final String SCREEN_DENSITY_BUCKET = "screen_density_bucket";
-    private static final String SCREEN_DENSITY = "screen_density";
-    private static final String SCREEN_HEIGHT = "screen_height";
-    private static final String SCREEN_WIDTH = "screen_width";
-    private static final String VERSION_SDK = "androidPlatformVersion";
-    private static final String VERSION_RELEASE = "buildVersion";
-    private static final String BUILD_ABI = "build_abi";
-    private static final String BUILD_ABI2 = "build_abi2";
-    private static final String BUILD_FINGERPRINT = "build_fingerprint";
-    private static final String BUILD_TYPE = "build_type";
-    private static final String BUILD_MODEL = "build_model";
-    private static final String BUILD_BRAND = "build_brand";
-    private static final String BUILD_MANUFACTURER = "build_manufacturer";
-    private static final String BUILD_BOARD = "build_board";
-    private static final String BUILD_DEVICE = "build_device";
-    private static final String PRODUCT_NAME = "buildName";
-    private static final String BUILD_ID = "buildID";
     private static Bundle mResults = new Bundle();
 
     public DeviceInfoInstrument() {
@@ -102,6 +68,7 @@ public class DeviceInfoInstrument extends Instrumentation {
         addResult(BUILD_FINGERPRINT, Build.FINGERPRINT);
         addResult(BUILD_ABI, Build.CPU_ABI);
         addResult(BUILD_ABI2, Build.CPU_ABI2);
+        addResult(SERIAL_NUMBER, Build.SERIAL);
 
         addResult(VERSION_RELEASE, Build.VERSION.RELEASE);
         addResult(VERSION_SDK, Build.VERSION.SDK);
@@ -111,8 +78,7 @@ public class DeviceInfoInstrument extends Instrumentation {
                 Context.WINDOW_SERVICE);
         Display d = wm.getDefaultDisplay();
         d.getMetrics(metrics);
-        addResult(SCREEN_WIDTH, metrics.widthPixels);
-        addResult(SCREEN_HEIGHT, metrics.heightPixels);
+        addResult(RESOLUTION, String.format("%sx%s", metrics.widthPixels, metrics.heightPixels));
         addResult(SCREEN_DENSITY, metrics.density);
         addResult(SCREEN_X_DENSITY, metrics.xdpi);
         addResult(SCREEN_Y_DENSITY, metrics.ydpi);
@@ -135,7 +101,7 @@ public class DeviceInfoInstrument extends Instrumentation {
                 Context.TELEPHONY_SERVICE);
         // network
         String network = tm.getNetworkOperatorName();
-        addResult(NETWORK, network);
+        addResult(NETWORK, network.trim());
 
         // imei
         String imei = tm.getDeviceId();
@@ -164,6 +130,10 @@ public class DeviceInfoInstrument extends Instrumentation {
         // partitions
         String partitions = getPartitions();
         addResult(PARTITIONS, partitions);
+
+        // System libraries
+        String sysLibraries = getSystemLibraries();
+        addResult(SYS_LIBRARIES, sysLibraries);
 
         finish(Activity.RESULT_OK, mResults);
     }
@@ -215,6 +185,10 @@ public class DeviceInfoInstrument extends Instrumentation {
                 screenSize = "large";
                 break;
 
+            case Configuration.SCREENLAYOUT_SIZE_XLARGE:
+                screenSize = "xlarge";
+                break;
+
             case Configuration.SCREENLAYOUT_SIZE_UNDEFINED:
                 screenSize = "undefined";
                 break;
@@ -230,10 +204,13 @@ public class DeviceInfoInstrument extends Instrumentation {
             case DisplayMetrics.DENSITY_MEDIUM:
                 return "mdpi";
 
+            case DisplayMetrics.DENSITY_TV:
+                return "tvdpi";
+
             case DisplayMetrics.DENSITY_HIGH:
                 return "hdpi";
 
-            case 320:
+            case DisplayMetrics.DENSITY_XHIGH:
                 return "xdpi";
 
             default:
@@ -311,7 +288,7 @@ public class DeviceInfoInstrument extends Instrumentation {
         try {
             String[] rootProcesses = RootProcessScanner.getRootProcesses();
             for (String rootProcess : rootProcesses) {
-                builder.append(rootProcess).append(';');
+                builder.append(rootProcess).append(':').append(0).append(';');
             }
         } catch (Exception exception) {
             Log.e(TAG, "Error getting processes: " + exception.getMessage(), exception);
@@ -352,5 +329,18 @@ public class DeviceInfoInstrument extends Instrumentation {
         } catch (IOException e) {
             return "Not able to run df for partition information.";
         }
+    }
+
+    private String getSystemLibraries() {
+        PackageManager pm = getContext().getPackageManager();
+        String list[] = pm.getSystemSharedLibraryNames();
+
+        StringBuilder builder = new StringBuilder();
+        for (String lib : list) {
+            builder.append(lib);
+            builder.append(";");
+        }
+
+        return builder.toString();
     }
 }

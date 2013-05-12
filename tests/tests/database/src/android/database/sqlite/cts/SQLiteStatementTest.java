@@ -16,23 +16,34 @@
 
 package android.database.sqlite.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDoneException;
 import android.database.sqlite.SQLiteStatement;
+import android.os.ParcelFileDescriptor;
 import android.test.AndroidTestCase;
+import android.test.MoreAsserts;
 
-@TestTargetClass(android.database.sqlite.SQLiteStatement.class)
+import java.io.IOException;
+import java.io.InputStream;
+
 public class SQLiteStatementTest extends AndroidTestCase {
     private static final String STRING1 = "this is a test";
     private static final String STRING2 = "another test";
+
+    private static final byte[][] BLOBS = new byte [][] {
+        parseBlob("86FADCF1A820666AEBD0789F47932151A2EF734269E8AC4E39630AB60519DFD8"),
+        new byte[1],
+        null,
+        parseBlob("00"),
+        parseBlob("FF"),
+        parseBlob("D7B500FECF25F7A4D83BF823D3858690790F2526013DE6CAE9A69170E2A1E47238"),
+    };
 
     private static final String DATABASE_NAME = "database_test.db";
 
@@ -60,54 +71,59 @@ public class SQLiteStatementTest extends AndroidTestCase {
         mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, data TEXT);");
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "execute",
-        args = {}
-    )
-    public void testExecute() {
-        populateDefaultTable();
-
-        Cursor c = mDatabase.query("test", null, null, null, null, null, null);
-        assertEquals(0, c.getCount());
-
-        // test insert
-        SQLiteStatement statement = mDatabase.compileStatement(
-                "INSERT INTO test (data) VALUES ('" + STRING1 + "')");
-        statement.execute();
-
-        c = mDatabase.query("test", null, null, null, null, null, null);
-        assertEquals(1, c.getCount());
-
-        c.moveToFirst();
-        assertEquals(STRING1, c.getString(c.getColumnIndex("data")));
-
-        // invalid SQL statement
-        statement = mDatabase.compileStatement(
-                "SELECT * FROM test WHERE data=\"" + STRING1 + "\"");
-        try {
-            statement.execute();
-            fail("There should be a SQLException thrown out.");
-        } catch (SQLException e) {
-            // expected.
+    private void populateBlobTable() {
+        mDatabase.execSQL("CREATE TABLE blob_test (_id INTEGER PRIMARY KEY, data BLOB)");
+        for (int i = 0; i < BLOBS.length; i++) {
+            ContentValues values = new ContentValues();
+            values.put("_id", i);
+            values.put("data", BLOBS[i]);
+            mDatabase.insert("blob_test", null, values);
         }
-
-        c.deactivate();
-        statement.close();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "executeInsert",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "execute",
-            args = {}
-        )
-    })
+    public void testExecute() {
+        mDatabase.disableWriteAheadLogging();
+        populateDefaultTable();
+
+        assertEquals(0, DatabaseUtils.longForQuery(mDatabase, "select count(*) from test", null));
+
+        // test update
+        // insert 2 rows and then update them.
+        SQLiteStatement statement1 = mDatabase.compileStatement(
+                "INSERT INTO test (data) VALUES ('" + STRING2 + "')");
+        assertEquals(1, statement1.executeInsert());
+        assertEquals(2, statement1.executeInsert());
+        SQLiteStatement statement2 =
+                mDatabase.compileStatement("UPDATE test set data = 'a' WHERE _id > 0");
+        assertEquals(2, statement2.executeUpdateDelete());
+        statement2.close();
+        // should still have 2 rows in the table
+        assertEquals(2, DatabaseUtils.longForQuery(mDatabase, "select count(*) from test", null));
+
+        // test delete
+        // insert 2 more rows and delete 3 of them
+        assertEquals(3, statement1.executeInsert());
+        assertEquals(4, statement1.executeInsert());
+        statement1.close();
+        statement2 = mDatabase.compileStatement("DELETE from test WHERE _id < 4");
+        assertEquals(3, statement2.executeUpdateDelete());
+        statement2.close();
+        // should still have 1 row1 in the table
+        assertEquals(1, DatabaseUtils.longForQuery(mDatabase, "select count(*) from test", null));
+
+        // if the SQL statement is something that causes rows of data to
+        // be returned, executeUpdateDelete() (and execute()) throw an exception.
+        statement2 = mDatabase.compileStatement("SELECT count(*) FROM test");
+        try {
+            statement2.executeUpdateDelete();
+            fail("exception expected");
+        } catch (SQLException e) {
+            // expected
+        } finally {
+            statement2.close();
+        }
+    }
+
     public void testExecuteInsert() {
         populateDefaultTable();
 
@@ -118,32 +134,35 @@ public class SQLiteStatementTest extends AndroidTestCase {
         SQLiteStatement statement = mDatabase.compileStatement(
                 "INSERT INTO test (data) VALUES ('" + STRING2 + "')");
         assertEquals(1, statement.executeInsert());
+        statement.close();
+
+        // try to insert another row with the same id. last inserted rowid should be -1
+        statement = mDatabase.compileStatement("insert or ignore into test values(1, 1);");
+        assertEquals(-1, statement.executeInsert());
+        statement.close();
 
         c = mDatabase.query("test", null, null, null, null, null, null);
         assertEquals(1, c.getCount());
 
         c.moveToFirst();
         assertEquals(STRING2, c.getString(c.getColumnIndex("data")));
+        c.close();
 
-        // invalid SQL statement
+        // if the sql statement is something that causes rows of data to
+        // be returned, executeInsert() throws an exception
         statement = mDatabase.compileStatement(
                 "SELECT * FROM test WHERE data=\"" + STRING2 + "\"");
         try {
             statement.executeInsert();
-            fail("There should be a SQLException thrown out.");
+            fail("exception expected");
         } catch (SQLException e) {
-            // expected.
-        }
+            // expected
+        } finally {
+            statement.close();
 
-        c.deactivate();
-        statement.close();
+        }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "simpleQueryForLong",
-        args = {}
-    )
     public void testSimpleQueryForLong() {
         mDatabase.execSQL("CREATE TABLE test (num INTEGER NOT NULL, str TEXT NOT NULL);");
         mDatabase.execSQL("INSERT INTO test VALUES (1234, 'hello');");
@@ -168,11 +187,6 @@ public class SQLiteStatementTest extends AndroidTestCase {
         statement.close();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "simpleQueryForString",
-        args = {}
-    )
     public void testSimpleQueryForString() {
         mDatabase.execSQL("CREATE TABLE test (num INTEGER NOT NULL, str TEXT NOT NULL);");
         mDatabase.execSQL("INSERT INTO test VALUES (1234, 'hello');");
@@ -195,5 +209,133 @@ public class SQLiteStatementTest extends AndroidTestCase {
         }
 
         statement.close();
+    }
+
+    public void testSimpleQueryForBlobFileDescriptorSuccessNormal() throws IOException {
+        doTestSimpleQueryForBlobFileDescriptorSuccess(0);
+    }
+
+    public void testSimpleQueryForBlobFileDescriptorSuccessEmpty() throws IOException {
+        doTestSimpleQueryForBlobFileDescriptorSuccess(1);
+    }
+
+    public void testSimpleQueryForBlobFileDescriptorSuccessNull() {
+        populateBlobTable();
+
+        String sql = "SELECT data FROM blob_test WHERE _id = " + 2;
+        SQLiteStatement stm = mDatabase.compileStatement(sql);
+        assertNull(stm.simpleQueryForBlobFileDescriptor());
+    }
+
+    public void testSimpleQueryForBlobFileDescriptorSuccess00() throws IOException {
+        doTestSimpleQueryForBlobFileDescriptorSuccess(3);
+    }
+
+    public void testSimpleQueryForBlobFileDescriptorSuccessFF() throws IOException {
+        doTestSimpleQueryForBlobFileDescriptorSuccess(4);
+    }
+
+    public void testSimpleQueryForBlobFileDescriptorSuccessEmbeddedNul() throws IOException {
+        doTestSimpleQueryForBlobFileDescriptorSuccess(5);
+    }
+
+    private void doTestSimpleQueryForBlobFileDescriptorSuccess(int i) throws IOException {
+        populateBlobTable();
+
+        String sql = "SELECT data FROM blob_test WHERE _id = " + i;
+        SQLiteStatement stm = mDatabase.compileStatement(sql);
+        ParcelFileDescriptor fd = stm.simpleQueryForBlobFileDescriptor();
+        assertFileDescriptorContent(BLOBS[i], fd);
+    }
+
+    public void testSimpleQueryForBlobFileDescriptorSuccessParam() throws IOException {
+        populateBlobTable();
+
+        String sql = "SELECT data FROM blob_test WHERE _id = ?";
+        SQLiteStatement stm = mDatabase.compileStatement(sql);
+        stm.bindLong(1, 0);
+        ParcelFileDescriptor fd = stm.simpleQueryForBlobFileDescriptor();
+        assertFileDescriptorContent(BLOBS[0], fd);
+    }
+
+    public void testGetBlobFailureNoParam() throws Exception {
+        populateBlobTable();
+
+        String sql = "SELECT data FROM blob_test WHERE _id = 100";
+        SQLiteStatement stm = mDatabase.compileStatement(sql);
+        ParcelFileDescriptor fd = null;
+        SQLiteDoneException expectedException = null;
+        try {
+            fd = stm.simpleQueryForBlobFileDescriptor();
+        } catch (SQLiteDoneException ex) {
+            expectedException = ex;
+        } finally {
+            if (fd != null) {
+                fd.close();
+                fd = null;
+            }
+        }
+        assertNotNull("Should have thrown SQLiteDoneException", expectedException);
+    }
+
+    public void testGetBlobFailureParam() throws Exception {
+        populateBlobTable();
+
+        String sql = "SELECT data FROM blob_test WHERE _id = ?";
+        SQLiteStatement stm = mDatabase.compileStatement(sql);
+        stm.bindLong(1, 100);
+        ParcelFileDescriptor fd = null;
+        SQLiteDoneException expectedException = null;
+        try {
+            fd = stm.simpleQueryForBlobFileDescriptor();
+        } catch (SQLiteDoneException ex) {
+            expectedException = ex;
+        } finally {
+            if (fd != null) {
+                fd.close();
+                fd = null;
+            }
+        }
+        assertNotNull("Should have thrown SQLiteDoneException", expectedException);
+    }
+
+    /*
+     * Convert string of hex digits to byte array.
+     * Results are undefined for poorly formed string.
+     *
+     * @param src hex string
+     */
+    private static byte[] parseBlob(String src) {
+        int len = src.length();
+        byte[] result = new byte[len / 2];
+
+        for (int i = 0; i < len/2; i++) {
+            int val;
+            char c1 = src.charAt(i*2);
+            char c2 = src.charAt(i*2+1);
+            int val1 = Character.digit(c1, 16);
+            int val2 = Character.digit(c2, 16);
+            val = (val1 << 4) | val2;
+            result[i] = (byte)val;
+        }
+        return result;
+    }
+
+    private static void assertFileDescriptorContent(byte[] expected, ParcelFileDescriptor fd)
+            throws IOException {
+        assertInputStreamContent(expected, new ParcelFileDescriptor.AutoCloseInputStream(fd));
+    }
+
+    private static void assertInputStreamContent(byte[] expected, InputStream is)
+            throws IOException {
+        try {
+            byte[] observed = new byte[expected.length];
+            int count = is.read(observed);
+            assertEquals(expected.length, count);
+            assertEquals(-1, is.read());
+            MoreAsserts.assertEquals(expected, observed);
+        } finally {
+            is.close();
+        }
     }
 }

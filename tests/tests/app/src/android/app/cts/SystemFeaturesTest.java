@@ -64,7 +64,7 @@ public class SystemFeaturesTest extends InstrumentationTestCase {
     protected void setUp() throws Exception {
         super.setUp();
         Instrumentation instrumentation = getInstrumentation();
-        mContext = instrumentation.getContext();
+        mContext = instrumentation.getTargetContext();
         mPackageManager = mContext.getPackageManager();
         mAvailableFeatures = new HashSet<String>();
         if (mPackageManager.getSystemAvailableFeatures() != null) {
@@ -113,7 +113,9 @@ public class SystemFeaturesTest extends InstrumentationTestCase {
             assertNotAvailable(PackageManager.FEATURE_CAMERA_AUTOFOCUS);
             assertNotAvailable(PackageManager.FEATURE_CAMERA_FLASH);
             assertNotAvailable(PackageManager.FEATURE_CAMERA_FRONT);
+            assertNotAvailable(PackageManager.FEATURE_CAMERA_ANY);
         } else {
+            assertAvailable(PackageManager.FEATURE_CAMERA_ANY);
             checkFrontCamera();
             checkRearCamera();
         }
@@ -201,6 +203,11 @@ public class SystemFeaturesTest extends InstrumentationTestCase {
         } else {
             assertNotAvailable(PackageManager.FEATURE_NFC);
         }
+    }
+
+    public void testScreenFeatures() {
+        assertTrue(mPackageManager.hasSystemFeature(PackageManager.FEATURE_SCREEN_LANDSCAPE)
+                || mPackageManager.hasSystemFeature(PackageManager.FEATURE_SCREEN_PORTRAIT));
     }
 
     /**
@@ -333,16 +340,22 @@ public class SystemFeaturesTest extends InstrumentationTestCase {
         // TODO: Add tests for the other touchscreen features.
     }
 
+    public void testUsbAccessory() {
+        assertAvailable(PackageManager.FEATURE_USB_ACCESSORY);
+    }
 
     public void testWifiFeature() throws Exception {
+        if (!mPackageManager.hasSystemFeature(PackageManager.FEATURE_WIFI)) {
+            // no WiFi, skip the test
+            return;
+        }
         boolean enabled = mWifiManager.isWifiEnabled();
         try {
-            // WifiManager is hard-coded to return true, but in other implementations this could
-            // return false for devices that don't have WiFi.
+            // WifiManager is hard-coded to return true,
+            // the case without WiFi is already handled,
+            // so this case MUST have WiFi.
             if (mWifiManager.setWifiEnabled(true)) {
                 assertAvailable(PackageManager.FEATURE_WIFI);
-            } else {
-                assertNotAvailable(PackageManager.FEATURE_WIFI);
             }
         } finally {
             if (!enabled) {

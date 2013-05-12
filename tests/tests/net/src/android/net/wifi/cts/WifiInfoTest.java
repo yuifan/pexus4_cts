@@ -16,22 +16,20 @@
 
 package android.net.wifi.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.cts.util.PollingCheck;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.WifiLock;
 import android.test.AndroidTestCase;
 
-@TestTargetClass(WifiInfo.class)
+import java.util.concurrent.Callable;
+
 public class WifiInfoTest extends AndroidTestCase {
     private static class MySync {
         int expectedState = STATE_NULL;
@@ -66,6 +64,10 @@ public class WifiInfoTest extends AndroidTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         mMySync = new MySync();
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
@@ -84,6 +86,11 @@ public class WifiInfoTest extends AndroidTestCase {
 
     @Override
     protected void tearDown() throws Exception {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            super.tearDown();
+            return;
+        }
         mWifiLock.release();
         mContext.unregisterReceiver(mReceiver);
         if (!mWifiManager.isWifiEnabled())
@@ -103,64 +110,11 @@ public class WifiInfoTest extends AndroidTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getMacAddress",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getIpAddress",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getDetailedStateOf",
-            args = {android.net.wifi.SupplicantState.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getNetworkId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getSSID",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getBSSID",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getSupplicantState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getLinkSpeed",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "toString",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getRssi",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getHiddenSSID",
-            args = {}
-        )
-    })
     public void testWifiInfoProperties() throws Exception {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         // this test case should in Wifi environment
         WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
 
@@ -176,10 +130,21 @@ public class WifiInfoTest extends AndroidTestCase {
         wifiInfo.getHiddenSSID();
         wifiInfo.getMacAddress();
         setWifiEnabled(false);
-        Thread.sleep(DURATION);
-        wifiInfo = mWifiManager.getConnectionInfo();
-        assertEquals(-1, wifiInfo.getNetworkId());
-        assertEquals(WifiManager.WIFI_STATE_DISABLED, mWifiManager.getWifiState());
+
+        PollingCheck.check("getNetworkId not -1", 20000, new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
+                return wifiInfo.getNetworkId() == -1;
+            }
+        });
+
+        PollingCheck.check("getWifiState not disabled", 20000, new Callable<Boolean>() {
+           @Override
+            public Boolean call() throws Exception {
+               return mWifiManager.getWifiState() == WifiManager.WIFI_STATE_DISABLED;
+            }
+        });
     }
 
 }

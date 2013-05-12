@@ -15,7 +15,6 @@
  */
 package android.gesture.cts;
 
-import dalvik.annotation.TestTargetClass;
 
 import android.gesture.GesturePoint;
 import android.gesture.GestureStroke;
@@ -28,7 +27,6 @@ import junit.framework.TestCase;
 /**
  * Simple compatibility unit tests for {@link GestureStroke}
  */
-@TestTargetClass(GestureStroke.class)
 public class GestureStrokeTest extends TestCase {
 
     private LineGestureStrokeHelper mHelper;
@@ -53,8 +51,8 @@ public class GestureStrokeTest extends TestCase {
     public void testGetPath_singlePoint() {
         GestureStroke emptyStroke = mHelper.createGestureStroke(new GesturePoint(0, 0, 0));
         Path emptyPath = emptyStroke.getPath();
-        // expect an empty path
-        assertTrue(emptyPath.isEmpty());
+        // a single point is considered a tap and is not empty
+        assertFalse(emptyPath.isEmpty());
     }
 
     /**

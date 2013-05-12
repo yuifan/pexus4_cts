@@ -27,6 +27,7 @@
     <string name="explain">1. click start. \n2. if above image shaked, then press pass button,
          else press failed button.</string>
     <string name="text_view_hello">Hello! Text view!</string>
+    <string name="text_view_hello_two_lines">Hello! \nText view!</string>
     <string name="text_view_simple_hint">This is a hint.</string>
     <string name="text_view_hint">This is a string for testing hint of textview.</string>
     <string name="activity_forwarding">App/Forwarding</string>
@@ -40,24 +41,6 @@
     <string name="text">DialogTest</string>
     <string name="text_country">Country</string>
     <string name="text_name">Name</string>
-    <string name="dialog_stub_dialog_test_button1">Test Dialog without theme</string>
-    <string name="dialog_stub_dialog_test_button2">Test Dialog with theme</string>
-    <string name="dialog_stub_dialog_test_button3">Test AlertDialog</string>
-    <string name="dialog_stub_dialog_test_button4">Test AlertDialog with theme</string>
-    <string name="dialog_stub_dialog_test_button5">Test DatePickerDialog</string>
-    <string name="dialog_stub_dialog_test_button6">Test DatePickerDialog with theme</string>
-    <string name="dialog_stub_dialog_test_button7">Test TimePickerDialog</string>
-    <string name="dialog_stub_dialog_test_button8">Test TimePickerDialog with theme</string>
-    <string name="dialog_stub_dialog_test_button9">Test onStart() and onStop()</string>
-    <string name="dialog_stub_dialog_test_button10">Test AlertDialog deprecated</string>
-    <string name="dialog_stub_dialog_test_button11">Test AlertDialog callback</string>
-    <string name="dialog_stub_dialog_test_button12">Test AlertDialog setview </string>
-    <string name="dialog_stub_dialog_test_button13">Test AlertDialog deprecated with Message</string>
-    <string name="dialog_stub_dialog_test_button14">Test AlertDialog with theme</string>
-    <string name="dialog_stub_dialog_test_button15">Test AlertDialog cancelable</string>
-    <string name="dialog_stub_dialog_test_button16">Test AlertDialog can\'n cancelable</string>
-    <string name="dialog_stub_dialog_test_button17">Test Dialog cancelable</string>
-    <string name="dialog_stub_dialog_test_button18">Test Dialog not cancelable</string>
     <string name="hello_world">Hello, World!</string>
     <string name="hello_android">Hello, Android!</string>
     <string name="alert_dialog_username">Name:</string>
@@ -169,4 +152,19 @@
    <string name="version_v3">base</string>
    <string name="authenticator_label">Android CTS</string>
    <string name="search_label">Android CTS</string>
+
+   <string name="button">Button</string>
+   <string name="holo_test">Holo Test</string>
+   <string name="holo_generator">Holo Generator</string>
+   <string name="holo_light_test">Holo Light Test</string>
+   <string name="holo_light_generator">Holo Light Generator</string>
+   <string name="reference_image">Reference Image: </string>
+   <string name="generated_image">Generated Image: </string>
+   <string name="themes_prompt">Select a Theme:</string>
+   <string name="sample_text">Sample text goes here. I wanted something creative and whimsical
+but then I just got bored...</string>
+    <string name="long_text">This is a really long string which exceeds the width of the view.
+New devices have a much larger screen which actually enables long strings to be displayed
+with no fading. I have made this string longer to fix this case. If you are correcting this
+text, I would love to see the kind of devices you guys now use! Guys, maybe some devices need longer string! </string>
 </resources>

@@ -16,27 +16,20 @@
 
 package android.webkit.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
+import android.test.ActivityInstrumentationTestCase2;
+import android.webkit.HttpAuthHandler;
+import android.webkit.WebView;
+import android.webkit.cts.WebViewOnUiThread.WaitForLoadedClient;
+
 
 import org.apache.http.HttpStatus;
 
-import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
-import android.webkit.HttpAuthHandler;
-import android.webkit.WebChromeClient;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-
-@TestTargetClass(android.webkit.HttpAuthHandler.class)
 public class HttpAuthHandlerTest extends ActivityInstrumentationTestCase2<WebViewStubActivity> {
 
     private static final long TIMEOUT = 10000;
 
-    private WebView mWebView;
     private CtsTestServer mWebServer;
+    private WebViewOnUiThread mOnUiThread;
 
     public HttpAuthHandlerTest() {
         super("com.android.cts.stub", WebViewStubActivity.class);
@@ -45,118 +38,88 @@ public class HttpAuthHandlerTest extends ActivityInstrumentationTestCase2<WebVie
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        mWebView = getActivity().getWebView();
-
-        // Set a web chrome client in order to receive progress updates.
-        mWebView.setWebChromeClient(new WebChromeClient());
+        mOnUiThread = new WebViewOnUiThread(this, getActivity().getWebView());
     }
 
     @Override
     protected void tearDown() throws Exception {
-        mWebView.clearHistory();
-        mWebView.clearCache(true);
+        mOnUiThread.cleanUp();
         if (mWebServer != null) {
             mWebServer.shutdown();
         }
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "proceed",
-            args = {String.class, String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            notes = "useHttpAuthUsernamePassword() always returns true",
-            method = "useHttpAuthUsernamePassword",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            notes = "This method is for internal use by the handler",
-            method = "handleMessage",
-            args = {android.os.Message.class}
-        )
-    })
     public void testProceed() throws Exception {
         mWebServer = new CtsTestServer(getActivity());
         String url = mWebServer.getAuthAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
 
         // wrong credentials
         MyWebViewClient client = new MyWebViewClient(true, "FakeUser", "FakePass");
-        mWebView.setWebViewClient(client);
+        mOnUiThread.setWebViewClient(client);
 
-        assertLoadUrlSuccessfully(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
         assertEquals(CtsTestServer.AUTH_REALM, client.realm);
-        assertEquals(CtsTestServer.getReasonString(HttpStatus.SC_FORBIDDEN), mWebView.getTitle());
+        assertEquals(CtsTestServer.getReasonString(HttpStatus.SC_UNAUTHORIZED), mOnUiThread.getTitle());
         assertTrue(client.useHttpAuthUsernamePassword);
 
         // missing credentials
         client = new MyWebViewClient(true, null, null);
-        mWebView.setWebViewClient(client);
+        mOnUiThread.setWebViewClient(client);
 
-        assertLoadUrlSuccessfully(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
         assertEquals(CtsTestServer.AUTH_REALM, client.realm);
         assertEquals(
-                CtsTestServer.getReasonString(HttpStatus.SC_UNAUTHORIZED), mWebView.getTitle());
+                CtsTestServer.getReasonString(HttpStatus.SC_UNAUTHORIZED), mOnUiThread.getTitle());
         assertTrue(client.useHttpAuthUsernamePassword);
 
         // correct credentials
         client = new MyWebViewClient(true, CtsTestServer.AUTH_USER, CtsTestServer.AUTH_PASS);
-        mWebView.setWebViewClient(client);
+        mOnUiThread.setWebViewClient(client);
 
-        assertLoadUrlSuccessfully(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
         assertEquals(CtsTestServer.AUTH_REALM, client.realm);
-        assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, mWebView.getTitle());
+        assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, mOnUiThread.getTitle());
         assertTrue(client.useHttpAuthUsernamePassword);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "cancel",
-        args = {}
-    )
     public void testCancel() throws Exception {
         mWebServer = new CtsTestServer(getActivity());
 
         String url = mWebServer.getAuthAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
         MyWebViewClient client = new MyWebViewClient(false, null, null);
-        mWebView.setWebViewClient(client);
+        mOnUiThread.setWebViewClient(client);
 
-        assertLoadUrlSuccessfully(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
         assertEquals(CtsTestServer.AUTH_REALM, client.realm);
         assertEquals(
-                CtsTestServer.getReasonString(HttpStatus.SC_UNAUTHORIZED), mWebView.getTitle());
+                CtsTestServer.getReasonString(HttpStatus.SC_UNAUTHORIZED), mOnUiThread.getTitle());
     }
 
-    private void assertLoadUrlSuccessfully(String url) throws InterruptedException {
-        mWebView.loadUrl(url);
-        new DelayedCheck(TIMEOUT) {
-            @Override
-            protected boolean check() {
-                return mWebView.getProgress() == 100;
-            }
-        }.run();
-    }
-
-    private static class MyWebViewClient extends WebViewClient {
+    private class MyWebViewClient extends WaitForLoadedClient {
         String realm;
         boolean useHttpAuthUsernamePassword;
 
         private boolean mProceed;
         private String mUser;
         private String mPassword;
+        private int mAuthCount;
 
         MyWebViewClient(boolean proceed, String user, String password) {
+            super(mOnUiThread);
             mProceed = proceed;
             mUser = user;
             mPassword = password;
         }
 
+        @Override
         public void onReceivedHttpAuthRequest(WebView view,
                 HttpAuthHandler handler, String host, String realm) {
+            ++mAuthCount;
+            if (mAuthCount > 1) {
+                handler.cancel();
+                return;
+            }
             this.realm = realm;
             this.useHttpAuthUsernamePassword = handler.useHttpAuthUsernamePassword();
             if (mProceed) {

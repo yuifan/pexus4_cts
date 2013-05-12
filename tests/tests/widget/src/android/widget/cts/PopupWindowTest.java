@@ -18,11 +18,6 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -45,7 +40,6 @@ import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.PopupWindow.OnDismissListener;
 
-@TestTargetClass(PopupWindow.class)
 public class PopupWindowTest extends
         ActivityInstrumentationTestCase2<MockPopupWindowStubActivity> {
     private Instrumentation mInstrumentation;
@@ -72,55 +66,6 @@ public class PopupWindowTest extends
         mActivity = getActivity();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {android.content.Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {android.content.Context.class, android.util.AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {android.content.Context.class, android.util.AttributeSet.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {android.view.View.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {android.view.View.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "PopupWindow",
-            args = {android.view.View.class, int.class, int.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getContentView",
-            args = {}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for constructor is incomplete." +
-            "1. not clear what is supposed to happen when the LayoutParam is null.")
     public void testConstructor() {
         new PopupWindow(mActivity);
 
@@ -128,29 +73,17 @@ public class PopupWindowTest extends
 
         new PopupWindow(mActivity, null, com.android.internal.R.attr.popupWindowStyle);
 
-        try {
-            mPopupWindow = new PopupWindow();
-            assertEquals(0, mPopupWindow.getWidth());
-            assertEquals(0, mPopupWindow.getHeight());
-            fail("Should throw NullPointerException");
-        } catch (NullPointerException e) {
-        }
+        mPopupWindow = new PopupWindow();
+        assertEquals(0, mPopupWindow.getWidth());
+        assertEquals(0, mPopupWindow.getHeight());
 
-        try {
-            mPopupWindow = new PopupWindow(50, 50);
-            assertEquals(50, mPopupWindow.getWidth());
-            assertEquals(50, mPopupWindow.getHeight());
-            fail("Should throw NullPointerException");
-        } catch (NullPointerException e) {
-        }
+        mPopupWindow = new PopupWindow(50, 50);
+        assertEquals(50, mPopupWindow.getWidth());
+        assertEquals(50, mPopupWindow.getHeight());
 
-        try {
-            mPopupWindow = new PopupWindow(-1, -1);
-            assertEquals(-1, mPopupWindow.getWidth());
-            assertEquals(-1, mPopupWindow.getHeight());
-            fail("Should throw NullPointerException");
-        } catch (NullPointerException e) {
-        }
+        mPopupWindow = new PopupWindow(-1, -1);
+        assertEquals(-1, mPopupWindow.getWidth());
+        assertEquals(-1, mPopupWindow.getHeight());
 
         TextView contentView = new TextView(mActivity);
         mPopupWindow = new PopupWindow(contentView);
@@ -190,18 +123,6 @@ public class PopupWindowTest extends
         assertTrue(mPopupWindow.isFocusable());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBackground",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setBackgroundDrawable",
-            args = {android.graphics.drawable.Drawable.class}
-        )
-    })
     public void testAccessBackground() {
         mPopupWindow = new PopupWindow(mActivity);
 
@@ -213,18 +134,6 @@ public class PopupWindowTest extends
         assertNull(mPopupWindow.getBackground());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAnimationStyle",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setAnimationStyle",
-            args = {int.class}
-        )
-    })
     public void testAccessAnimationStyle() {
         mPopupWindow = new PopupWindow(mActivity);
         // default is -1
@@ -243,18 +152,6 @@ public class PopupWindowTest extends
         assertEquals(-100, mPopupWindow.getAnimationStyle());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setContentView",
-            args = {android.view.View.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getContentView",
-            args = {}
-        )
-    })
     public void testAccessContentView() {
         mPopupWindow = new PopupWindow(mActivity);
         assertNull(mPopupWindow.getContentView());
@@ -277,18 +174,6 @@ public class PopupWindowTest extends
         dismissPopup();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setFocusable",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isFocusable",
-            args = {}
-        )
-    })
     public void testAccessFocusable() {
         mPopupWindow = new PopupWindow(mActivity);
         assertFalse(mPopupWindow.isFocusable());
@@ -300,18 +185,6 @@ public class PopupWindowTest extends
         assertFalse(mPopupWindow.isFocusable());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setHeight",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getHeight",
-            args = {}
-        )
-    })
     public void testAccessHeight() {
         mPopupWindow = new PopupWindow(mActivity);
         // default is 0
@@ -347,18 +220,6 @@ public class PopupWindowTest extends
         return wm.getDefaultDisplay();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setWidth",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getWidth",
-            args = {}
-        )
-    })
     public void testAccessWidth() {
         mPopupWindow = new PopupWindow(mActivity);
         assertEquals(0, mPopupWindow.getWidth());
@@ -383,11 +244,6 @@ public class PopupWindowTest extends
         assertEquals(width, mPopupWindow.getWidth());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "showAsDropDown",
-        args = {android.view.View.class}
-    )
     public void testShowAsDropDown() {
         int[] anchorXY = new int[2];
         int[] viewOnScreenXY = new int[2];
@@ -414,11 +270,6 @@ public class PopupWindowTest extends
         dismissPopup();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "showAtLocation",
-        args = {android.view.View.class, int.class, int.class, int.class}
-    )
     public void testShowAtLocation() {
         int[] viewInWindowXY = new int[2];
         int[] viewOnScreenXY = new int[2];
@@ -451,11 +302,6 @@ public class PopupWindowTest extends
         dismissPopup();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "showAsDropDown",
-        args = {android.view.View.class, int.class, int.class}
-    )
     public void testShowAsDropDownWithOffsets() {
         int[] anchorXY = new int[2];
         int[] viewOnScreenXY = new int[2];
@@ -484,18 +330,6 @@ public class PopupWindowTest extends
         dismissPopup();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMaxAvailableHeight",
-            args = {android.view.View.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMaxAvailableHeight",
-            args = {android.view.View.class, int.class}
-        )
-    })
     public void testGetMaxAvailableHeight() {
         mPopupWindow = createPopupWindow(createPopupContent());
 
@@ -532,11 +366,6 @@ public class PopupWindowTest extends
         assertTrue(maxAvailableHeight <= avaliable);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "dismiss",
-        args = {}
-    )
     public void testDismiss() {
         mPopupWindow = createPopupWindow(createPopupContent());
         assertFalse(mPopupWindow.isShowing());
@@ -550,11 +379,6 @@ public class PopupWindowTest extends
         assertFalse(mPopupWindow.isShowing());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setOnDismissListener",
-        args = {android.widget.PopupWindow.OnDismissListener.class}
-    )
     public void testSetOnDismissListener() {
         mPopupWindow = new PopupWindow(new TextView(mActivity));
         mPopupWindow.setOnDismissListener(null);
@@ -575,23 +399,6 @@ public class PopupWindowTest extends
         assertEquals(2, onDismissListener.getOnDismissCalledCount());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "update",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setClippingEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setIgnoreCheekPress",
-            args = {}
-        )
-    })
     public void testUpdate() {
         mPopupWindow = createPopupWindow(createPopupContent());
         mPopupWindow.setBackgroundDrawable(null);
@@ -635,23 +442,6 @@ public class PopupWindowTest extends
                 WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM & p.flags);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "update",
-            args = {int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "update",
-            args = {int.class, int.class, int.class, int.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isShowing",
-            args = {}
-        )
-    })
     public void testUpdatePositionAndDimension() {
         int[] fstXY = new int[2];
         int[] sndXY = new int[2];
@@ -701,18 +491,6 @@ public class PopupWindowTest extends
         dismissPopup();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "update",
-            args = {android.view.View.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isShowing",
-            args = {}
-        )
-    })
     public void testUpdateDimensionAndAlignAnchorView() {
         mPopupWindow = createPopupWindow(createPopupContent());
 
@@ -740,18 +518,6 @@ public class PopupWindowTest extends
         mPopupWindow.dismiss();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "update",
-            args = {android.view.View.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isShowing",
-            args = {}
-        )
-    })
     public void testUpdateDimensionAndAlignAnchorViewWithOffsets() {
         int[] anchorXY = new int[2];
         int[] viewInWindowOff = new int[2];
@@ -825,18 +591,6 @@ public class PopupWindowTest extends
         dismissPopup();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getInputMethodMode",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setInputMethodMode",
-            args = {int.class}
-        )
-    })
     public void testAccessInputMethodMode() {
         mPopupWindow = new PopupWindow(mActivity);
         assertEquals(0, mPopupWindow.getInputMethodMode());
@@ -854,18 +608,6 @@ public class PopupWindowTest extends
         assertEquals(-1, mPopupWindow.getInputMethodMode());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isClippingEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setClippingEnabled",
-            args = {boolean.class}
-        )
-    })
     public void testAccessClippingEnabled() {
         mPopupWindow = new PopupWindow(mActivity);
         assertTrue(mPopupWindow.isClippingEnabled());
@@ -874,18 +616,6 @@ public class PopupWindowTest extends
         assertFalse(mPopupWindow.isClippingEnabled());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isOutsideTouchable",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setOutsideTouchable",
-            args = {boolean.class}
-        )
-    })
     public void testAccessOutsideTouchable() {
         mPopupWindow = new PopupWindow(mActivity);
         assertFalse(mPopupWindow.isOutsideTouchable());
@@ -894,18 +624,6 @@ public class PopupWindowTest extends
         assertTrue(mPopupWindow.isOutsideTouchable());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isTouchable",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTouchable",
-            args = {boolean.class}
-        )
-    })
     public void testAccessTouchable() {
         mPopupWindow = new PopupWindow(mActivity);
         assertTrue(mPopupWindow.isTouchable());
@@ -914,11 +632,6 @@ public class PopupWindowTest extends
         assertFalse(mPopupWindow.isTouchable());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isAboveAnchor",
-        args = {}
-    )
     public void testIsAboveAnchor() {
         mPopupWindow = createPopupWindow(createPopupContent());
         final View upperAnchor = mActivity.findViewById(R.id.anchor_upper);
@@ -945,11 +658,6 @@ public class PopupWindowTest extends
         dismissPopup();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setTouchInterceptor",
-        args = {android.view.View.OnTouchListener.class}
-    )
     public void testSetTouchInterceptor() {
         mPopupWindow = new PopupWindow(new TextView(mActivity));
 
@@ -989,11 +697,6 @@ public class PopupWindowTest extends
         assertEquals(2, onTouchListener.getOnTouchCalledCount());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setWindowLayoutMode",
-        args = {int.class, int.class}
-    )
     public void testSetWindowLayoutMode() {
         mPopupWindow = new PopupWindow(new TextView(mActivity));
         showPopup();

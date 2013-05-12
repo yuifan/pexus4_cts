@@ -16,18 +16,9 @@
 
 package android.database.cts;
 
-import com.android.common.ArrayListCursor;
-import com.google.android.collect.Lists;
-
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
-import android.database.AbstractCursor;
 import android.database.CharArrayBuffer;
 import android.database.CursorWindow;
+import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteException;
 import android.os.Parcel;
 import android.test.AndroidTestCase;
@@ -36,55 +27,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
-@TestTargetClass(android.database.CursorWindow.class)
 public class CursorWindowTest extends AndroidTestCase {
 
     private static final String TEST_STRING = "Test String";
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "clear",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "setStartPosition",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "putString",
-            args = {java.lang.String.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "putNull",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "setNumColumns",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "freeLastRow",
-            args = {}
-        )
-    })
     public void testWriteCursorToWindow() throws Exception {
         // create cursor
-        String[] colNames = new String[]{"name", "number", "profit"};
+        String[] colNames = new String[]{"_id", "name", "number", "profit"};
         int colsize = colNames.length;
-        ArrayList<ArrayList> list = createTestList(10, colsize);
-        AbstractCursor cursor = new ArrayListCursor(colNames, list);
+        ArrayList<ArrayList<Integer>> list = createTestList(10, colsize);
+        MatrixCursor cursor = new MatrixCursor(colNames, list.size());
+        for (ArrayList<Integer> row : list) {
+            cursor.addRow(row);
+        }
 
         // fill window
         CursorWindow window = new CursorWindow(false);
@@ -92,10 +47,10 @@ public class CursorWindowTest extends AndroidTestCase {
 
         // read from cursor window
         for (int i = 0; i < list.size(); i++) {
-            ArrayList col = list.get(i);
+            ArrayList<Integer> col = list.get(i);
             for (int j = 0; j < colsize; j++) {
                 String s = window.getString(i, j);
-                int r2 = (Integer) col.get(j);
+                int r2 = col.get(j);
                 int r1 = Integer.parseInt(s);
                 assertEquals(r2, r1);
             }
@@ -106,10 +61,10 @@ public class CursorWindowTest extends AndroidTestCase {
         cursor.fillWindow(1, window);
         // read from cursor from window
         for (int i = 1; i < list.size(); i++) {
-            ArrayList col = list.get(i);
+            ArrayList<Integer> col = list.get(i);
             for (int j = 0; j < colsize; j++) {
                 String s = window.getString(i, j);
-                int r2 = (Integer) col.get(j);
+                int r2 = col.get(j);
                 int r1 = Integer.parseInt(s);
                 assertEquals(r2, r1);
             }
@@ -120,38 +75,6 @@ public class CursorWindowTest extends AndroidTestCase {
         assertEquals(0, window.getNumRows());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "putNull",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "getString",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "getBlob",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "getDouble",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "getLong",
-            args = {int.class, int.class}
-        )
-    })
     public void testNull() {
         CursorWindow window = getOneByOneWindow();
 
@@ -163,32 +86,6 @@ public class CursorWindowTest extends AndroidTestCase {
         assertNull(window.getBlob(0, 0));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "putString",
-            args = {java.lang.String.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "getString",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "getLong",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "This is a test from unittest of CursorWindowTest.",
-            method = "getDouble",
-            args = {int.class, int.class}
-        )
-    })
     public void testEmptyString() {
         CursorWindow window = getOneByOneWindow();
 
@@ -199,29 +96,6 @@ public class CursorWindowTest extends AndroidTestCase {
         assertEquals(0.0, window.getDouble(0, 0));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "CursorWindow",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStartPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "newFromParcel",
-            args = {android.os.Parcel.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "writeToParcel",
-            args = {android.os.Parcel.class, int.class}
-        )
-    })
-    @ToBeFixed(bug = " ", explanation = "Can't create a remote binder for newFromParcel here.")
     public void testConstructors() {
         int TEST_NUMBER = 5;
         CursorWindow cursorWindow;
@@ -236,48 +110,19 @@ public class CursorWindowTest extends AndroidTestCase {
 
         // Test newFromParcel
         Parcel parcel = Parcel.obtain();
-        try {
-            cursorWindow = CursorWindow.newFromParcel(parcel);
-            fail("Can't accept a local binder.");
-        } catch (IllegalStateException e) {
-            // expected
-        }
-
         cursorWindow = new CursorWindow(true);
         cursorWindow.setStartPosition(TEST_NUMBER);
+        cursorWindow.setNumColumns(1);
+        cursorWindow.allocRow();
+        cursorWindow.putString(TEST_STRING, TEST_NUMBER, 0);
         cursorWindow.writeToParcel(parcel, 0);
+
         parcel.setDataPosition(0);
-        assertNotNull(parcel.readStrongBinder());
-        assertEquals(TEST_NUMBER, parcel.readInt());
+        cursorWindow = CursorWindow.CREATOR.createFromParcel(parcel);
+        assertEquals(TEST_NUMBER, cursorWindow.getStartPosition());
+        assertEquals(TEST_STRING, cursorWindow.getString(TEST_NUMBER, 0));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setNumColumns",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNumRows",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "allocRow",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "freeLastRow",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "close",
-            args = {}
-        )
-    })
     public void testDataStructureOperations() {
         CursorWindow cursorWindow = new CursorWindow(true);
 
@@ -330,78 +175,6 @@ public class CursorWindowTest extends AndroidTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "putString",
-            args = {java.lang.String.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "putNull",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "putLong",
-            args = {long.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "putDouble",
-            args = {double.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "putBlob",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getString",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getShort",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLong",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getInt",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getFloat",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDouble",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBlob",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isNull",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isBlob",
-            args = {int.class, int.class}
-        )
-    })
     public void testAccessDataValues() {
         final long NUMBER_LONG_INTEGER = (long) 0xaabbccddffL;
         final long NUMBER_INTEGER = (int) NUMBER_LONG_INTEGER;
@@ -506,11 +279,6 @@ public class CursorWindowTest extends AndroidTestCase {
         assertTrue(cursorWindow.isBlob(0, 4));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "copyStringToBuffer",
-        args = {int.class, int.class, android.database.CharArrayBuffer.class}
-    )
     public void testCopyStringToBuffer() {
         int DEFAULT_ARRAY_LENGTH = 64;
         String baseString = "0123456789";
@@ -546,18 +314,6 @@ public class CursorWindowTest extends AndroidTestCase {
         assertEquals(expectedString.length(), charArrayBuffer.data.length);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStartPosition",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStartPosition",
-            args = {}
-        )
-    })
     public void testAccessStartPosition() {
         final int TEST_POSITION_1 = 0;
         final int TEST_POSITION_2 = 3;
@@ -587,18 +343,6 @@ public class CursorWindowTest extends AndroidTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "clear",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onAllReferencesReleased",
-            args = {}
-        )
-    })
     public void testClearAndOnAllReferencesReleased() {
         MockCursorWindow cursorWindow = new MockCursorWindow(true);
 
@@ -625,11 +369,6 @@ public class CursorWindowTest extends AndroidTestCase {
         assertTrue(cursorWindow.hasReleasedAllReferences());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "describeContents",
-        args = {}
-    )
     public void testDescribeContents() {
         CursorWindow cursorWindow = new CursorWindow(true);
         assertEquals(0, cursorWindow.describeContents());
@@ -668,17 +407,16 @@ public class CursorWindowTest extends AndroidTestCase {
         }
     }
 
-    private static ArrayList<ArrayList> createTestList(int rows, int cols) {
-        ArrayList<ArrayList> list = Lists.newArrayList();
+    private static ArrayList<ArrayList<Integer>> createTestList(int rows, int cols) {
+        ArrayList<ArrayList<Integer>> list = new ArrayList<ArrayList<Integer>>();
         Random generator = new Random();
 
         for (int i = 0; i < rows; i++) {
-            ArrayList<Integer> col = Lists.newArrayList();
+            ArrayList<Integer> col = new ArrayList<Integer>();
             list.add(col);
             for (int j = 0; j < cols; j++) {
                 // generate random number
-                Integer r = generator.nextInt();
-                col.add(r);
+                col.add(j == 0 ? i : generator.nextInt());
             }
         }
         return list;

@@ -16,6 +16,9 @@
 
 package android.widget.cts;
 
+import com.android.cts.stub.R;
+
+
 import org.xmlpull.v1.XmlPullParser;
 
 import android.app.Activity;
@@ -44,18 +47,9 @@ import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.AdapterView.OnItemClickListener;
 
-import com.android.cts.stub.R;
-
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.ToBeFixed;
-
 /**
  * Test {@link GridView}.
  */
-@TestTargetClass(GridView.class)
 public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubActivity> {
     private GridView mGridView;
     private Activity mActivity;
@@ -72,36 +66,11 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-
         mGridView = null;
         mActivity = getActivity();
         mInstrumentation = getInstrumentation();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructor(s) of {@link GridView}",
-            method = "GridView",
-            args = {android.content.Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructor(s) of {@link GridView}",
-            method = "GridView",
-            args = {android.content.Context.class, android.util.AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructor(s) of {@link GridView}",
-            method = "GridView",
-            args = {android.content.Context.class, android.util.AttributeSet.class, int.class}
-        )
-    })
-    @ToBeFixed(bug = "1417734", explanation = "GridView#GridView(Context), " +
-            "GridView#GridView(Context, AttributeSet) and " +
-            "GridView#GridView(Context, AttributeSet, int)" +
-            " should check whether the input Context is null")
     public void testConstructor() {
         new GridView(mActivity);
 
@@ -133,18 +102,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setAdapter",
-            args = {android.widget.ListAdapter.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAdapter",
-            args = {}
-        )
-    })
     public void testAccessAdapter() {
         mGridView = new GridView(mActivity);
         // set Adapter
@@ -156,12 +113,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         assertNull(mGridView.getAdapter());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#setSelection(int)}",
-        method = "setSelection",
-        args = {int.class}
-    )
     public void testSetSelection() {
         mGridView = new GridView(mActivity);
         mGridView.setSelection(0);
@@ -174,27 +125,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         assertEquals(mGridView.getCount(), mGridView.getSelectedItemPosition());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test {@link GridView#onKeyDown(int, KeyEvent)}",
-            method = "onKeyDown",
-            args = {int.class, android.view.KeyEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test {@link GridView#onKeyDown(int, KeyEvent)}",
-            method = "onKeyUp",
-            args = {int.class, android.view.KeyEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test {@link GridView#onKeyDown(int, KeyEvent)}",
-            method = "onKeyMultiple",
-            args = {int.class, int.class, android.view.KeyEvent.class}
-        )
-    })
-    @ToBeFixed(bug = "", explanation = "Fix click callback tests")
     public void testPressKey() {
         final int NUM_COLUMNS = 3;
         mGridView = findGridViewById(R.id.gridview);
@@ -243,12 +173,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         assertTrue(listener.hasOnItemClickCalled());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#setGravity(int)}",
-        method = "setGravity",
-        args = {int.class}
-    )
     public void testSetGravity() {
         mGridView = findGridViewById(R.id.gridview);
 
@@ -302,17 +226,13 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         ViewAsserts.assertRightAligned(mGridView, child, mGridView.getListPaddingRight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#setHorizontalSpacing(int)}",
-        method = "setHorizontalSpacing",
-        args = {int.class}
-    )
     public void testSetHorizontalSpacing() {
         mGridView = findGridViewById(R.id.gridview);
+        mGridView.setStretchMode(GridView.NO_STRETCH);
         // Number of columns should be big enough, otherwise the
         // horizontal spacing cannot be correctly verified.
-        mGridView.setNumColumns(20);
+        mGridView.setNumColumns(28);
+
 
         // this test case can not be ran in UI thread.
         mActivity.runOnUiThread(new Runnable() {
@@ -339,12 +259,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         assertEquals(5, child1.getLeft() - child0.getRight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#setVerticalSpacing(int)}",
-        method = "setVerticalSpacing",
-        args = {int.class}
-    )
     public void testSetVerticalSpacing() {
         mGridView = findGridViewById(R.id.gridview);
 
@@ -373,18 +287,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         assertEquals(5, child1.getTop() - child0.getBottom());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStretchMode",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStretchMode",
-            args = {}
-        )
-    })
     public void testAccessStretchMode() {
         mGridView = findGridViewById(R.id.gridview);
         View child;
@@ -483,12 +385,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
                 < childRight[STRETCH_SPACING_UNIFORM][INDEX_1]);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#setNumColumns(int)}",
-        method = "setNumColumns",
-        args = {int.class}
-    )
     public void testSetNumColumns() {
         mGridView = findGridViewById(R.id.gridview);
 
@@ -532,12 +428,43 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "attachLayoutAnimationParameters",
-        args = {android.view.View.class, android.view.ViewGroup.LayoutParams.class, int.class,
-                int.class}
-    )
+    public void testGetNumColumns() {
+        mGridView = new GridView(mActivity);
+
+        assertEquals(mGridView.getNumColumns(), GridView.AUTO_FIT);
+
+        mGridView = findGridViewById(R.id.gridview);
+
+        mActivity.runOnUiThread(new Runnable() {
+            public void run() {
+                mGridView.setAdapter(new MockGridViewAdapter(10));
+                mGridView.setNumColumns(10);
+            }
+        });
+        mInstrumentation.waitForIdleSync();
+
+        assertEquals(mGridView.getNumColumns(), 10);
+
+        mActivity.runOnUiThread(new Runnable() {
+            public void run() {
+                mGridView.setNumColumns(1);
+            }
+        });
+        mInstrumentation.waitForIdleSync();
+
+        assertEquals(mGridView.getNumColumns(), 1);
+
+        mActivity.runOnUiThread(new Runnable() {
+            public void run() {
+                mGridView.setNumColumns(0);
+            }
+        });
+        mInstrumentation.waitForIdleSync();
+
+        //although setNumColumns(0) was called, the number of columns should be 1
+        assertEquals(mGridView.getNumColumns(), 1);
+    }
+
     public void testAttachLayoutAnimationParameters() {
         MockGridView mockGridView = new MockGridView(mActivity);
         ViewGroup.LayoutParams p = new ViewGroup.LayoutParams(320, 480);
@@ -547,24 +474,11 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         assertEquals(2, animationParams.count);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#layoutChildren()}",
-        method = "layoutChildren",
-        args = {}
-    )
-    @ToBeFixed(bug = "1400249", explanation = "It will be tested by functional test.")
     public void testLayoutChildren() {
         MockGridView mockGridView = new MockGridView(mActivity);
         mockGridView.layoutChildren();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#onFocusChanged(boolean, int, Rect)}",
-        method = "onFocusChanged",
-        args = {boolean.class, int.class, android.graphics.Rect.class}
-    )
     @UiThreadTest
     public void testOnFocusChanged() {
         final MockGridView mockGridView = new MockGridView(mActivity);
@@ -583,22 +497,10 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         assertTrue(mockGridView.hasCalledOnFocusChanged());
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        notes = "Test {@link GridView#onMeasure(int, int)}",
-        method = "onMeasure",
-        args = {int.class, int.class}
-    )
     public void testOnMeasure() {
         // Do not test it. It's implementation detail.
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link GridView#setColumnWidth(int)}",
-        method = "setColumnWidth",
-        args = {int.class}
-    )
     public void testSetColumnWidth() {
         mGridView = findGridViewById(R.id.gridview);
 
@@ -842,12 +744,6 @@ public class GridViewTest extends ActivityInstrumentationTestCase<GridViewStubAc
         private Context mContext;
 
         private Integer[] mThumbIds = {
-                R.drawable.failed, R.drawable.pass,
-                R.drawable.animated, R.drawable.black,
-                R.drawable.blue, R.drawable.red,
-                R.drawable.animated, R.drawable.black,
-                R.drawable.blue, R.drawable.failed,
-                R.drawable.pass, R.drawable.red,
                 R.drawable.failed, R.drawable.pass,
                 R.drawable.animated, R.drawable.black,
                 R.drawable.blue, R.drawable.red,

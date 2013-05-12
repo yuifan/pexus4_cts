@@ -16,7 +16,6 @@
 
 package android.os.cts;
 
-import dalvik.annotation.TestTargetClass;
 
 import android.os.Build;
 
@@ -26,7 +25,6 @@ import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 
-@TestTargetClass(Build.class)
 public class BuildTest extends TestCase {
 
     private static final String RO_PRODUCT_CPU_ABI = "ro.product.cpu.abi";
@@ -42,14 +40,37 @@ public class BuildTest extends TestCase {
 
     private void assertArmCpuAbiConstants() throws IOException {
         if (CpuFeatures.isArm7Compatible()) {
-            String message = "CPU is ARM v7 compatible, so "
+            String cpuAbi = getProperty(RO_PRODUCT_CPU_ABI);
+            String cpuAbi2 = getProperty(RO_PRODUCT_CPU_ABI2);
+            //if CPU_ABI is armv7, CPU_ABI2 is either of {armeabi, NULL}
+            if (cpuAbi.equals(CpuFeatures.ARMEABI_V7)) {
+                String message = "CPU is ARM v7 compatible, so "
                     + RO_PRODUCT_CPU_ABI  + " must be set to " + CpuFeatures.ARMEABI_V7 + " and "
-                    + RO_PRODUCT_CPU_ABI2 + " must be set to " + CpuFeatures.ARMEABI;
-            assertProperty(message, RO_PRODUCT_CPU_ABI, CpuFeatures.ARMEABI_V7);
-            assertProperty(message, RO_PRODUCT_CPU_ABI2, CpuFeatures.ARMEABI);
-            assertEquals(message, CpuFeatures.ARMEABI_V7, Build.CPU_ABI);
-            assertEquals(message, CpuFeatures.ARMEABI, Build.CPU_ABI2);
-        } else {
+                    + RO_PRODUCT_CPU_ABI2 + " must be set to " + CpuFeatures.ARMEABI + " or NULL";
+                assertEquals(message, CpuFeatures.ARMEABI_V7, Build.CPU_ABI);
+                if (cpuAbi2.equals(CpuFeatures.ARMEABI)){
+                    assertEquals(message, cpuAbi2, Build.CPU_ABI2);
+                } else {
+                    assertNoPropertySet(message, RO_PRODUCT_CPU_ABI2);
+                    assertEquals(message, Build.UNKNOWN, Build.CPU_ABI2);
+                }
+            }
+            //if CPU_ABI is x86, then CPU_ABI2 is either of {armeabi, armv7, NULL}
+            else if (cpuAbi.equals(CpuFeatures.X86ABI)) {
+                String message = "CPU is x86 but ARM v7 compatible, so "
+                    + RO_PRODUCT_CPU_ABI  + " must be set to " + CpuFeatures.X86ABI + " and "
+                    + RO_PRODUCT_CPU_ABI2 + " must be set to " + CpuFeatures.ARMEABI + " or "
+                    + CpuFeatures.ARMEABI_V7 + " or NULL";
+                assertEquals(message, CpuFeatures.X86ABI, Build.CPU_ABI);
+                if (cpuAbi2.equals(CpuFeatures.ARMEABI_V7) || cpuAbi2.equals(CpuFeatures.ARMEABI))
+                    assertEquals(message, cpuAbi2, Build.CPU_ABI2);
+                else {
+                    assertNoPropertySet(message, RO_PRODUCT_CPU_ABI2);
+                    assertEquals(message, Build.UNKNOWN, Build.CPU_ABI2);
+                }
+            }
+        }
+        else {
             String message = "CPU is not ARM v7 compatible. "
                     + RO_PRODUCT_CPU_ABI  + " must be set to " + CpuFeatures.ARMEABI + " and "
                     + RO_PRODUCT_CPU_ABI2 + " must not be set.";
@@ -59,7 +80,24 @@ public class BuildTest extends TestCase {
             assertEquals(message, Build.UNKNOWN, Build.CPU_ABI2);
         }
     }
-
+    /**
+     * @param property name passed to getprop
+     */
+    private String getProperty(String property)
+            throws IOException {
+        Process process = new ProcessBuilder("getprop", property).start();
+        Scanner scanner = null;
+        String line = "";
+        try {
+            scanner = new Scanner(process.getInputStream());
+            line = scanner.nextLine();
+        } finally {
+            if (scanner != null) {
+                scanner.close();
+            }
+        }
+        return line;
+    }
     /**
      * @param message shown when the test fails
      * @param property name passed to getprop
@@ -114,6 +152,8 @@ public class BuildTest extends TestCase {
         Pattern.compile("^([0-9A-Za-z._-]+)$");
     private static final Pattern ID_PATTERN =
         Pattern.compile("^([0-9A-Za-z._-]+)$");
+    private static final Pattern HARDWARE_PATTERN =
+        Pattern.compile("^([0-9A-Za-z.,_-]+)$");
     private static final Pattern PRODUCT_PATTERN =
         Pattern.compile("^([0-9A-Za-z._-]+)$");
     private static final Pattern SERIAL_NUMBER_PATTERN =
@@ -135,9 +175,13 @@ public class BuildTest extends TestCase {
 
         // Build.FINGERPRINT tested by BuildVersionTest
 
+        assertTrue(HARDWARE_PATTERN.matcher(Build.HARDWARE).matches());
+
         assertNotEmpty(Build.HOST);
 
         assertTrue(ID_PATTERN.matcher(Build.ID).matches());
+
+        assertNotEmpty(Build.MANUFACTURER);
 
         assertNotEmpty(Build.MODEL);
 

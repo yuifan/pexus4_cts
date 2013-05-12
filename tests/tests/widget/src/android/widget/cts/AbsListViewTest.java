@@ -18,18 +18,13 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -40,25 +35,30 @@ import android.text.Editable;
 import android.text.SpannableStringBuilder;
 import android.util.AttributeSet;
 import android.util.Xml;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.AbsListView;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.AbsListView.RecyclerListener;
+import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemLongClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@TestTargetClass(AbsListView.class)
 public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewStubActivity> {
+    private final String[] mShortList = new String[] {
+        "This", "is", "short", "!",
+    };
     private final String[] mCountryList = new String[] {
+        "Argentina", "Australia", "China", "France", "Germany", "Italy", "Japan", "United States",
+        "Argentina", "Australia", "China", "France", "Germany", "Italy", "Japan", "United States",
         "Argentina", "Australia", "China", "France", "Germany", "Italy", "Japan", "United States"
     };
 
@@ -66,6 +66,7 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
     private Activity mActivity;
     private Instrumentation mInstrumentation;
     private AttributeSet mAttributeSet;
+    private ArrayAdapter<String> mAdapter_short;
     private ArrayAdapter<String> mAdapter_countries;
 
     private static final float DELTA = 0.001f;
@@ -74,10 +75,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         super("com.android.cts.stub", ListViewStubActivity.class);
     }
 
-    @ToBeFixed(bug="1448885", explanation="AbsListView is an abstract class and its abstract " +
-            "methods: fillGap(boolean), findMotionRow(int) and setSelectionInt(int) are " +
-            "package private, we can not extends it directly to test. So, we use its subclass " +
-            "ListView to test")
 
     @Override
     protected void setUp() throws Exception {
@@ -90,48 +87,20 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         WidgetTestUtils.beginDocument(parser, "LinearLayout");
         mAttributeSet = Xml.asAttributeSet(parser);
 
+        mAdapter_short = new ArrayAdapter<String>(mActivity,
+                android.R.layout.simple_list_item_1, mShortList);
         mAdapter_countries = new ArrayAdapter<String>(mActivity,
                 android.R.layout.simple_list_item_1, mCountryList);
 
         mListView = (ListView)mActivity.findViewById(R.id.listview_default);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "AbsListView",
-            args = {android.content.Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "AbsListView",
-            args = {android.content.Context.class, android.util.AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "AbsListView",
-            args = {android.content.Context.class, android.util.AttributeSet.class, int.class}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testConstructor() {
         /**
          * We can not test the constructors.
          */
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setFastScrollEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isFastScrollEnabled",
-            args = {}
-        )
-    })
     public void testAccessFastScrollEnabled() {
         mListView.setFastScrollEnabled(false);
         assertFalse(mListView.isFastScrollEnabled());
@@ -140,18 +109,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertTrue(mListView.isFastScrollEnabled());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setSmoothScrollbarEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isSmoothScrollbarEnabled",
-            args = {}
-        )
-    })
     public void testAccessSmoothScrollbarEnabled() {
         mListView.setSmoothScrollbarEnabled(false);
         assertFalse(mListView.isSmoothScrollbarEnabled());
@@ -160,18 +117,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertTrue(mListView.isSmoothScrollbarEnabled());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setScrollingCacheEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isScrollingCacheEnabled",
-            args = {}
-        )
-    })
     public void testAccessScrollingCacheEnabled() {
         mListView.setScrollingCacheEnabled(false);
         assertFalse(mListView.isScrollingCacheEnabled());
@@ -181,9 +126,13 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
     }
 
     private void setAdapter() throws Throwable {
+        setAdapter(mAdapter_countries);
+    }
+
+    private void setAdapter(final ListAdapter adapter) throws Throwable {
         runTestOnUiThread(new Runnable() {
             public void run() {
-                mListView.setAdapter(mAdapter_countries);
+                mListView.setAdapter(adapter);
             }
         });
         mInstrumentation.waitForIdleSync();
@@ -199,14 +148,53 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         });
         mInstrumentation.waitForIdleSync();
     }
+    public void testSetOnScrollListener() throws Throwable {
+        MockOnScrollListener onScrollListener = new MockOnScrollListener();
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getFocusedRect",
-        args = {android.graphics.Rect.class}
-    )
-    public void testGetFocusedRect() throws Throwable {
+        assertNull(onScrollListener.getView());
+        assertEquals(0, onScrollListener.getFirstVisibleItem());
+        assertEquals(0, onScrollListener.getVisibleItemCount());
+        assertEquals(0, onScrollListener.getTotalItemCount());
+        assertEquals(-1, onScrollListener.getScrollState());
+
+        assertFalse(onScrollListener.isOnScrollCalled());
+        assertFalse(onScrollListener.isOnScrollStateChangedCalled());
+
+        mListView.setOnScrollListener(onScrollListener);
+        assertSame(mListView, onScrollListener.getView());
+        assertEquals(0, onScrollListener.getFirstVisibleItem());
+        assertEquals(0, onScrollListener.getVisibleItemCount());
+        assertEquals(0, onScrollListener.getTotalItemCount());
+        assertEquals(-1, onScrollListener.getScrollState());
+
+        assertTrue(onScrollListener.isOnScrollCalled());
+        assertFalse(onScrollListener.isOnScrollStateChangedCalled());
+        onScrollListener.reset();
+
         setAdapter();
+
+        assertSame(mListView, onScrollListener.getView());
+        assertEquals(0, onScrollListener.getFirstVisibleItem());
+        assertEquals(mListView.getChildCount(), onScrollListener.getVisibleItemCount());
+        assertEquals(mCountryList.length, onScrollListener.getTotalItemCount());
+        assertEquals(-1, onScrollListener.getScrollState());
+
+        assertTrue(onScrollListener.isOnScrollCalled());
+        assertFalse(onScrollListener.isOnScrollStateChangedCalled());
+        onScrollListener.reset();
+
+        TouchUtils.scrollToBottom(this, mActivity, mListView);
+        assertSame(mListView, onScrollListener.getView());
+        assertEquals(mListView.getChildCount(), onScrollListener.getVisibleItemCount());
+        assertEquals(mCountryList.length, onScrollListener.getTotalItemCount());
+        assertEquals(OnScrollListener.SCROLL_STATE_IDLE, onScrollListener.getScrollState());
+
+        assertTrue(onScrollListener.isOnScrollCalled());
+        assertTrue(onScrollListener.isOnScrollStateChangedCalled());
+    }
+
+    public void testGetFocusedRect() throws Throwable {
+        setAdapter(mAdapter_short);
         setListSelection(0);
 
         Rect r1 = new Rect();
@@ -217,7 +205,7 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(0, r1.left);
         assertTrue(r1.right > 0);
 
-        setListSelection(7);
+        setListSelection(3);
         Rect r2 = new Rect();
         mListView.getFocusedRect(r2);
         assertTrue(r2.top > 0);
@@ -230,18 +218,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(r1.right, r2.right);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStackFromBottom",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isStackFromBottom",
-            args = {}
-        )
-    })
     public void testAccessStackFromBottom() throws Throwable {
         setAdapter();
 
@@ -265,11 +241,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(mCountryList.length-1, mListView.getSelectedItemPosition());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSelectedView",
-        args = {android.graphics.Rect.class}
-    )
     public void testAccessSelectedItem() throws Throwable {
         assertNull(mListView.getSelectedView());
 
@@ -286,28 +257,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(mCountryList[2], tv.getText().toString());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPaddingTop",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPaddingLeft",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPaddingBottom",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPaddingRight",
-            args = {}
-        )
-    })
     public void testAccessListPadding() throws Throwable {
         setAdapter();
 
@@ -330,33 +279,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(r.bottom, mListView.getListPaddingBottom());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setSelector",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setSelector",
-            args = {android.graphics.drawable.Drawable.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSelector",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDrawSelectorOnTop",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "verifyDrawable",
-            args = {android.graphics.drawable.Drawable.class}
-        )
-    })
     public void testAccessSelector() throws Throwable {
         setAdapter();
 
@@ -384,28 +306,20 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
 
         Drawable drawable = mListView.getSelector();
         assertNotNull(drawable);
-        Rect r = drawable.getBounds();
+        final Rect r = drawable.getBounds();
 
-        TextView v = (TextView) mListView.getSelectedView();
+        final TextView v = (TextView) mListView.getSelectedView();
+        new PollingCheck() {
+            @Override
+            protected boolean check() {
+                return v.getRight() == r.right;
+            }
+        }.run();
         assertEquals(v.getLeft(), r.left);
         assertEquals(v.getTop(), r.top);
-        assertEquals(v.getRight(), r.right);
         assertEquals(v.getBottom(), r.bottom);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setScrollIndicators",
-            args = {android.view.View.class, android.view.View.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "requestLayout",
-            args = {}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testSetScrollIndicators() throws Throwable {
         TextView tv1 = (TextView) mActivity.findViewById(R.id.headerview1);
         TextView tv2 = (TextView) mActivity.findViewById(R.id.footerview1);
@@ -422,11 +336,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         mInstrumentation.waitForIdleSync();
     }
 
-    @TestTargetNew(
-        level = TestLevel.TODO,
-        method = "showContextMenuForChild",
-        args = {android.view.View.class}
-    )
     public void testShowContextMenuForChild() throws Throwable {
         setAdapter();
         setListSelection(1);
@@ -437,18 +346,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         // TODO: how to show the contextMenu success
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "pointToPosition",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "pointToRowId",
-            args = {int.class, int.class}
-        )
-    })
     public void testPointToPosition() throws Throwable {
         assertEquals(AbsListView.INVALID_POSITION, mListView.pointToPosition(-1, -1));
         assertEquals(AbsListView.INVALID_ROW_ID, mListView.pointToRowId(-1, -1));
@@ -469,18 +366,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertTrue(position2 > position1);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "draw",
-            args = {android.graphics.Canvas.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "dispatchDraw",
-            args = {android.graphics.Canvas.class}
-        )
-    })
     public void testDraw() {
         Canvas canvas = new Canvas();
         mListView.draw(canvas);
@@ -491,18 +376,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         // TODO: how to check
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setRecyclerListener",
-            args = {android.widget.AbsListView.RecyclerListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "reclaimViews",
-            args = {java.util.List.class}
-        )
-    })
     public void testSetRecyclerListener() throws Throwable {
         setAdapter();
 
@@ -519,23 +392,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertSame(recyclerListener.getView(), views.get(views.size() - 1));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setCacheColorHint",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCacheColorHint",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSolidColor",
-            args = {}
-        )
-    })
     public void testAccessCacheColorHint() {
         mListView.setCacheColorHint(Color.RED);
         assertEquals(Color.RED, mListView.getCacheColorHint());
@@ -550,18 +406,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(Color.GRAY, mListView.getSolidColor());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTranscriptMode",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTranscriptMode",
-            args = {}
-        )
-    })
     public void testAccessTranscriptMode() {
         mListView.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
         assertEquals(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL, mListView.getTranscriptMode());
@@ -573,11 +417,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(AbsListView.TRANSCRIPT_MODE_NORMAL, mListView.getTranscriptMode());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "checkLayoutParams",
-        args = {android.view.ViewGroup.LayoutParams.class}
-    )
     public void testCheckLayoutParams() {
         MyListView listView = new MyListView(mActivity);
 
@@ -588,23 +427,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertFalse(listView.checkLayoutParams(param2));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "computeVerticalScrollRange",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "computeVerticalScrollOffset",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "computeVerticalScrollExtent",
-            args = {}
-        )
-    })
     public void testComputeVerticalScrollValues() {
         MyListView listView = new MyListView(mActivity);
         assertEquals(0, listView.computeVerticalScrollRange());
@@ -622,18 +444,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(0, listView.computeVerticalScrollExtent());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "generateLayoutParams",
-            args = {android.util.AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "generateLayoutParams",
-            args = {android.view.ViewGroup.LayoutParams.class}
-        )
-    })
     public void testGenerateLayoutParams() throws XmlPullParserException, IOException {
         ViewGroup.LayoutParams res = mListView.generateLayoutParams(mAttributeSet);
         assertNotNull(res);
@@ -650,18 +460,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(ViewGroup.LayoutParams.WRAP_CONTENT, res.height);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "beforeTextChanged",
-            args = {java.lang.CharSequence.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "afterTextChanged",
-            args = {android.text.Editable.class}
-        )
-    })
     public void testBeforeAndAfterTextChanged() {
         // The java doc says these two methods do nothing
         CharSequence str = "test";
@@ -689,11 +487,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertTrue(listView.isAfterTextChangedCalled());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addTouchables",
-        args = {java.util.ArrayList.class}
-    )
     public void testAddTouchables() throws Throwable {
         ArrayList<View> views = new ArrayList<View>();
         assertEquals(0, views.size());
@@ -704,13 +497,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(mListView.getChildCount(), views.size());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "invalidateViews",
-        args = {}
-    )
-    @ToBeFixed(bug = "1400249", explanation = "it's hard to do unit test, should be tested by" +
-            " functional test.")
     public void testInvalidateViews() throws Throwable {
         TextView tv1 = (TextView) mActivity.findViewById(R.id.headerview1);
         TextView tv2 = (TextView) mActivity.findViewById(R.id.footerview1);
@@ -727,11 +513,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         mInstrumentation.waitForIdleSync();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getContextMenuInfo",
-        args = {}
-    )
     public void testGetContextMenuInfo() throws Throwable {
         final MyListView listView = new MyListView(mActivity, mAttributeSet);
 
@@ -744,10 +525,10 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         });
         mInstrumentation.waitForIdleSync();
 
-        TextView v = (TextView) listView.getSelectedView();
+        final TextView v = (TextView) listView.getSelectedView();
         assertNull(listView.getContextMenuInfo());
 
-        MockOnItemLongClickListener listener = new MockOnItemLongClickListener();
+        final MockOnItemLongClickListener listener = new MockOnItemLongClickListener();
         listView.setOnItemLongClickListener(listener);
 
         assertNull(listener.getParent());
@@ -755,10 +536,17 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(0, listener.getPosition());
         assertEquals(0, listener.getID());
 
+        mInstrumentation.waitForIdleSync();
         TouchUtils.longClickView(this, v);
 
+        new PollingCheck() {
+            @Override
+            protected boolean check() {
+                return v == listener.getView();
+            }
+        }.run();
+
         assertSame(listView, listener.getParent());
-        assertSame(v, listener.getView());
         assertEquals(2, listener.getPosition());
         assertEquals(listView.getItemIdAtPosition(2), listener.getID());
 
@@ -766,18 +554,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertNotNull(cmi);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTopFadingEdgeStrength",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getBottomFadingEdgeStrength",
-            args = {}
-        )
-    })
     public void testGetTopBottomFadingEdgeStrength() {
         MyListView listView = new MyListView(mActivity);
 
@@ -785,50 +561,12 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertEquals(0.0f, listView.getBottomFadingEdgeStrength(), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL,
-        method = "handleDataChanged",
-        args = {}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testHandleDataChanged() {
         MyListView listView = new MyListView(mActivity, mAttributeSet, 0);
         listView.handleDataChanged();
         // TODO: how to check?
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "hasTextFilter",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTextFilterEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isTextFilterEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setFilterText",
-            args = {java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "clearTextFilter",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isInFilterMode",
-            args = {}
-        )
-    })
     public void testSetFilterText() {
         MyListView listView = new MyListView(mActivity, mAttributeSet, 0);
         String filterText = "xyz";
@@ -862,12 +600,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
         assertFalse(listView.isInFilterMode());
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_FEASIBLE,
-        method = "layoutChildren",
-        args = {}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testLayoutChildren() {
         /**
          * the subclass ListView and GridView override this method, so we can not test
@@ -875,108 +607,6 @@ public class AbsListViewTest extends ActivityInstrumentationTestCase2<ListViewSt
          */
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "drawableStateChanged",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onCreateInputConnection",
-            args = {android.view.inputmethod.EditorInfo.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onFilterComplete",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onGlobalLayout",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onInterceptTouchEvent",
-            args = {android.view.MotionEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onKeyUp",
-            args = {int.class, android.view.KeyEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onRestoreInstanceState",
-            args = {android.os.Parcelable.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onSaveInstanceState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onTextChanged",
-            args = {java.lang.CharSequence.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onTouchEvent",
-            args = {android.view.MotionEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onTouchModeChanged",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onWindowFocusChanged",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onAttachedToWindow",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onCreateDrawableState",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onDetachedFromWindow",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onFocusChanged",
-            args = {boolean.class, int.class, android.graphics.Rect.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onLayout",
-            args = {boolean.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onMeasure",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "onSizeChanged",
-            args = {int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_NECESSARY,
-            method = "dispatchSetPressed",
-            args = {boolean.class}
-        )
-    })
     public void testFoo() {
         /**
          * Do not test these APIs. They are callbacks which:

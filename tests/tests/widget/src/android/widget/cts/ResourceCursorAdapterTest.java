@@ -17,27 +17,20 @@
 package android.widget.cts;
 
 import com.android.cts.stub.R;
-import com.android.common.ArrayListCursor;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.test.InstrumentationTestCase;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ResourceCursorAdapter;
 
-import java.util.ArrayList;
-
 /**
  * Test {@link ResourceCursorAdapter}.
  */
-@TestTargetClass(ResourceCursorAdapter.class)
 public class ResourceCursorAdapterTest extends InstrumentationTestCase {
     private ResourceCursorAdapter mResourceCursorAdapter;
 
@@ -58,18 +51,6 @@ public class ResourceCursorAdapterTest extends InstrumentationTestCase {
         mCursor = createTestCursor(3, 3);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "ResourceCursorAdapter",
-            args = {Context.class, int.class, Cursor.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "ResourceCursorAdapter",
-            args = {Context.class, int.class, Cursor.class, boolean.class}
-        )
-    })
     public void testConstructor() {
         MockResourceCursorAdapter adapter = new MockResourceCursorAdapter(mContext, -1, null);
         // the default is true
@@ -87,11 +68,6 @@ public class ResourceCursorAdapterTest extends InstrumentationTestCase {
         assertSame(mCursor, adapter.getCursor());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setViewResource",
-        args = {int.class}
-    )
     public void testSetViewResource() {
         mResourceCursorAdapter = new MockResourceCursorAdapter(mContext,
                 R.layout.cursoradapter_item0, mCursor);
@@ -107,12 +83,6 @@ public class ResourceCursorAdapterTest extends InstrumentationTestCase {
         assertEquals(R.id.cursorAdapter_item1, result.getId());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ResourceCursorAdapter#setDropDownViewResource(int)}",
-        method = "setDropDownViewResource",
-        args = {int.class}
-    )
     public void testSetDropDownViewResource() {
         mResourceCursorAdapter = new MockResourceCursorAdapter(mContext,
                 R.layout.cursoradapter_item0, mCursor);
@@ -136,11 +106,6 @@ public class ResourceCursorAdapterTest extends InstrumentationTestCase {
         assertEquals(R.id.cursorAdapter_item0, result.getId());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "newDropDownView",
-        args = {Context.class, Cursor.class, ViewGroup.class}
-    )
     // parameters Context and Cursor are never readin the method
     public void testNewDropDownView() {
         mResourceCursorAdapter = new MockResourceCursorAdapter(mContext,
@@ -156,11 +121,6 @@ public class ResourceCursorAdapterTest extends InstrumentationTestCase {
         assertEquals(R.id.cursorAdapter_item1, result.getId());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "newView",
-        args = {Context.class, Cursor.class, ViewGroup.class}
-    )
     // The parameters Context and Cursor are never read in the method
     public void testNewView() {
         mResourceCursorAdapter = new MockResourceCursorAdapter(mContext,
@@ -185,21 +145,22 @@ public class ResourceCursorAdapterTest extends InstrumentationTestCase {
      */
     @SuppressWarnings("unchecked")
     private Cursor createTestCursor(int colCount, int rowCount) {
-        ArrayList<ArrayList> list = new ArrayList<ArrayList>();
-        String[] columns = new String[colCount];
+        String[] columns = new String[colCount + 1];
         for (int i = 0; i < colCount; i++) {
             columns[i] = "column" + i;
         }
+        columns[colCount] = "_id";
 
+        MatrixCursor cursor = new MatrixCursor(columns, rowCount);
+        Object[] row = new Object[colCount + 1];
         for (int i = 0; i < rowCount; i++) {
-            ArrayList<String> row = new ArrayList<String>();
             for (int j = 0; j < colCount; j++) {
-                row.add("" + i + "" + j);
+                row[j] = "" + i + "" + j;
             }
-            list.add(row);
+            row[colCount] = i;
+            cursor.addRow(row);
         }
-
-        return new ArrayListCursor(columns, list);
+        return cursor;
     }
 
     private static class MockResourceCursorAdapter extends ResourceCursorAdapter {

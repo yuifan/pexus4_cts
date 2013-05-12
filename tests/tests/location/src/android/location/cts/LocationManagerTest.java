@@ -16,11 +16,6 @@
 
 package android.location.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -38,10 +33,12 @@ import android.location.GpsStatus.Listener;
 import android.os.Bundle;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.test.InstrumentationTestCase;
 
 import java.util.List;
+import java.lang.Thread;
 
 /**
  * Requires the permissions
@@ -50,13 +47,14 @@ import java.util.List;
  * android.permission.ACCESS_FINE_LOCATION to access GPS provider
  * android.permission.ACCESS_LOCATION_EXTRA_COMMANDS to send extra commands to GPS provider
  */
-@TestTargetClass(LocationManager.class)
 public class LocationManagerTest extends InstrumentationTestCase {
     private static final long TEST_TIME_OUT = 5000;
 
     private static final String TEST_MOCK_PROVIDER_NAME = "test_provider";
 
     private static final String UNKNOWN_PROVIDER_NAME = "unknown_provider";
+
+    private static final String FUSED_PROVIDER_NAME = "fused";
 
     private LocationManager mManager;
 
@@ -120,19 +118,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeTestProvider",
-            args = {java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "addTestProvider",
-            args = {String.class, boolean.class, boolean.class, boolean.class, boolean.class,
-                    boolean.class, boolean.class, boolean.class, int.class, int.class}
-        )
-    })
     public void testRemoveTestProvider() {
         // this test assumes TEST_MOCK_PROVIDER_NAME was created in setUp.
         LocationProvider provider = mManager.getProvider(TEST_MOCK_PROVIDER_NAME);
@@ -165,23 +150,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAllProviders",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getProviders",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTestProviderEnabled",
-            args = {String.class, boolean.class}
-        )
-    })
     public void testGetProviders() {
         List<String> providers = mManager.getAllProviders();
         assertTrue(providers.size() >= 2);
@@ -237,11 +205,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         return false;
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getProvider",
-        args = {String.class}
-    )
     public void testGetProvider() {
         LocationProvider p = mManager.getProvider(TEST_MOCK_PROVIDER_NAME);
         assertNotNull(p);
@@ -266,18 +229,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getProviders",
-            args = {Criteria.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBestProvider",
-            args = {Criteria.class, boolean.class}
-        )
-    })
     public void testGetProvidersWithCriteria() {
         Criteria criteria = new Criteria();
         List<String> providers = mManager.getProviders(criteria, true);
@@ -306,29 +257,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         assertNotNull(p);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "requestLocationUpdates",
-            args = {String.class, long.class, float.class, LocationListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeUpdates",
-            args = {LocationListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTestProviderLocation",
-            args = {String.class, Location.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            notes = "Cannot determine whether location has been cleared",
-            method = "clearTestProviderLocation",
-            args = {String.class}
-        )
-    })
     public void testLocationUpdatesWithLocationListener() throws InterruptedException {
         doLocationUpdatesWithLocationListener(TEST_MOCK_PROVIDER_NAME);
 
@@ -426,23 +354,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "requestLocationUpdates",
-            args = {String.class, long.class, float.class, LocationListener.class, Looper.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeUpdates",
-            args = {LocationListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTestProviderLocation",
-            args = {String.class, Location.class}
-        )
-    })
     public void testLocationUpdatesWithLocationListenerAndLooper() throws InterruptedException {
         double latitude1 = 60;
         double longitude1 = 20;
@@ -492,23 +403,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "requestLocationUpdates",
-            args = {String.class, long.class, float.class, PendingIntent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeUpdates",
-            args = {PendingIntent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTestProviderLocation",
-            args = {String.class, Location.class}
-        )
-    })
     public void testLocationUpdatesWithPendingIntent() throws InterruptedException {
         double latitude1 = 20;
         double longitude1 = 40;
@@ -557,47 +451,15 @@ public class LocationManagerTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "addProximityAlert",
-            args = {double.class, double.class, float.class, long.class, PendingIntent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeProximityAlert",
-            args = {PendingIntent.class}
-        )
-    })
     public void testAddProximityAlert() {
         Intent i = new Intent();
         i.setAction("android.location.cts.TEST_GET_GPS_STATUS_ACTION");
         PendingIntent pi = PendingIntent.getBroadcast(mContext, 0, i, PendingIntent.FLAG_ONE_SHOT);
 
-        mManager.addProximityAlert(0, 0, 0, 5000, pi);
+        mManager.addProximityAlert(0, 0, 1.0f, 5000, pi);
         mManager.removeProximityAlert(pi);
-
-        mManager.addProximityAlert(0, 0, 0, 5000, null);
-        mManager.removeProximityAlert(null);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isProviderEnabled",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTestProviderEnabled",
-            args = {String.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "clearTestProviderEnabled",
-            args = {String.class}
-        )
-    })
     public void testIsProviderEnabled() {
         // this test assumes enabled TEST_MOCK_PROVIDER_NAME was created in setUp.
         assertNotNull(mManager.getProvider(TEST_MOCK_PROVIDER_NAME));
@@ -631,11 +493,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getLastKnownLocation",
-        args = {String.class}
-    )
     public void testGetLastKnownLocation() throws InterruptedException {
         double latitude1 = 20;
         double longitude1 = 40;
@@ -671,20 +528,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "addGpsStatusListener",
-            args = {GpsStatus.Listener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeGpsStatusListener",
-            args = {GpsStatus.Listener.class}
-        )
-    })
-    @ToBeFixed(bug = "", explanation = "The callbacks of LocationListener can not be tested "
-            + "because there is no simulation of GPS events on the emulator")
     public void testGpsStatusListener() {
         MockGpsStatusListener listener = new MockGpsStatusListener();
         mManager.addGpsStatusListener(listener);
@@ -694,25 +537,12 @@ public class LocationManagerTest extends InstrumentationTestCase {
         mManager.removeGpsStatusListener(null);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getGpsStatus",
-        args = {GpsStatus.class}
-    )
-    @ToBeFixed(bug = "", explanation = "The callbacks of LocationListener can not be tested "
-            + "because there is no simulation of GPS events on the emulator")
     public void testGetGpsStatus() {
         GpsStatus status = mManager.getGpsStatus(null);
         assertNotNull(status);
         assertSame(status, mManager.getGpsStatus(status));
     }
 
-    @TestTargetNew(
-        level = TestLevel.SUFFICIENT,
-        notes = "Cannot rely on any specific extra command to be implemented.",
-        method = "sendExtraCommand",
-        args = {String.class, String.class, Bundle.class}
-    )
     public void testSendExtraCommand() {
         // this test assumes TEST_MOCK_PROVIDER_NAME was created in setUp.
         assertNotNull(mManager.getProvider(TEST_MOCK_PROVIDER_NAME));
@@ -723,24 +553,6 @@ public class LocationManagerTest extends InstrumentationTestCase {
         assertFalse(mManager.sendExtraCommand(UNKNOWN_PROVIDER_NAME, "unknown", new Bundle()));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "requestLocationUpdates",
-            args = {String.class, long.class, float.class, LocationListener.class, Looper.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTestProviderStatus",
-            args = {String.class, int.class, Bundle.class, long.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            notes = "Cannot determine whether status has been cleared",
-            method = "clearTestProviderStatus",
-            args = {String.class}
-        )
-    })
     public void testSetTestProviderStatus() throws InterruptedException {
         final int status = LocationProvider.TEMPORARILY_UNAVAILABLE;
         final long updateTime = 1000;
@@ -778,44 +590,59 @@ public class LocationManagerTest extends InstrumentationTestCase {
     /**
      * Tests basic proximity alert when entering proximity
      */
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addProximityAlert",
-        args = {double.class, double.class, float.class, long.class, PendingIntent.class}
-    )
     public void testEnterProximity() throws Exception {
+        // need to mock the fused location provider for proximity tests
+        mockFusedLocation();
+
         doTestEnterProximity(10000);
+
+        unmockFusedLocation();
     }
 
     /**
      * Tests proximity alert when entering proximity, with no expiration
      */
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addProximityAlert",
-        args = {double.class, double.class, float.class, long.class, PendingIntent.class}
-    )
     public void testEnterProximity_noexpire() throws Exception {
+        // need to mock the fused location provider for proximity tests
+        mockFusedLocation();
+
         doTestEnterProximity(-1);
+
+        unmockFusedLocation();
     }
 
     /**
      * Tests basic proximity alert when exiting proximity
      */
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addProximityAlert",
-        args = {double.class, double.class, float.class, long.class, PendingIntent.class}
-    )
     public void testExitProximity() throws Exception {
+        // need to mock the fused location provider for proximity tests
+        mockFusedLocation();
+
         // first do enter proximity scenario
         doTestEnterProximity(-1);
 
         // now update to trigger exit proximity proximity
         mIntentReceiver.clearReceivedIntents();
-        updateLocation(20, 20);
+        updateLocationAndWait(FUSED_PROVIDER_NAME, 20, 20);
         waitForReceiveBroadcast();
         assertProximityType(false);
+
+        unmockFusedLocation();
+    }
+
+    /**
+     * Tests basic proximity alert when initially within proximity
+     */
+    public void testInitiallyWithinProximity() throws Exception {
+        // need to mock the fused location provider for proximity tests
+        mockFusedLocation();
+
+        updateLocationAndWait(FUSED_PROVIDER_NAME, 0, 0);
+        registerProximityListener(0, 0, 1000, 10000);
+        waitForReceiveBroadcast();
+        assertProximityType(true);
+
+        unmockFusedLocation();
     }
 
     /**
@@ -826,11 +653,34 @@ public class LocationManagerTest extends InstrumentationTestCase {
      */
     private void doTestEnterProximity(long expiration) throws Exception {
         // update location to outside proximity range
-        updateLocation(30, 30);
+        updateLocationAndWait(FUSED_PROVIDER_NAME, 30, 30);
         registerProximityListener(0, 0, 1000, expiration);
-        updateLocation(0, 0);
+        updateLocationAndWait(FUSED_PROVIDER_NAME, 0, 0);
         waitForReceiveBroadcast();
         assertProximityType(true);
+    }
+
+
+    private void updateLocationAndWait(String providerName, double latitude, double longitude)
+            throws InterruptedException {
+        // Register a listener for the location we are about to set.
+        MockLocationListener listener = new MockLocationListener();
+        HandlerThread handlerThread = new HandlerThread("updateLocationAndWait");
+        handlerThread.start();
+        mManager.requestLocationUpdates(providerName, 0, 0, listener, handlerThread.getLooper());
+
+        // Set the location.
+        updateLocation(providerName, latitude, longitude);
+
+        // Make sure we received the location, and it is the right one.
+        assertTrue(listener.hasCalledOnLocationChanged(TEST_TIME_OUT));
+        Location location = listener.getLocation();
+        assertEquals(providerName, location.getProvider());
+        assertEquals(latitude, location.getLatitude());
+        assertEquals(longitude, location.getLongitude());
+
+        // Remove the listener.
+        mManager.removeUpdates(listener);
     }
 
     private void registerIntentReceiver() {
@@ -870,7 +720,9 @@ public class LocationManagerTest extends InstrumentationTestCase {
      *            if exit expected
      */
     private void assertProximityType(boolean expectedEnterProximity) throws Exception {
-        boolean proximityTest = mIntentReceiver.getLastReceivedIntent().getBooleanExtra(
+        Intent intent = mIntentReceiver.getLastReceivedIntent();
+        assertNotNull("Did not receive any intent", intent);
+        boolean proximityTest = intent.getBooleanExtra(
                 LocationManager.KEY_PROXIMITY_ENTERING, !expectedEnterProximity);
         assertEquals("proximity alert not set to expected enter proximity value",
                 expectedEnterProximity, proximityTest);
@@ -881,13 +733,22 @@ public class LocationManagerTest extends InstrumentationTestCase {
         Location location = new Location(providerName);
         location.setLatitude(latitude);
         location.setLongitude(longitude);
-
+        location.setAccuracy(1.0f);
         location.setTime(java.lang.System.currentTimeMillis());
+        location.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos());
         mManager.setTestProviderLocation(providerName, location);
     }
 
     private void updateLocation(final double latitude, final double longitude) {
         updateLocation(TEST_MOCK_PROVIDER_NAME, latitude, longitude);
+    }
+
+    private void mockFusedLocation() {
+        addTestProvider(FUSED_PROVIDER_NAME);
+    }
+
+    private void unmockFusedLocation() {
+        mManager.removeTestProvider(FUSED_PROVIDER_NAME);
     }
 
     /**

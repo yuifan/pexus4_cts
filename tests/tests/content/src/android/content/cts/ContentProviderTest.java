@@ -18,30 +18,23 @@ package android.content.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.IContentProvider;
-import android.content.EntityIterator;
 import android.content.ContentProviderResult;
 import android.content.ContentProviderOperation;
 import android.content.OperationApplicationException;
 import android.content.pm.ProviderInfo;
 import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
-import android.database.CursorWindow;
-import android.database.IBulkCursor;
-import android.database.IContentObserver;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.ICancellationSignal;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.test.AndroidTestCase;
@@ -54,7 +47,6 @@ import java.util.ArrayList;
 /**
  * Test {@link ContentProvider}.
  */
-@TestTargetClass(ContentProvider.class)
 public class ContentProviderTest extends AndroidTestCase {
     private static final String TEST_PACKAGE_NAME = "com.android.cts.stub";
     private static final String TEST_FILE_NAME = "testFile.tmp";
@@ -67,11 +59,6 @@ public class ContentProviderTest extends AndroidTestCase {
         super.tearDown();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "openAssetFile",
-        args = {android.net.Uri.class, java.lang.String.class}
-    )
     public void testOpenAssetFile() throws IOException {
         MockContentProvider mockContentProvider = new MockContentProvider();
         Uri uri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE +
@@ -90,11 +77,6 @@ public class ContentProviderTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "attachInfo",
-        args = {android.content.Context.class, android.content.pm.ProviderInfo.class}
-    )
     public void testAttachInfo() {
         MockContentProvider mockContentProvider = new MockContentProvider();
 
@@ -131,11 +113,6 @@ public class ContentProviderTest extends AndroidTestCase {
         assertEquals(info1.writePermission, mockContentProvider.getWritePermission());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "bulkInsert",
-        args = {android.net.Uri.class, android.content.ContentValues[].class}
-    )
     public void testBulkInsert() {
         MockContentProvider mockContentProvider = new MockContentProvider();
 
@@ -156,11 +133,6 @@ public class ContentProviderTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getContext",
-        args = {}
-    )
     public void testGetContext() {
         MockContentProvider mockContentProvider = new MockContentProvider();
         assertNull(mockContentProvider.getContext());
@@ -171,18 +143,6 @@ public class ContentProviderTest extends AndroidTestCase {
         assertSame(getContext(), mockContentProvider.getContext());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getReadPermission",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setReadPermission",
-            args = {java.lang.String.class}
-        )
-    })
     public void testAccessReadPermission() {
         MockContentProvider mockContentProvider = new MockContentProvider();
         assertNull(mockContentProvider.getReadPermission());
@@ -199,18 +159,6 @@ public class ContentProviderTest extends AndroidTestCase {
         assertNull(mockContentProvider.getReadPermission());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getWritePermission",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setWritePermission",
-            args = {java.lang.String.class}
-        )
-    })
     public void testAccessWritePermission() {
         MockContentProvider mockContentProvider = new MockContentProvider();
         assertNull(mockContentProvider.getWritePermission());
@@ -227,21 +175,11 @@ public class ContentProviderTest extends AndroidTestCase {
         assertNull(mockContentProvider.getWritePermission());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isTemporary",
-        args = {}
-    )
     public void testIsTemporary() {
         MockContentProvider mockContentProvider = new MockContentProvider();
         assertFalse(mockContentProvider.isTemporary());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "openFile",
-        args = {android.net.Uri.class, java.lang.String.class}
-    )
     public void testOpenFile() {
         MockContentProvider mockContentProvider = new MockContentProvider();
 
@@ -259,11 +197,6 @@ public class ContentProviderTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "openFileHelper",
-        args = {android.net.Uri.class, java.lang.String.class}
-    )
     public void testOpenFileHelper() throws IOException {
 
         // create a temporary File
@@ -300,29 +233,14 @@ public class ContentProviderTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_FEASIBLE,
-        method = "onConfigurationChanged",
-        args = {android.content.res.Configuration.class}
-    )
     public void testOnConfigurationChanged() {
         // cannot trigger this callback reliably
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_FEASIBLE,
-        method = "onLowMemory",
-        args = {}
-    )
     public void testOnLowMemory() {
         // cannot trigger this callback reliably
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "coerceToLocalContentProvider",
-        args = {android.content.IContentProvider.class}
-    )
     public void testCoerceToLocalContentProvider() {
         MockContentProvider mockContentProvider = new MockContentProvider();
 
@@ -330,80 +248,85 @@ public class ContentProviderTest extends AndroidTestCase {
         assertSame(mockContentProvider, ContentProvider.coerceToLocalContentProvider(transport));
 
         IContentProvider iContentProvider = new IContentProvider() {
-            public IBulkCursor bulkQuery(Uri url, String[] projection, String selection,
-                    String[] selectionArgs, String sortOrder, IContentObserver observer,
-                    CursorWindow window) throws RemoteException {
-                return null;
-            }
-
+            @Override
             public int bulkInsert(Uri url, ContentValues[] initialValues) {
                 return 0;
             }
 
+            @Override
             public int delete(Uri url, String selection, String[] selectionArgs) {
                 return 0;
             }
 
+            @Override
             public String getType(Uri url) {
                 return null;
             }
 
+            @Override
             public Uri insert(Uri url, ContentValues initialValues) {
                 return null;
             }
 
+            @Override
             public ParcelFileDescriptor openFile(Uri url, String mode) {
                 return null;
             }
 
+            @Override
             public AssetFileDescriptor openAssetFile(Uri url, String mode) {
                 return null;
             }
 
+            @Override
             public ContentProviderResult[] applyBatch(
                     ArrayList<ContentProviderOperation> operations)
                     throws RemoteException, OperationApplicationException {
                 return null;
             }
 
+            @Override
             public Cursor query(Uri url, String[] projection, String selection,
-                    String[] selectionArgs, String sortOrder) {
+                    String[] selectionArgs, String sortOrder,
+                    ICancellationSignal cancellationSignal) {
                 return null;
             }
 
-            /**
-             * @hide
-             */
-            public EntityIterator queryEntities(Uri url, String selection, String[] selectionArgs,
-                    String sortOrder) throws RemoteException {
-                return null;
-            }
-
+            @Override
             public int update(Uri url, ContentValues values, String selection,
                     String[] selectionArgs) {
                 return 0;
             }
 
+            @Override
             public IBinder asBinder() {
                 return null;
             }
 
-            /**
-             * @hide
-             */
+            @Override
             public Bundle call(String method, String request, Bundle args) {
+                return null;
+            }
+
+            @Override
+            public String[] getStreamTypes(Uri url, String mimeTypeFilter) throws RemoteException {
+                return null;
+            }
+
+            @Override
+            public AssetFileDescriptor openTypedAssetFile(Uri url, String mimeType, Bundle opts)
+                    throws RemoteException, FileNotFoundException {
+                return null;
+            }
+
+            @Override
+            public ICancellationSignal createCancellationSignal() throws RemoteException {
                 return null;
             }
         };
         assertNull(ContentProvider.coerceToLocalContentProvider(iContentProvider));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test getIContentProvider()",
-        method = "getIContentProvider",
-        args = {}
-    )
     public void testGetIContentProvider() {
         MockContentProvider mockContentProvider = new MockContentProvider();
 

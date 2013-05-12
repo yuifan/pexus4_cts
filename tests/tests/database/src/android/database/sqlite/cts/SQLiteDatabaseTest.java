@@ -17,13 +17,13 @@
 package android.database.sqlite.cts;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.Semaphore;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.SQLException;
@@ -37,13 +37,9 @@ import android.database.sqlite.SQLiteStatement;
 import android.database.sqlite.SQLiteTransactionListener;
 import android.test.AndroidTestCase;
 import android.test.MoreAsserts;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.ToBeFixed;
+import android.test.suitebuilder.annotation.LargeTest;
+import android.test.suitebuilder.annotation.SmallTest;
 
-@TestTargetClass(android.database.sqlite.SQLiteDatabase.class)
 public class SQLiteDatabaseTest extends AndroidTestCase {
     private SQLiteDatabase mDatabase;
     private File mDatabaseFile;
@@ -91,41 +87,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test openDatabase",
-            method = "openDatabase",
-            args = {java.lang.String.class,
-                    android.database.sqlite.SQLiteDatabase.CursorFactory.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test openOrCreateDatabase",
-            method = "openOrCreateDatabase",
-            args = {java.io.File.class,
-                    android.database.sqlite.SQLiteDatabase.CursorFactory.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test openOrCreateDatabase",
-            method = "openOrCreateDatabase",
-            args = {java.lang.String.class,
-                    android.database.sqlite.SQLiteDatabase.CursorFactory.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test close",
-            method = "close",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test create",
-            method = "create",
-            args = {android.database.sqlite.SQLiteDatabase.CursorFactory.class}
-        )
-    })
     public void testOpenDatabase() {
         CursorFactory factory = new CursorFactory() {
             public Cursor newCursor(SQLiteDatabase db, SQLiteCursorDriver masterQuery,
@@ -139,17 +100,8 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         assertNotNull(db);
         db.close();
 
-        try {
-            // do not allow to create file in the directory
-            SQLiteDatabase.openDatabase("/system/database.db", factory,
-                    SQLiteDatabase.CREATE_IF_NECESSARY);
-            fail("didn't throw SQLiteException when do not allow to create database file");
-        } catch (SQLiteException e) {
-        } finally {
-            db.close();
-        }
-
         File dbFile = new File(mDatabaseDir, "database_test12345678.db");
+        dbFile.delete();
         assertFalse(dbFile.exists());
         db = SQLiteDatabase.openOrCreateDatabase(dbFile.getPath(), factory);
         assertNotNull(db);
@@ -167,6 +119,40 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         db.close();
     }
 
+    public void testDeleteDatabase() throws IOException {
+        File dbFile = new File(mDatabaseDir, "database_test12345678.db");
+        File journalFile = new File(dbFile.getPath() + "-journal");
+        File shmFile = new File(dbFile.getPath() + "-shm");
+        File walFile = new File(dbFile.getPath() + "-wal");
+        File mjFile1 = new File(dbFile.getPath() + "-mj00000000");
+        File mjFile2 = new File(dbFile.getPath() + "-mj00000001");
+        File innocentFile = new File(dbFile.getPath() + "-innocent");
+
+        dbFile.createNewFile();
+        journalFile.createNewFile();
+        shmFile.createNewFile();
+        walFile.createNewFile();
+        mjFile1.createNewFile();
+        mjFile2.createNewFile();
+        innocentFile.createNewFile();
+
+        boolean deleted = SQLiteDatabase.deleteDatabase(dbFile);
+        assertTrue(deleted);
+
+        assertFalse(dbFile.exists());
+        assertFalse(journalFile.exists());
+        assertFalse(shmFile.exists());
+        assertFalse(walFile.exists());
+        assertFalse(mjFile1.exists());
+        assertFalse(mjFile2.exists());
+        assertTrue(innocentFile.exists());
+
+        innocentFile.delete();
+
+        boolean deletedAgain = SQLiteDatabase.deleteDatabase(dbFile);
+        assertFalse(deletedAgain);
+    }
+
     private class MockSQLiteCursor extends SQLiteCursor {
         public MockSQLiteCursor(SQLiteDatabase db, SQLiteCursorDriver driver,
                 String editTable, SQLiteQuery query) {
@@ -174,44 +160,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test beginTransaction()",
-            method = "beginTransaction",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test endTransaction()",
-            method = "endTransaction",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test setTransactionSuccessful()",
-            method = "setTransactionSuccessful",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test inTransaction()",
-            method = "inTransaction",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test isDbLockedByCurrentThread()",
-            method = "isDbLockedByCurrentThread",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test isDbLockedByOtherThreads()",
-            method = "isDbLockedByOtherThreads",
-            args = {}
-        )
-    })
     public void testTransaction() {
         mDatabase.execSQL("CREATE TABLE test (num INTEGER);");
         mDatabase.execSQL("INSERT INTO test (num) VALUES (0)");
@@ -338,102 +286,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @SuppressWarnings("deprecation")
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test getSyncedTables()",
-            method = "getSyncedTables",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test markTableSyncable(String, String)",
-            method = "markTableSyncable",
-            args = {java.lang.String.class, java.lang.String.class}
-        )
-    })
-    public void testGetSyncedTables() {
-        mDatabase.execSQL("CREATE TABLE people (_id INTEGER PRIMARY KEY, name TEXT, "
-                + "_sync_dirty INTEGER);");
-        mDatabase.execSQL("CREATE TABLE _delete_people (name TEXT);");
-        Map<String, String> tableMap = mDatabase.getSyncedTables();
-        assertEquals(0, tableMap.size());
-        mDatabase.markTableSyncable("people", "_delete_people");
-        tableMap = mDatabase.getSyncedTables();
-        assertEquals(1, tableMap.size());
-        Set<String> keys = tableMap.keySet();
-        Iterator<String> iterator = keys.iterator();
-        assertTrue(iterator.hasNext());
-        assertEquals("people", iterator.next());
-        assertEquals("_delete_people", tableMap.get("people"));
-        assertFalse(iterator.hasNext());
-
-        // test sync
-        mDatabase.execSQL("INSERT INTO people VALUES (0, \"foo\", 0);");
-        Cursor c = mDatabase.query("people", new String[] {"_id", "name" },
-                "_id = 0", null, null, null, null);
-        assertTrue(c.moveToFirst());
-        c.updateString(1, "updated");
-        c.commitUpdates();
-        c.close();
-        c = mDatabase.query("people", new String[] {"_id", "_sync_dirty" },
-                "_id = 0", null, null, null, null);
-        assertTrue(c.moveToFirst());
-        // _sync_dirty flag has been set
-        assertEquals(1, c.getInt(1));
-        c.close();
-    }
-
-    @SuppressWarnings("deprecation")
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test markTableSyncable(String, String, String)",
-        method = "markTableSyncable",
-        args = {java.lang.String.class, java.lang.String.class, java.lang.String.class}
-    )
-    public void testMarkTableSyncable() {
-        mDatabase.execSQL("CREATE TABLE phone (_id INTEGER PRIMARY KEY, _people_id INTEGER, " +
-                "name TEXT);");
-        mDatabase.execSQL("CREATE TABLE people (_id INTEGER PRIMARY KEY, " +
-                "name TEXT, _sync_dirty INTEGER);");
-        mDatabase.markTableSyncable("phone", "_people_id", "people");
-
-        Map<String, String> tableMap = mDatabase.getSyncedTables();
-        // since no delete table was given, there is no mapping
-        assertEquals(0, tableMap.size());
-
-        // test sync
-        mDatabase.execSQL("INSERT INTO people VALUES (13, \"foo\", 0);");
-        mDatabase.execSQL("INSERT INTO phone VALUES (0, 13, \"bar\");");
-        Cursor c = mDatabase.query("phone", new String[] {"_id", "name" },
-                "_id = 0", null, null, null, null);
-        assertTrue(c.moveToFirst());
-        c.updateString(1, "updated");
-        c.commitUpdates();
-        c.close();
-        c = mDatabase.query("people", new String[] {"_id", "_sync_dirty" },
-                "_id = 13", null, null, null, null);
-        assertTrue(c.moveToFirst());
-        // _sync_dirty flag has been set
-        assertEquals(1, c.getInt(1));
-        c.close();
-    }
-
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test getMaximumSize()",
-            method = "getMaximumSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test setMaximumSize(long)",
-            method = "setMaximumSize",
-            args = {long.class}
-        )
-    })
     public void testAccessMaximumSize() {
         long curMaximumSize = mDatabase.getMaximumSize();
 
@@ -447,21 +299,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         assertTrue(mDatabase.getMaximumSize() > curMaximumSize);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test getPageSize()",
-            method = "getPageSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test setPageSize(long)",
-            method = "setPageSize",
-            args = {long.class}
-        )
-    })
-    @ToBeFixed(bug = "1676383", explanation = "setPageSize does not work as javadoc declares.")
     public void testAccessPageSize() {
         File databaseFile = new File(mDatabaseDir, "database.db");
         if (databaseFile.exists()) {
@@ -485,12 +322,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test compileStatement(String)",
-        method = "compileStatement",
-        args = {java.lang.String.class}
-    )
     public void testCompileStatement() {
         mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, "
                 + "name TEXT, age INTEGER, address TEXT);");
@@ -532,12 +363,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         cursor.close();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test delete(String, String, String[])",
-        method = "delete",
-        args = {java.lang.String.class, java.lang.String.class, java.lang.String[].class}
-    )
     public void testDelete() {
         mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, "
                 + "name TEXT, age INTEGER, address TEXT);");
@@ -546,7 +371,8 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         mDatabase.execSQL("INSERT INTO test (name, age, address) VALUES ('Jim', 35, 'Chicago');");
 
         // delete one record.
-        mDatabase.delete(TABLE_NAME, "name = 'Mike'", null);
+        int count = mDatabase.delete(TABLE_NAME, "name = 'Mike'", null);
+        assertEquals(1, count);
 
         Cursor cursor = mDatabase.query(TABLE_NAME, TEST_PROJECTION, null,
                 null, null, null, null);
@@ -564,7 +390,8 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         cursor.close();
 
         // delete another record.
-        mDatabase.delete(TABLE_NAME, "name = ?", new String[] { "Jack" });
+        count = mDatabase.delete(TABLE_NAME, "name = ?", new String[] { "Jack" });
+        assertEquals(1, count);
 
         cursor = mDatabase.query(TABLE_NAME, TEST_PROJECTION, null, null, null,
                 null, null);
@@ -581,7 +408,8 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         mDatabase.execSQL("INSERT INTO test (name, age, address) VALUES ('Jack', 30, 'London');");
 
         // delete all records.
-        mDatabase.delete(TABLE_NAME, null, null);
+        count = mDatabase.delete(TABLE_NAME, null, null);
+        assertEquals(3, count);
 
         cursor = mDatabase.query(TABLE_NAME, TEST_PROJECTION, null, null, null, null, null);
         assertNotNull(cursor);
@@ -589,20 +417,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         cursor.close();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test execSQL(String)",
-            method = "execSQL",
-            args = {java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test execSQL(String, Object[])",
-            method = "execSQL",
-            args = {java.lang.String.class, java.lang.Object[].class}
-        )
-    })
     public void testExecSQL() {
         mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, "
                 + "name TEXT, age INTEGER, address TEXT);");
@@ -693,12 +507,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         cursor.close();;
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test findEditTable(String)",
-        method = "findEditTable",
-        args = {java.lang.String.class}
-    )
     public void testFindEditTable() {
         String tables = "table1 table2 table3";
         assertEquals("table1", SQLiteDatabase.findEditTable(tables));
@@ -716,30 +524,10 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test getPath()",
-        method = "getPath",
-        args = {}
-    )
     public void testGetPath() {
         assertEquals(mDatabaseFilePath, mDatabase.getPath());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test getVersion()",
-            method = "getVersion",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test setVersion(int)",
-            method = "setVersion",
-            args = {int.class}
-        )
-    })
     public void testAccessVersion() {
         mDatabase.setVersion(1);
         assertEquals(1, mDatabase.getVersion());
@@ -748,22 +536,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         assertEquals(3, mDatabase.getVersion());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test insert(String, String, ContentValues)",
-            method = "insert",
-            args = {java.lang.String.class, java.lang.String.class,
-                    android.content.ContentValues.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test insertOrThrow(String, String, ContentValues)",
-            method = "insertOrThrow",
-            args = {java.lang.String.class, java.lang.String.class,
-                    android.content.ContentValues.class}
-        )
-    })
     public void testInsert() {
         mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, "
                 + "name TEXT, age INTEGER, address TEXT);");
@@ -848,12 +620,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test isOpen()",
-        method = "isOpen",
-        args = {}
-    )
     public void testIsOpen() {
         assertTrue(mDatabase.isOpen());
 
@@ -861,12 +627,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         assertFalse(mDatabase.isOpen());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test isReadOnly()",
-        method = "isReadOnly",
-        args = {}
-    )
     public void testIsReadOnly() {
         assertFalse(mDatabase.isReadOnly());
 
@@ -882,22 +642,10 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test releaseMemory()",
-        method = "releaseMemory",
-        args = {}
-    )
     public void testReleaseMemory() {
         SQLiteDatabase.releaseMemory();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test setLockingEnabled()",
-        method = "setLockingEnabled",
-        args = {boolean.class}
-    )
     public void testSetLockingEnabled() {
         mDatabase.execSQL("CREATE TABLE test (num INTEGER);");
         mDatabase.execSQL("INSERT INTO test (num) VALUES (0)");
@@ -911,22 +659,8 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         mDatabase.endTransaction();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test yieldIfContended()",
-            method = "yieldIfContended",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test yieldIfContendedSafely()",
-            method = "yieldIfContendedSafely",
-            args = {}
-        )
-    })
     @SuppressWarnings("deprecation")
-    public void testYieldIfContended() {
+    public void testYieldIfContendedWhenNotContended() {
         assertFalse(mDatabase.yieldIfContended());
 
         mDatabase.execSQL("CREATE TABLE test (num INTEGER);");
@@ -953,54 +687,58 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         mDatabase.endTransaction();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test query",
-            method = "query",
-            args = {boolean.class, java.lang.String.class, java.lang.String[].class,
-                    java.lang.String.class, java.lang.String[].class, java.lang.String.class,
-                    java.lang.String.class, java.lang.String.class, java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test queryWithFactory",
-            method = "queryWithFactory",
-            args = {android.database.sqlite.SQLiteDatabase.CursorFactory.class, boolean.class,
-                    java.lang.String.class, java.lang.String[].class, java.lang.String.class,
-                    java.lang.String[].class, java.lang.String.class, java.lang.String.class,
-                    java.lang.String.class, java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test query",
-            method = "query",
-            args = {java.lang.String.class, java.lang.String[].class, java.lang.String.class,
-                    java.lang.String[].class, java.lang.String.class, java.lang.String.class,
-                    java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test query",
-            method = "query",
-            args = {java.lang.String.class, java.lang.String[].class, java.lang.String.class,
-                    java.lang.String[].class, java.lang.String.class, java.lang.String.class,
-                    java.lang.String.class, java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test rawQuery",
-            method = "rawQuery",
-            args = {java.lang.String.class, java.lang.String[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test rawQueryWithFactory",
-            method = "rawQueryWithFactory",
-            args = {android.database.sqlite.SQLiteDatabase.CursorFactory.class,
-                    java.lang.String.class, java.lang.String[].class, java.lang.String.class}
-        )
-    })
+    @SuppressWarnings("deprecation")
+    public void testYieldIfContendedWhenContended() throws Exception {
+        mDatabase.execSQL("CREATE TABLE test (num INTEGER);");
+        mDatabase.execSQL("INSERT INTO test (num) VALUES (0)");
+
+        // Begin a transaction and update a value.
+        mDatabase.beginTransaction();
+        setNum(1);
+        assertNum(1);
+
+        // On another thread, begin a transaction there.  This causes contention
+        // for use of the database.  When the main thread yields, the second thread
+        // begin its own transaction.  It should perceive the new state that was
+        // committed by the main thread when it yielded.
+        final Semaphore s = new Semaphore(0);
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                s.release(); // let main thread continue
+
+                mDatabase.beginTransaction();
+                assertNum(1);
+                setNum(2);
+                assertNum(2);
+                mDatabase.setTransactionSuccessful();
+                mDatabase.endTransaction();
+            }
+        };
+        t.start();
+
+        // Wait for thread to try to begin its transaction.
+        s.acquire();
+        Thread.sleep(500);
+
+        // Yield.  There should be contention for the database now, so yield will
+        // return true.
+        assertTrue(mDatabase.yieldIfContendedSafely());
+
+        // Since we reacquired the transaction, the other thread must have finished
+        // its transaction.  We should observe its changes and our own within this transaction.
+        assertNum(2);
+        setNum(3);
+        assertNum(3);
+
+        // Go ahead and finish the transaction.
+        mDatabase.setTransactionSuccessful();
+        mDatabase.endTransaction();
+        assertNum(3);
+
+        t.join();
+    }
+
     public void testQuery() {
         mDatabase.execSQL("CREATE TABLE employee (_id INTEGER PRIMARY KEY, " +
                 "name TEXT, month INTEGER, salary INTEGER);");
@@ -1110,22 +848,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         cursor.close();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test replace()",
-            method = "replace",
-            args = {java.lang.String.class, java.lang.String.class,
-                    android.content.ContentValues.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test replaceOrThrow()",
-            method = "replaceOrThrow",
-            args = {java.lang.String.class, java.lang.String.class,
-                    android.content.ContentValues.class}
-        )
-    })
     public void testReplace() {
         mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, "
                 + "name TEXT, age INTEGER, address TEXT);");
@@ -1191,13 +913,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test update()",
-        method = "update",
-        args = {java.lang.String.class, android.content.ContentValues.class,
-                java.lang.String.class, java.lang.String[].class}
-    )
     public void testUpdate() {
         mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, data TEXT);");
 
@@ -1218,12 +933,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         cursor.close();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test needUpgrade(int)",
-        method = "needUpgrade",
-        args = {int.class}
-    )
     public void testNeedUpgrade() {
         mDatabase.setVersion(0);
         assertTrue(mDatabase.needUpgrade(1));
@@ -1231,12 +940,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         assertFalse(mDatabase.needUpgrade(1));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test setLocale(Locale)",
-        method = "setLocale",
-        args = {java.util.Locale.class}
-    )
     public void testSetLocale() {
         final String[] STRINGS = {
                 "c\u00f4t\u00e9",
@@ -1280,24 +983,12 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         });
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test onAllReferencesReleased()",
-        method = "onAllReferencesReleased",
-        args = {}
-    )
     public void testOnAllReferencesReleased() {
         assertTrue(mDatabase.isOpen());
         mDatabase.releaseReference();
         assertFalse(mDatabase.isOpen());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test transaction with SQLTransactionListener()",
-        method = "beginTransactionWithListener",
-        args = {SQLiteTransactionListener.class}
-    )
     public void testTransactionWithSQLiteTransactionListener() {
         mDatabase.execSQL("CREATE TABLE test (num INTEGER);");
         mDatabase.execSQL("INSERT INTO test (num) VALUES (0)");
@@ -1329,12 +1020,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         assertEquals(mTransactionListenerOnRollbackCalled, false);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test transaction w/rollback with SQLTransactionListener()",
-        method = "beginTransactionWithListener",
-        args = {SQLiteTransactionListener.class}
-    )
     public void testRollbackTransactionWithSQLiteTransactionListener() {
         mDatabase.execSQL("CREATE TABLE test (num INTEGER);");
         mDatabase.execSQL("INSERT INTO test (num) VALUES (0)");
@@ -1379,15 +1064,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "removed the android-provided group_concat built-in function." +
-                    "Instead we are now using the sqlite3.c provided group_concat function." +
-                    "and it returns NULL if the columnds to be concatenated have null values" +
-                    " in them",
-            method = "sqlite3::group_concat built-in function",
-            args = {java.lang.String.class}
-        )
     public void testGroupConcat() {
         mDatabase.execSQL("CREATE TABLE test (i INT, j TEXT);");
 
@@ -1421,12 +1097,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         // should get no exceptions
     }
 
-    @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test schema changes - change existing table.",
-            method = "compileStatement",
-            args = {java.lang.String.class}
-        )
     public void testSchemaChanges() {
         mDatabase.execSQL("CREATE TABLE test (i INT, j INT);");
 
@@ -1494,12 +1164,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         deleteStatement.close();
     }
 
-    @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test schema changes - add new table.",
-            method = "compileStatement",
-            args = {java.lang.String.class}
-        )
     public void testSchemaChangesNewTable() {
         mDatabase.execSQL("CREATE TABLE test (i INT, j INT);");
 
@@ -1564,12 +1228,6 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         deleteStatement2.close();
     }
 
-    @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test schema changes - drop existing table.",
-            method = "compileStatement",
-            args = {java.lang.String.class}
-        )
     public void testSchemaChangesDropTable() {
         mDatabase.execSQL("CREATE TABLE test (i INT, j INT);");
 
@@ -1593,5 +1251,246 @@ public class SQLiteDatabaseTest extends AndroidTestCase {
         cursor.moveToNext();
         assertEquals(1, cursor.getInt(0));
         assertEquals(2, cursor.getInt(1));
+    }
+
+    /**
+     * With sqlite's write-ahead-logging (WAL) enabled, readers get old version of data
+     * from the table that a writer is modifying at the same time.
+     * <p>
+     * This method does the following to test this sqlite3 feature
+     * <ol>
+     *   <li>creates a table in the database and populates it with 5 rows of data</li>
+     *   <li>do "select count(*) from this_table" and expect to receive 5</li>
+     *   <li>start a writer thread who BEGINs a transaction, INSERTs a single row
+     *   into this_table</li>
+     *   <li>writer stops the transaction at this point, kicks off a reader thread - which will
+     *       do  the above SELECT query: "select count(*) from this_table"</li>
+     *   <li>this query should return value 5 - because writer is still in transaction and
+     *    sqlite returns OLD version of the data</li>
+     *   <li>writer ends the transaction, thus making the extra row now visible to everyone</li>
+     *   <li>reader is kicked off again to do the same query. this time query should
+     *   return value = 6 which includes the newly inserted row into this_table.</li>
+     *</p>
+     * @throws InterruptedException
+     */
+    @LargeTest
+    public void testReaderGetsOldVersionOfDataWhenWriterIsInXact() throws InterruptedException {
+        // redo setup to create WAL enabled database
+        mDatabase.close();
+        new File(mDatabase.getPath()).delete();
+        mDatabase = SQLiteDatabase.openOrCreateDatabase(mDatabaseFile.getPath(), null, null);
+        boolean rslt = mDatabase.enableWriteAheadLogging();
+        assertTrue(rslt);
+        assertNotNull(mDatabase);
+
+        // create a new table and insert 5 records into it.
+        mDatabase.execSQL("CREATE TABLE t1 (i int, j int);");
+        mDatabase.beginTransaction();
+        for (int i = 0; i < 5; i++) {
+            mDatabase.execSQL("insert into t1 values(?,?);", new String[] {i+"", i+""});
+        }
+        mDatabase.setTransactionSuccessful();
+        mDatabase.endTransaction();
+
+        // make sure a reader can read the above data
+        ReaderQueryingData r1 = new ReaderQueryingData(5);
+        r1.start();
+        Thread.yield();
+        try {r1.join();} catch (Exception e) {}
+
+        WriterDoingSingleTransaction w = new WriterDoingSingleTransaction();
+        w.start();
+        w.join();
+    }
+
+    private class WriterDoingSingleTransaction extends Thread {
+        @Override public void run() {
+            // start a transaction
+            mDatabase.beginTransactionNonExclusive();
+            mDatabase.execSQL("insert into t1 values(?,?);", new String[] {"11", "11"});
+            assertTrue(mDatabase.isOpen());
+
+            // while the writer is in a transaction, start a reader and make sure it can still
+            // read 5 rows of data (= old data prior to the current transaction)
+            ReaderQueryingData r1 = new ReaderQueryingData(5);
+            r1.start();
+            try {r1.join();} catch (Exception e) {}
+
+            // now, have the writer do the select count(*)
+            // it should execute on the same connection as this transaction
+            // and count(*) should reflect the newly inserted row
+            Long l = DatabaseUtils.longForQuery(mDatabase, "select count(*) from t1", null);
+            assertEquals(6, l.intValue());
+
+            // end transaction
+            mDatabase.setTransactionSuccessful();
+            mDatabase.endTransaction();
+
+            // reader should now be able to read 6 rows = new data AFTER this transaction
+            r1 = new ReaderQueryingData(6);
+            r1.start();
+            try {r1.join();} catch (Exception e) {}
+        }
+    }
+
+    private class ReaderQueryingData extends Thread {
+        private int count;
+        /**
+         * constructor with a param to indicate the number of rows expected to be read
+         */
+        public ReaderQueryingData(int count) {
+            this.count = count;
+        }
+        @Override public void run() {
+            Long l = DatabaseUtils.longForQuery(mDatabase, "select count(*) from t1", null);
+            assertEquals(count, l.intValue());
+        }
+    }
+
+    public void testExceptionsFromEnableWriteAheadLogging() {
+        // attach a database
+        // redo setup to create WAL enabled database
+        mDatabase.close();
+        new File(mDatabase.getPath()).delete();
+        mDatabase = SQLiteDatabase.openOrCreateDatabase(mDatabaseFile.getPath(), null, null);
+
+        // attach a database and call enableWriteAheadLogging - should not be allowed
+        mDatabase.execSQL("attach database ':memory:' as memoryDb");
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        assertFalse(mDatabase.enableWriteAheadLogging());
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+
+        // enableWriteAheadLogging on memory database is not allowed
+        SQLiteDatabase db = SQLiteDatabase.create(null);
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        assertFalse(db.enableWriteAheadLogging());
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        db.close();
+    }
+
+    public void testEnableThenDisableWriteAheadLogging() {
+        // Enable WAL.
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(mDatabase.enableWriteAheadLogging());
+        assertTrue(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(DatabaseUtils.stringForQuery(mDatabase, "PRAGMA journal_mode", null)
+                .equalsIgnoreCase("WAL"));
+
+        // Enabling when already enabled should have no observable effect.
+        assertTrue(mDatabase.enableWriteAheadLogging());
+        assertTrue(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(DatabaseUtils.stringForQuery(mDatabase, "PRAGMA journal_mode", null)
+                .equalsIgnoreCase("WAL"));
+
+        // Disabling when there are no connections should work.
+        mDatabase.disableWriteAheadLogging();
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+    }
+
+    public void testEnableThenDisableWriteAheadLoggingUsingOpenFlag() {
+        new File(mDatabase.getPath()).delete();
+        mDatabase = SQLiteDatabase.openDatabase(mDatabaseFile.getPath(), null,
+                SQLiteDatabase.CREATE_IF_NECESSARY | SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
+                null);
+        assertTrue(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(DatabaseUtils.stringForQuery(mDatabase, "PRAGMA journal_mode", null)
+                .equalsIgnoreCase("WAL"));
+
+        // Enabling when already enabled should have no observable effect.
+        assertTrue(mDatabase.enableWriteAheadLogging());
+        assertTrue(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(DatabaseUtils.stringForQuery(mDatabase, "PRAGMA journal_mode", null)
+                .equalsIgnoreCase("WAL"));
+
+        // Disabling when there are no connections should work.
+        mDatabase.disableWriteAheadLogging();
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+    }
+
+    public void testEnableWriteAheadLoggingFromContextUsingModeFlag() {
+        // Without the MODE_ENABLE_WRITE_AHEAD_LOGGING flag, database opens without WAL.
+        getContext().deleteDatabase(DATABASE_FILE_NAME);
+        mDatabase = getContext().openOrCreateDatabase(DATABASE_FILE_NAME,
+                Context.MODE_PRIVATE, null);
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        mDatabase.close();
+
+        // With the MODE_ENABLE_WRITE_AHEAD_LOGGING flag, database opens with WAL.
+        getContext().deleteDatabase(DATABASE_FILE_NAME);
+        mDatabase = getContext().openOrCreateDatabase(DATABASE_FILE_NAME,
+                Context.MODE_PRIVATE | Context.MODE_ENABLE_WRITE_AHEAD_LOGGING, null);
+        assertTrue(mDatabase.isWriteAheadLoggingEnabled());
+        mDatabase.close();
+    }
+
+    public void testEnableWriteAheadLoggingShouldThrowIfTransactionInProgress() {
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        String oldJournalMode = DatabaseUtils.stringForQuery(
+                mDatabase, "PRAGMA journal_mode", null);
+
+        // Begin transaction.
+        mDatabase.beginTransaction();
+
+        try {
+            // Attempt to enable WAL should fail.
+            mDatabase.enableWriteAheadLogging();
+            fail("Expected IllegalStateException");
+        } catch (IllegalStateException ex) {
+            // expected
+        }
+
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(DatabaseUtils.stringForQuery(mDatabase, "PRAGMA journal_mode", null)
+                .equalsIgnoreCase(oldJournalMode));
+    }
+
+    public void testDisableWriteAheadLoggingShouldThrowIfTransactionInProgress() {
+        // Enable WAL.
+        assertFalse(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(mDatabase.enableWriteAheadLogging());
+        assertTrue(mDatabase.isWriteAheadLoggingEnabled());
+
+        // Begin transaction.
+        mDatabase.beginTransaction();
+
+        try {
+            // Attempt to disable WAL should fail.
+            mDatabase.disableWriteAheadLogging();
+            fail("Expected IllegalStateException");
+        } catch (IllegalStateException ex) {
+            // expected
+        }
+
+        assertTrue(mDatabase.isWriteAheadLoggingEnabled());
+        assertTrue(DatabaseUtils.stringForQuery(mDatabase, "PRAGMA journal_mode", null)
+                .equalsIgnoreCase("WAL"));
+    }
+
+    public void testEnableAndDisableForeignKeys() {
+        // Initially off.
+        assertEquals(0, DatabaseUtils.longForQuery(mDatabase, "PRAGMA foreign_keys", null));
+
+        // Enable foreign keys.
+        mDatabase.setForeignKeyConstraintsEnabled(true);
+        assertEquals(1, DatabaseUtils.longForQuery(mDatabase, "PRAGMA foreign_keys", null));
+
+        // Disable foreign keys.
+        mDatabase.setForeignKeyConstraintsEnabled(false);
+        assertEquals(0, DatabaseUtils.longForQuery(mDatabase, "PRAGMA foreign_keys", null));
+
+        // Cannot configure foreign keys if there are transactions in progress.
+        mDatabase.beginTransaction();
+        try {
+            mDatabase.setForeignKeyConstraintsEnabled(true);
+            fail("Expected IllegalStateException");
+        } catch (IllegalStateException ex) {
+            // expected
+        }
+        assertEquals(0, DatabaseUtils.longForQuery(mDatabase, "PRAGMA foreign_keys", null));
+        mDatabase.endTransaction();
+
+        // Enable foreign keys should work again after transaction complete.
+        mDatabase.setForeignKeyConstraintsEnabled(true);
+        assertEquals(1, DatabaseUtils.longForQuery(mDatabase, "PRAGMA foreign_keys", null));
     }
 }

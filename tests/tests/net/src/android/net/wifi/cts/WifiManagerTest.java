@@ -16,28 +16,28 @@
 
 package android.net.wifi.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiManager;
 import android.net.wifi.WifiConfiguration.Status;
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.TxPacketCountListener;
 import android.net.wifi.WifiManager.WifiLock;
 import android.test.AndroidTestCase;
 import android.util.Log;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
-@TestTargetClass(WifiManager.class)
 public class WifiManagerTest extends AndroidTestCase {
     private static class MySync {
         int expectedState = STATE_NULL;
@@ -47,6 +47,7 @@ public class WifiManagerTest extends AndroidTestCase {
     private WifiLock mWifiLock;
     private static MySync mMySync;
     private List<ScanResult> mScanResult = null;
+    private NetworkInfo mNetworkInfo;
 
     // Please refer to WifiManager
     private static final int MIN_RSSI = -100;
@@ -54,9 +55,10 @@ public class WifiManagerTest extends AndroidTestCase {
 
     private static final int STATE_NULL = 0;
     private static final int STATE_WIFI_CHANGING = 1;
-    private static final int STATE_WIFI_CHANGED = 2;
-    private static final int STATE_SCANING = 3;
-    private static final int STATE_SCAN_RESULTS_AVAILABLE = 4;
+    private static final int STATE_WIFI_ENABLED = 2;
+    private static final int STATE_WIFI_DISABLED = 3;
+    private static final int STATE_SCANNING = 4;
+    private static final int STATE_SCAN_RESULTS_AVAILABLE = 5;
 
     private static final String TAG = "WifiManagerTest";
     private static final String SSID1 = "\"WifiManagerTest\"";
@@ -75,13 +77,29 @@ public class WifiManagerTest extends AndroidTestCase {
                         mScanResult = mWifiManager.getScanResults();
                         mMySync.expectedState = STATE_SCAN_RESULTS_AVAILABLE;
                         mScanResult = mWifiManager.getScanResults();
-                        mMySync.notify();
+                        mMySync.notifyAll();
                     }
                 }
-            } else if (action.equals(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION)) {
+            } else if (action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)) {
+                int newState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE,
+                        WifiManager.WIFI_STATE_UNKNOWN);
                 synchronized (mMySync) {
-                    mMySync.expectedState = STATE_WIFI_CHANGED;
-                    mMySync.notify();
+                    if (newState == WifiManager.WIFI_STATE_ENABLED) {
+                        Log.d(TAG, "*** New WiFi state is ENABLED ***");
+                        mMySync.expectedState = STATE_WIFI_ENABLED;
+                        mMySync.notifyAll();
+                    } else if (newState == WifiManager.WIFI_STATE_DISABLED) {
+                        Log.d(TAG, "*** New WiFi state is DISABLED ***");
+                        mMySync.expectedState = STATE_WIFI_DISABLED;
+                        mMySync.notifyAll();
+                    }
+                }
+            } else if (action.equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
+                synchronized (mMySync) {
+                    mNetworkInfo =
+                            (NetworkInfo) intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+                    if (mNetworkInfo.getState() == NetworkInfo.State.CONNECTED)
+                        mMySync.notifyAll();
                 }
             }
         }
@@ -90,6 +108,10 @@ public class WifiManagerTest extends AndroidTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         mMySync = new MySync();
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
@@ -110,37 +132,59 @@ public class WifiManagerTest extends AndroidTestCase {
             setWifiEnabled(true);
         Thread.sleep(DURATION);
         assertTrue(mWifiManager.isWifiEnabled());
-        mMySync.expectedState = STATE_NULL;
+        synchronized (mMySync) {
+            mMySync.expectedState = STATE_NULL;
+        }
     }
 
     @Override
     protected void tearDown() throws Exception {
-        mWifiLock.release();
-        mContext.unregisterReceiver(mReceiver);
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            super.tearDown();
+            return;
+        }
         if (!mWifiManager.isWifiEnabled())
             setWifiEnabled(true);
+        mWifiLock.release();
+        mContext.unregisterReceiver(mReceiver);
         Thread.sleep(DURATION);
         super.tearDown();
     }
 
     private void setWifiEnabled(boolean enable) throws Exception {
         synchronized (mMySync) {
-            mMySync.expectedState = STATE_WIFI_CHANGING;
             assertTrue(mWifiManager.setWifiEnabled(enable));
-            long timeout = System.currentTimeMillis() + TIMEOUT_MSEC;
-            while (System.currentTimeMillis() < timeout
-                    && mMySync.expectedState == STATE_WIFI_CHANGING)
-                mMySync.wait(WAIT_MSEC);
+            if (mWifiManager.isWifiEnabled() != enable) {
+                mMySync.expectedState = STATE_WIFI_CHANGING;
+                long timeout = System.currentTimeMillis() + TIMEOUT_MSEC;
+                int expectedState = (enable ? STATE_WIFI_ENABLED : STATE_WIFI_DISABLED);
+                while (System.currentTimeMillis() < timeout
+                        && mMySync.expectedState != expectedState)
+                    mMySync.wait(WAIT_MSEC);
+            }
         }
     }
 
     private void startScan() throws Exception {
         synchronized (mMySync) {
-            mMySync.expectedState = STATE_SCANING;
+            mMySync.expectedState = STATE_SCANNING;
             assertTrue(mWifiManager.startScan());
             long timeout = System.currentTimeMillis() + TIMEOUT_MSEC;
-            while (System.currentTimeMillis() < timeout && mMySync.expectedState == STATE_SCANING)
+            while (System.currentTimeMillis() < timeout && mMySync.expectedState == STATE_SCANNING)
                 mMySync.wait(WAIT_MSEC);
+        }
+    }
+
+    private void connectWifi() throws Exception {
+        synchronized (mMySync) {
+            if (mNetworkInfo.getState() == NetworkInfo.State.CONNECTED) return;
+            assertTrue(mWifiManager.reconnect());
+            long timeout = System.currentTimeMillis() + TIMEOUT_MSEC;
+            while (System.currentTimeMillis() < timeout
+                    && mNetworkInfo.getState() != NetworkInfo.State.CONNECTED)
+                mMySync.wait(WAIT_MSEC);
+            assertTrue(mNetworkInfo.getState() == NetworkInfo.State.CONNECTED);
         }
     }
 
@@ -177,59 +221,11 @@ public class WifiManagerTest extends AndroidTestCase {
      * 4.pingSupplicant
      * 5.satrtScan
      */
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isWifiEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setWifiEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "startScan",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getScanResults",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "pingSupplicant",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "reassociate",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "reconnect",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "disconnect",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "createWifiLock",
-            args = {int.class, String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "createWifiLock",
-            args = {String.class}
-        )
-    })
     public void testWifiManagerActions() throws Exception {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         assertTrue(mWifiManager.reconnect());
         assertTrue(mWifiManager.reassociate());
         assertTrue(mWifiManager.disconnect());
@@ -250,34 +246,11 @@ public class WifiManagerTest extends AndroidTestCase {
      * 3.wifi state
      * 4.ConnectionInfo
      */
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isWifiEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getWifiState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setWifiEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getConnectionInfo",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDhcpInfo",
-            args = {}
-        )
-    })
     public void testWifiManagerProperties() throws Exception {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         setWifiEnabled(true);
         assertTrue(mWifiManager.isWifiEnabled());
         assertNotNull(mWifiManager.getDhcpInfo());
@@ -297,54 +270,11 @@ public class WifiManagerTest extends AndroidTestCase {
      * 6.configured Networks
      * 7.save configure;
      */
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isWifiEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setWifiEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getConfiguredNetworks",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "addNetwork",
-            args = {android.net.wifi.WifiConfiguration.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "updateNetwork",
-            args = {android.net.wifi.WifiConfiguration.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeNetwork",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "enableNetwork",
-            args = {int.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "disableNetwork",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "saveConfiguration",
-            args = {}
-        )
-    })
     public void testWifiManagerNetWork() throws Exception {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         // store the list of enabled networks, so they can be re-enabled after test completes
         Set<String> enabledSsids = getEnabledNetworks(mWifiManager.getConfiguredNetworks());
         try {
@@ -428,19 +358,11 @@ public class WifiManagerTest extends AndroidTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "compareSignalLevel",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "calculateSignalLevel",
-            args = {int.class, int.class}
-        )
-    })
     public void testSignal() {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         final int numLevels = 9;
         int expectLevel = 0;
         assertEquals(expectLevel, WifiManager.calculateSignalLevel(MIN_RSSI, numLevels));
@@ -456,5 +378,75 @@ public class WifiManagerTest extends AndroidTestCase {
         rssiA = 5;
         rssiB = 4;
         assertTrue(WifiManager.compareSignalLevel(rssiA, rssiB) > 0);
+    }
+
+    private int getTxPacketCount() throws Exception {
+        final AtomicInteger ret = new AtomicInteger(-1);
+
+        mWifiManager.getTxPacketCount(new TxPacketCountListener() {
+            @Override
+            public void onSuccess(int count) {
+                ret.set(count);
+            }
+            @Override
+            public void onFailure(int reason) {
+                ret.set(0);
+            }
+        });
+
+        long timeout = System.currentTimeMillis() + TIMEOUT_MSEC;
+        while (ret.get() < 0 && System.currentTimeMillis() < timeout)
+            Thread.sleep(WAIT_MSEC);
+        assertTrue(ret.get() >= 0);
+        return ret.get();
+    }
+
+    /**
+     * The new WiFi watchdog requires kernel/driver to export some packet loss
+     * counters. This CTS tests whether those counters are correctly exported.
+     * To pass this CTS test, a connected WiFi link is required.
+     */
+    public void testWifiWatchdog() throws Exception {
+        // Make sure WiFi is enabled
+        if (!mWifiManager.isWifiEnabled()) {
+            setWifiEnabled(true);
+            Thread.sleep(DURATION);
+        }
+        assertTrue(mWifiManager.isWifiEnabled());
+
+        int i = 0;
+        for (; i < 15; i++) {
+            // Wait for a WiFi connection
+            connectWifi();
+
+            // Read TX packet counter
+            int txcount1 = getTxPacketCount();
+
+            // Do some network operations
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL("http://www.google.com/");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setInstanceFollowRedirects(false);
+                connection.setConnectTimeout(TIMEOUT_MSEC);
+                connection.setReadTimeout(TIMEOUT_MSEC);
+                connection.setUseCaches(false);
+                connection.getInputStream();
+            } catch (Exception e) {
+                // ignore
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+
+            // Read TX packet counter again and make sure it increases
+            int txcount2 = getTxPacketCount();
+
+            if (txcount2 > txcount1) {
+                break;
+            } else {
+                Thread.sleep(DURATION);
+            }
+        }
+        assertTrue(i < 15);
     }
 }

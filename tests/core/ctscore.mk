@@ -12,43 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+LOCAL_JAVA_LIBRARIES := android.test.runner bouncycastle conscrypt
+LOCAL_PROGUARD_ENABLED := disabled
+LOCAL_DEX_PREOPT := false
+
 # don't include these packages in any target
 LOCAL_MODULE_TAGS := optional
-# and when built explicitly put them in the data partition
+# and when installed explicitly put them in the data partition
 LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_APPS)
+# Don't delete META-INF from the core-tests jar
+LOCAL_DONT_DELETE_JAR_META_INF := true
 
-LOCAL_JAVA_LIBRARIES := android.test.runner bouncycastle
-
-LOCAL_PROGUARD_ENABLED := disabled
+LOCAL_JNI_SHARED_LIBRARIES := libjavacoretests
 
 include $(BUILD_PACKAGE)
-
-CORETESTS_INTERMEDIATES := $(call intermediates-dir-for,JAVA_LIBRARIES,core-tests,,COMMON)
-
-PACKAGE_INTERMEDIATES := $(intermediates)
-PACKAGE_RESOURCES := $(PACKAGE_INTERMEDIATES)/package_res.apk
-
-$(LOCAL_INSTALLED_MODULE): $(PACKAGE_RESOURCES)
-
-$(PACKAGE_RESOURCES): PRIVATE_INTERMEDIATES_COMMON := $(intermediates.COMMON)
-$(PACKAGE_RESOURCES): PRIVATE_CORETESTS_INTERMEDIATES_COMMON := $(CORETESTS_INTERMEDIATES)
-$(PACKAGE_RESOURCES): PRIVATE_INTERMEDIATES := $(intermediates)
-$(PACKAGE_RESOURCES): PRIVATE_MODULE_STEM := $(LOCAL_BUILT_MODULE_STEM)
-$(PACKAGE_RESOURCES): PRIVATE_RESOURCE_DIRS := $(call all-core-resource-dirs,test)
-$(PACKAGE_RESOURCES): PRIVATE_LOCAL_PATH := $(LOCAL_PATH)
-$(PACKAGE_RESOURCES): PRIVATE_PRIVATE_KEY := $(private_key)
-$(PACKAGE_RESOURCES): PRIVATE_CERTIFICATE := $(certificate)
-$(PACKAGE_RESOURCES): $(LOCAL_BUILT_MODULE) $(CORETESTS_INTERMEDIATES)/javalib.jar
-	@echo "Add resources to package ($@)"
-	@rm -rf $(PRIVATE_INTERMEDIATES_COMMON)/ctsclasses
-# javalib.jar should only contain .dex files, but the harmony tests also include
-# some .class files, so get rid of them
-	$(call unzip-jar-files,$(PRIVATE_CORETESTS_INTERMEDIATES_COMMON)/javalib.jar,\
-		$(PRIVATE_INTERMEDIATES_COMMON)/ctsclasses)
-	@find $(PRIVATE_INTERMEDIATES_COMMON)/ctsclasses -type f -name "*.class" -delete
-	@rm -f $(PRIVATE_INTERMEDIATES_COMMON)/ctsclasses/classes.dex
-	@cp $< $@
-	@jar uf $@ -C $(PRIVATE_INTERMEDIATES_COMMON)/ctsclasses .
-	$(sign-package)
-	$(align-package)
-	$(hide) cp $@ $<

@@ -103,43 +103,6 @@ public class DatabaseCursorTest extends AndroidTestCase implements PerformanceTe
     }
 
     @MediumTest
-    public void testCursorUpdate() {
-        mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, d INTEGER, s INTEGER);");
-        for (int i = 0; i < 20; i++) {
-            mDatabase.execSQL("INSERT INTO test (d, s) VALUES (" + i + "," + i % 2 + ");");
-        }
-
-        Cursor testCursor = getTestCursor(mDatabase.query("test", null, "s = 0", null, null, null,
-                null));
-
-        int dCol = testCursor.getColumnIndexOrThrow("d");
-        int sCol = testCursor.getColumnIndexOrThrow("s");
-
-        int count = 0;
-        while (testCursor.moveToNext()) {
-            assertTrue(testCursor.updateInt(dCol, 3));
-            count++;
-        }
-        assertEquals(10, count);
-
-        assertTrue(testCursor.commitUpdates());
-
-        assertTrue(testCursor.requery());
-
-        count = 0;
-        while (testCursor.moveToNext()) {
-            assertEquals(3, testCursor.getInt(dCol));
-            count++;
-        }
-
-        assertEquals(10, count);
-        assertTrue(testCursor.moveToFirst());
-        assertTrue(testCursor.deleteRow());
-        assertEquals(9, testCursor.getCount());
-        testCursor.close();
-    }
-
-    @MediumTest
     public void testBlob() throws Exception {
         // create table
         mDatabase.execSQL(
@@ -178,23 +141,6 @@ public class DatabaseCursorTest extends AndroidTestCase implements PerformanceTe
         assertEquals(s, testCursor.getString(sCol));
         assertEquals((double) d, testCursor.getDouble(dCol));
         assertEquals((long) l, testCursor.getLong(lCol));
-
-        // new byte[]
-        byte[] newblob = new byte[1000];
-        value = 98;
-        Arrays.fill(blob, value);
-
-        testCursor.updateBlob(bCol, newblob);
-        cBlob = testCursor.getBlob(bCol);
-        assertTrue(Arrays.equals(newblob, cBlob));
-
-        // commit
-        assertTrue(testCursor.commitUpdates());
-        assertTrue(testCursor.requery());
-        testCursor.moveToNext();
-        cBlob = testCursor.getBlob(bCol);
-        assertTrue(Arrays.equals(newblob, cBlob));
-        testCursor.close();
     }
 
     @MediumTest
@@ -364,53 +310,6 @@ public class DatabaseCursorTest extends AndroidTestCase implements PerformanceTe
         @Override
         public void onInvalidated() {
         }
-    }
-
-    @LargeTest
-    public void testLoadingThreadClose() throws Exception {
-        mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, data INT);");
-
-        final int count = 1000;
-        String sql = "INSERT INTO test (data) VALUES (?);";
-        SQLiteStatement s = mDatabase.compileStatement(sql);
-        for (int i = 0; i < count; i++) {
-            s.bindLong(1, i);
-            s.execute();
-        }
-
-        int maxRead = 11;
-        int initialRead = 5;
-        SQLiteCursor testCursor = (SQLiteCursor) mDatabase.rawQuery("select * from test;", null,
-                initialRead, maxRead);
-
-        TestObserver observer = new TestObserver(count, testCursor);
-        testCursor.registerDataSetObserver(observer);
-        testCursor.getCount();
-        testCursor.close();
-    }
-
-    @LargeTest
-    public void testLoadingThreadDeactivate() throws Exception {
-        mDatabase.execSQL("CREATE TABLE test (_id INTEGER PRIMARY KEY, data INT);");
-
-        final int count = 1000;
-        String sql = "INSERT INTO test (data) VALUES (?);";
-        SQLiteStatement s = mDatabase.compileStatement(sql);
-        for (int i = 0; i < count; i++) {
-            s.bindLong(1, i);
-            s.execute();
-        }
-
-        int maxRead = 11;
-        int initialRead = 5;
-        SQLiteCursor testCursor = (SQLiteCursor) mDatabase.rawQuery("select * from test;", null,
-                initialRead, maxRead);
-
-        TestObserver observer = new TestObserver(count, testCursor);
-        testCursor.registerDataSetObserver(observer);
-        testCursor.getCount();
-        testCursor.deactivate();
-        testCursor.close();
     }
 
     @LargeTest

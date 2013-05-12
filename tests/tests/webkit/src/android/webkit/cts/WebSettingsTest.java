@@ -15,25 +15,19 @@
  */
 package android.webkit.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
+import android.content.Context;
+import android.cts.util.PollingCheck;
+import android.graphics.Bitmap;
 import android.os.Build;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
-import android.view.animation.cts.DelayedCheck;
-import android.webkit.MimeTypeMap;
-import android.webkit.WebChromeClient;
+import android.webkit.ConsoleMessage;
+import android.webkit.WebIconDatabase;
 import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.webkit.WebSettings.LayoutAlgorithm;
-import android.webkit.WebSettings.RenderPriority;
 import android.webkit.WebSettings.TextSize;
-
+import android.webkit.WebView;
+import android.webkit.cts.WebViewOnUiThread.WaitForProgressClient;
+import java.io.FileOutputStream;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,14 +35,27 @@ import java.util.regex.Pattern;
 /**
  * Tests for {@link android.webkit.WebSettings}
  */
-@TestTargetClass(android.webkit.WebSettings.class)
 public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStubActivity> {
 
+    private static final int WEBVIEW_TIMEOUT = 5000;
     private static final String LOG_TAG = "WebSettingsTest";
 
-    private WebView mWebView;
+    private final String EMPTY_IMAGE_HEIGHT = "0";
+    private final String NETWORK_IMAGE_HEIGHT = "48";  // See getNetworkImageHtml()
+    private final String DATA_URL_IMAGE_HTML = "<html>" +
+            "<head><script>function updateTitle(){" +
+            "document.title=document.getElementById('img').naturalHeight;}</script></head>" +
+            "<body onload='updateTitle()'>" +
+            "<img id='img' onload='updateTitle()' src='data:image/png;base64,iVBORw0KGgoAAA" +
+            "ANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAAAXNSR0IArs4c6QAAAA1JREFUCB0BAgD9/wAAAAIAAc3j" +
+            "0SsAAAAASUVORK5CYII=" +
+            "'></body></html>";
+    private final String DATA_URL_IMAGE_HEIGHT = "1";
+
     private WebSettings mSettings;
     private CtsTestServer mWebServer;
+    private WebViewOnUiThread mOnUiThread;
+    private Context mContext;
 
     public WebSettingsTest() {
         super("com.android.cts.stub", WebViewStubActivity.class);
@@ -57,12 +64,9 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        mWebView = getActivity().getWebView();
-
-        // Set a web chrome client in order to receive progress updates.
-        mWebView.setWebChromeClient(new WebChromeClient());
-
-        mSettings = mWebView.getSettings();
+        mOnUiThread = new WebViewOnUiThread(this, getActivity().getWebView());
+        mSettings = mOnUiThread.getSettings();
+        mContext = getInstrumentation().getTargetContext();
     }
 
     @Override
@@ -70,95 +74,87 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         if (mWebServer != null) {
             mWebServer.shutdown();
         }
-        // clear the cache to prevent side effects
-        mWebView.clearCache(true);
+        mOnUiThread.cleanUp();
         super.tearDown();
     }
 
-    @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getUserAgentString",
-            args = {}
-    )
     /**
      * Verifies that the default user agent string follows the format defined in Android
-     * compatibility definition:
+     * compatibility definition (tokens in angle brackets are variables, tokens in square
+     * brackets are optional):
      * <p/>
-     * Mozilla/5.0 (Linux; U; Android <version>; <language>-<country>; <devicemodel>;
-     * Build/<buildID>) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1
+     * Mozilla/5.0 (Linux;[ U;] Android <version>;[ <language>-<country>;]
+     * [<devicemodel>;] Build/<buildID>) AppleWebKit/<major>.<minor> (KHTML, like Gecko)
+     * Version/<major>.<minor>[ Mobile] Safari/<major>.<minor>
      */
     public void testUserAgentString_default() {
         final String actualUserAgentString = mSettings.getUserAgentString();
         Log.i(LOG_TAG, String.format("Checking user agent string %s", actualUserAgentString));
-        final String patternString = "Mozilla/5\\.0 \\(Linux; U; Android (.+); (\\w+)-(\\w+);" +
-            " (.+) Build/(.+)\\) AppleWebKit/533\\.1 \\(KHTML, like Gecko\\) Version/4\\.0" +
-            "( Mobile)? Safari/533\\.1";
+        final String patternString =
+                "Mozilla/5\\.0 \\(Linux;( U;)? Android ([^;]+);( (\\w+)-(\\w+);)?" +
+                "\\s?(.*)\\sBuild/(.+)\\) AppleWebKit/(\\d+)\\.(\\d+) \\(KHTML, like Gecko\\) " +
+                "Version/\\d+\\.\\d+( Mobile)? Safari/(\\d+)\\.(\\d+)";
+        // Groups used:
+        //  1 - SSL encryption strength token " U;" (optional)
+        //  2 - Android version
+        //  3 - full locale string (optional)
+        //  4   - country
+        //  5   - language
+        //  6 - device model (optional)
+        //  7 - build ID
+        //  8 - AppleWebKit major version number
+        //  9 - AppleWebKit minor version number
+        // 10 - " Mobile" string (optional)
+        // 11 - Safari major version number
+        // 12 - Safari minor version number
         Log.i(LOG_TAG, String.format("Trying to match pattern %s", patternString));
         final Pattern userAgentExpr = Pattern.compile(patternString);
         Matcher patternMatcher = userAgentExpr.matcher(actualUserAgentString);
         assertTrue(String.format("User agent string did not match expected pattern. \nExpected " +
                         "pattern:\n%s\nActual:\n%s", patternString, actualUserAgentString),
                         patternMatcher.find());
-        assertEquals(Build.VERSION.RELEASE, patternMatcher.group(1));
-        Locale currentLocale = Locale.getDefault();
-        assertEquals(currentLocale.getLanguage().toLowerCase(), patternMatcher.group(2));
-        assertEquals(currentLocale.getCountry().toLowerCase(), patternMatcher.group(3));
-        assertEquals(Build.MODEL, patternMatcher.group(4));
-        assertEquals(Build.ID, patternMatcher.group(5));
+        if (patternMatcher.group(3) != null) {
+            Locale currentLocale = Locale.getDefault();
+            assertEquals(currentLocale.getLanguage().toLowerCase(), patternMatcher.group(4));
+            assertEquals(currentLocale.getCountry().toLowerCase(), patternMatcher.group(5));
+        }
+        if ("REL".equals(Build.VERSION.CODENAME)) {
+            // Model is only added in release builds
+            assertEquals(Build.MODEL, patternMatcher.group(6));
+            // Release version is valid only in release builds
+            assertEquals(Build.VERSION.RELEASE, patternMatcher.group(2));
+        }
+        assertEquals(Build.ID, patternMatcher.group(7));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getUserAgentString",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setUserAgentString",
-            args = {String.class}
-        )
-    })
     public void testAccessUserAgentString() throws Exception {
         startWebServer();
         String url = mWebServer.getUserAgentUrl();
 
         String defaultUserAgent = mSettings.getUserAgentString();
         assertNotNull(defaultUserAgent);
-        loadUrl(url);
-        assertEquals(defaultUserAgent, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(defaultUserAgent, mOnUiThread.getTitle());
 
         // attempting to set a null string has no effect
         mSettings.setUserAgentString(null);
         assertEquals(defaultUserAgent, mSettings.getUserAgentString());
-        loadUrl(url);
-        assertEquals(defaultUserAgent, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(defaultUserAgent, mOnUiThread.getTitle());
 
         // attempting to set an empty string has no effect
         mSettings.setUserAgentString("");
         assertEquals(defaultUserAgent, mSettings.getUserAgentString());
-        loadUrl(url);
-        assertEquals(defaultUserAgent, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(defaultUserAgent, mOnUiThread.getTitle());
 
         String customUserAgent = "Cts/test";
         mSettings.setUserAgentString(customUserAgent);
         assertEquals(customUserAgent, mSettings.getUserAgentString());
-        loadUrl(url);
-        assertEquals(customUserAgent, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(customUserAgent, mOnUiThread.getTitle());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getUserAgent",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setUserAgent",
-            args = {int.class}
-        )
-    })
     @SuppressWarnings("deprecation")
     public void testAccessUserAgent() throws Exception {
         startWebServer();
@@ -166,161 +162,130 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
 
         mSettings.setUserAgent(1);
         assertEquals(1, mSettings.getUserAgent());
-        loadUrl(url);
-        String userAgent1 = mWebView.getTitle();
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        String userAgent1 = mOnUiThread.getTitle();
         assertNotNull(userAgent1);
 
         mSettings.setUserAgent(3);
         assertEquals(1, mSettings.getUserAgent());
-        loadUrl(url);
-        assertEquals(userAgent1, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(userAgent1, mOnUiThread.getTitle());
 
         mSettings.setUserAgent(2);
         assertEquals(2, mSettings.getUserAgent());
-        loadUrl(url);
-        String userAgent2 = mWebView.getTitle();
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        String userAgent2 = mOnUiThread.getTitle();
         assertNotNull(userAgent2);
 
         mSettings.setUserAgent(3);
         assertEquals(2, mSettings.getUserAgent());
-        loadUrl(url);
-        assertEquals(userAgent2, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(userAgent2, mOnUiThread.getTitle());
 
         mSettings.setUserAgent(0);
         assertEquals(0, mSettings.getUserAgent());
-        loadUrl(url);
-        String userAgent0 = mWebView.getTitle();
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        String userAgent0 = mOnUiThread.getTitle();
         assertNotNull(userAgent0);
 
         final String customUserAgent = "Cts/Test";
         mSettings.setUserAgentString(customUserAgent);
         assertEquals(-1, mSettings.getUserAgent());
-        loadUrl(url);
-        assertEquals(customUserAgent, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(customUserAgent, mOnUiThread.getTitle());
     }
 
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAllowFileAccess",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setAllowFileAccess",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed(explanation = "Cannot block file access using setAllowFileAccess(false)")
     public void testAccessAllowFileAccess() {
+        // This test is not compatible with 4.0.3
+        if ("4.0.3".equals(Build.VERSION.RELEASE)) {
+            return;
+        }
+
         assertTrue(mSettings.getAllowFileAccess());
 
         String fileUrl = TestHtmlConstants.getFileUrl(TestHtmlConstants.HELLO_WORLD_URL);
-        loadUrl(fileUrl);
-        assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(fileUrl);
+        assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, mOnUiThread.getTitle());
 
         fileUrl = TestHtmlConstants.getFileUrl(TestHtmlConstants.BR_TAG_URL);
         mSettings.setAllowFileAccess(false);
         assertFalse(mSettings.getAllowFileAccess());
-        loadUrl(fileUrl);
-        // direct file:// access still works with access disabled
-        assertEquals(TestHtmlConstants.BR_TAG_TITLE, mWebView.getTitle());
+        mOnUiThread.loadUrlAndWaitForCompletion(fileUrl);
+        // android_asset URLs should still be loaded when even with file access
+        // disabled.
+        assertEquals(TestHtmlConstants.BR_TAG_TITLE, mOnUiThread.getTitle());
 
-        // ToBeFixed: How does this API prevent file access?
+        // Files on the file system should not be loaded.
+        mOnUiThread.loadUrlAndWaitForCompletion(TestHtmlConstants.LOCAL_FILESYSTEM_URL);
+        assertEquals(TestHtmlConstants.WEBPAGE_NOT_AVAILABLE_TITLE, mOnUiThread.getTitle());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBlockNetworkImage",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setBlockNetworkImage",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed(explanation = "Implementation does not work as expected.")
-    public void testAccessBlockNetworkImage() throws Exception {
-        String url = TestHtmlConstants.EMBEDDED_IMG_URL;
-        final String ext = MimeTypeMap.getFileExtensionFromUrl(url);
-
-        mWebView.clearCache(true);
-        assertFalse(mSettings.getBlockNetworkImage());
-        assertTrue(mSettings.getLoadsImagesAutomatically());
-        loadAssetUrl(url);
-        new DelayedCheck() {
+    public void testAccessCacheMode() throws Throwable {
+        runTestOnUiThread(new Runnable() {
             @Override
-            protected boolean check() {
-                return !mWebServer.getLastRequestUrl().endsWith(ext);
+            public void run() {
+                // getInstance must run on the UI thread
+                WebIconDatabase iconDb = WebIconDatabase.getInstance();
+                String dbPath = getActivity().getFilesDir().toString() + "/icons";
+                iconDb.open(dbPath);
             }
-        }.run();
-
-        /* ToBeFixed: Uncomment after fixing the framework
-        mWebView.clearCache(true);
-        mSettings.setBlockNetworkImage(true);
-        assertTrue(mSettings.getBlockNetworkImage());
-        loadUrl(url);
-        assertTrue(mWebServer.getLastRequestUrl().endsWith(ext));
-        */
-    }
-
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCacheMode",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setCacheMode",
-            args = {int.class}
-        )
-    })
-    public void testAccessCacheMode() throws Exception {
+        });
+        getInstrumentation().waitForIdleSync();
+        Thread.sleep(100); // Wait for open to be received on the icon db thread.
         assertEquals(WebSettings.LOAD_DEFAULT, mSettings.getCacheMode());
-
-        mSettings.setCacheMode(WebSettings.LOAD_NORMAL);
-        assertEquals(WebSettings.LOAD_NORMAL, mSettings.getCacheMode());
 
         mSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         assertEquals(WebSettings.LOAD_CACHE_ELSE_NETWORK, mSettings.getCacheMode());
+        final IconListenerClient iconListener = new IconListenerClient();
+        mOnUiThread.setWebChromeClient(iconListener);
         loadAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
+            protected boolean check() {
+                return iconListener.mReceivedIcon;
+            }
+        }.run();
         int firstFetch = mWebServer.getRequestCount();
         loadAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
         assertEquals(firstFetch, mWebServer.getRequestCount());
 
         mSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         assertEquals(WebSettings.LOAD_NO_CACHE, mSettings.getCacheMode());
+        iconListener.mReceivedIcon = false;
         loadAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
+            protected boolean check() {
+                return iconListener.mReceivedIcon;
+            }
+        }.run();
         int secondFetch = mWebServer.getRequestCount();
+        iconListener.mReceivedIcon = false;
         loadAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
+            protected boolean check() {
+                return iconListener.mReceivedIcon;
+            }
+        }.run();
         int thirdFetch = mWebServer.getRequestCount();
         assertTrue(firstFetch < secondFetch);
         assertTrue(secondFetch < thirdFetch);
 
         mSettings.setCacheMode(WebSettings.LOAD_CACHE_ONLY);
         assertEquals(WebSettings.LOAD_CACHE_ONLY, mSettings.getCacheMode());
+        iconListener.mReceivedIcon = false;
         loadAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
+            protected boolean check() {
+                return iconListener.mReceivedIcon;
+            }
+        }.run();
         assertEquals(thirdFetch, mWebServer.getRequestCount());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCursiveFontFamily",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setCursiveFontFamily",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessCursiveFontFamily() throws Exception {
         assertNotNull(mSettings.getCursiveFontFamily());
 
@@ -329,20 +294,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(newCusiveFamily, mSettings.getCursiveFontFamily());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getFantasyFontFamily",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setFantasyFontFamily",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessFantasyFontFamily() {
         assertNotNull(mSettings.getFantasyFontFamily());
 
@@ -351,20 +302,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(newFantasyFamily, mSettings.getFantasyFontFamily());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getFixedFontFamily",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setFixedFontFamily",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessFixedFontFamily() {
         assertNotNull(mSettings.getFixedFontFamily());
 
@@ -373,20 +310,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(newFixedFamily, mSettings.getFixedFontFamily());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSansSerifFontFamily",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setSansSerifFontFamily",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessSansSerifFontFamily() {
         assertNotNull(mSettings.getSansSerifFontFamily());
 
@@ -395,20 +318,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(newFixedFamily, mSettings.getSansSerifFontFamily());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSerifFontFamily",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setSerifFontFamily",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessSerifFontFamily() {
         assertNotNull(mSettings.getSerifFontFamily());
 
@@ -417,20 +326,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(newSerifFamily, mSettings.getSerifFontFamily());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStandardFontFamily",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setStandardFontFamily",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessStandardFontFamily() {
         assertNotNull(mSettings.getStandardFontFamily());
 
@@ -439,20 +334,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(newStandardFamily, mSettings.getStandardFontFamily());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDefaultFontSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setDefaultFontSize",
-            args = {int.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessDefaultFontSize() {
         int defaultSize = mSettings.getDefaultFontSize();
         assertTrue(defaultSize > 0);
@@ -471,20 +352,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(10, mSettings.getDefaultFontSize());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDefaultFixedFontSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setDefaultFixedFontSize",
-            args = {int.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessDefaultFixedFontSize() {
         int defaultSize = mSettings.getDefaultFixedFontSize();
         assertTrue(defaultSize > 0);
@@ -503,20 +370,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(10, mSettings.getDefaultFixedFontSize());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDefaultTextEncodingName",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setDefaultTextEncodingName",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessDefaultTextEncodingName() {
         assertNotNull(mSettings.getDefaultTextEncodingName());
 
@@ -525,95 +378,62 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(newEncodingName, mSettings.getDefaultTextEncodingName());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getJavaScriptCanOpenWindowsAutomatically",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setJavaScriptCanOpenWindowsAutomatically",
-            args = {boolean.class}
-        )
-    })
     public void testAccessJavaScriptCanOpenWindowsAutomatically() throws Exception {
-        mWebView.setWebViewClient(new WebViewClient());
         mSettings.setJavaScriptEnabled(true);
 
         mSettings.setJavaScriptCanOpenWindowsAutomatically(false);
         assertFalse(mSettings.getJavaScriptCanOpenWindowsAutomatically());
         loadAssetUrl(TestHtmlConstants.POPUP_URL);
-        new DelayedCheck(10000) {
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
             protected boolean check() {
-                String title = mWebView.getTitle();
+                String title = mOnUiThread.getTitle();
                 return title != null && title.length() > 0;
             }
         }.run();
-        assertEquals("Popup blocked", mWebView.getTitle());
+        assertEquals("Popup blocked", mOnUiThread.getTitle());
 
         mSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         assertTrue(mSettings.getJavaScriptCanOpenWindowsAutomatically());
         loadAssetUrl(TestHtmlConstants.POPUP_URL);
-        new DelayedCheck(10000) {
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
             protected boolean check() {
-                String title = mWebView.getTitle();
-                return title != null && title.length() > 0;
+                String title = mOnUiThread.getTitle();
+                // The title may not change immediately after loading, so
+                // we have to discount the initial "Popup blocked" from the
+                // previous load.
+                return title != null && title.length() > 0
+                        && !title.equals("Popup blocked");
             }
         }.run();
-        assertEquals("Popup allowed", mWebView.getTitle());
-}
+        assertEquals("Popup allowed", mOnUiThread.getTitle());
+    }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getJavaScriptEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setJavaScriptEnabled",
-            args = {boolean.class}
-        )
-    })
     public void testAccessJavaScriptEnabled() throws Exception {
         mSettings.setJavaScriptEnabled(true);
         assertTrue(mSettings.getJavaScriptEnabled());
         loadAssetUrl(TestHtmlConstants.JAVASCRIPT_URL);
-        new DelayedCheck(10000) {
+        new PollingCheck(WEBVIEW_TIMEOUT) {
             @Override
             protected boolean check() {
-                return mWebView.getTitle() != null;
+                return mOnUiThread.getTitle() != null;
             }
         }.run();
-        assertEquals("javascript on", mWebView.getTitle());
+        assertEquals("javascript on", mOnUiThread.getTitle());
 
         mSettings.setJavaScriptEnabled(false);
         assertFalse(mSettings.getJavaScriptEnabled());
         loadAssetUrl(TestHtmlConstants.JAVASCRIPT_URL);
-        new DelayedCheck(10000) {
+        new PollingCheck(WEBVIEW_TIMEOUT) {
             @Override
             protected boolean check() {
-                return mWebView.getTitle() != null;
+                return mOnUiThread.getTitle() != null;
             }
         }.run();
-        assertEquals("javascript off", mWebView.getTitle());
+        assertEquals("javascript off", mOnUiThread.getTitle());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLayoutAlgorithm",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setLayoutAlgorithm",
-            args = {LayoutAlgorithm.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessLayoutAlgorithm() {
         assertEquals(WebSettings.LayoutAlgorithm.NARROW_COLUMNS, mSettings.getLayoutAlgorithm());
 
@@ -624,20 +444,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(WebSettings.LayoutAlgorithm.SINGLE_COLUMN, mSettings.getLayoutAlgorithm());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLightTouchEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setLightTouchEnabled",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessLightTouchEnabled() {
         assertFalse(mSettings.getLightTouchEnabled());
 
@@ -645,51 +451,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertTrue(mSettings.getLightTouchEnabled());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLoadsImagesAutomatically",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setLoadsImagesAutomatically",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
-    public void testAccessLoadsImagesAutomatically() throws Exception {
-        mWebView.clearCache(true);
-        assertTrue(mSettings.getLoadsImagesAutomatically());
-        String url = TestHtmlConstants.EMBEDDED_IMG_URL;
-        String ext = MimeTypeMap.getFileExtensionFromUrl(url);
-        loadAssetUrl(url);
-        Thread.sleep(1000);
-        assertFalse(mWebServer.getLastRequestUrl().endsWith(ext));
-
-        mWebView.clearCache(true);
-        mSettings.setLoadsImagesAutomatically(false);
-        assertFalse(mSettings.getLoadsImagesAutomatically());
-        loadAssetUrl(url);
-        Thread.sleep(1000);
-        assertTrue(mWebServer.getLastRequestUrl().endsWith(ext));
-    }
-
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinimumFontSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setMinimumFontSize",
-            args = {int.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessMinimumFontSize() {
         assertEquals(8, mSettings.getMinimumFontSize());
 
@@ -703,20 +464,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(10, mSettings.getMinimumFontSize());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinimumLogicalFontSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setMinimumLogicalFontSize",
-            args = {int.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessMinimumLogicalFontSize() {
         assertEquals(8, mSettings.getMinimumLogicalFontSize());
 
@@ -730,19 +477,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(10, mSettings.getMinimumLogicalFontSize());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNavDump",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setNavDump",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed(explanation = "NavDump feature is not documented")
     public void testAccessNavDump() {
         assertFalse(mSettings.getNavDump());
 
@@ -750,20 +484,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertTrue(mSettings.getNavDump());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPluginsEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setPluginsEnabled",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessPluginsEnabled() {
         assertFalse(mSettings.getPluginsEnabled());
 
@@ -771,20 +491,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertTrue(mSettings.getPluginsEnabled());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPluginsPath",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setPluginsPath",
-            args = {String.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessPluginsPath() {
         assertNotNull(mSettings.getPluginsPath());
 
@@ -794,20 +500,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals("", mSettings.getPluginsPath());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSaveFormData",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setSaveFormData",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessSaveFormData() {
         assertTrue(mSettings.getSaveFormData());
 
@@ -815,20 +507,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertFalse(mSettings.getSaveFormData());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSavePassword",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setSavePassword",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessSavePassword() {
         assertTrue(mSettings.getSavePassword());
 
@@ -836,20 +514,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertFalse(mSettings.getSavePassword());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTextSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setTextSize",
-            args = {TextSize.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessTextSize() {
         assertEquals(TextSize.NORMAL, mSettings.getTextSize());
 
@@ -866,19 +530,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(TextSize.SMALLEST, mSettings.getTextSize());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getUseDoubleTree",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setUseDoubleTree",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods take effect")
     public void testAccessUseDoubleTree() {
         assertFalse(mSettings.getUseDoubleTree());
 
@@ -887,20 +538,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertFalse(mSettings.getUseDoubleTree());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getUseWideViewPort",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setUseWideViewPort",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessUseWideViewPort() {
         assertFalse(mSettings.getUseWideViewPort());
 
@@ -908,25 +545,12 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertTrue(mSettings.getUseWideViewPort());
     }
 
-    @TestTargetNew(
-        level = TestLevel.SUFFICIENT,
-        method = "setNeedInitialFocus",
-        args = {boolean.class}
-    )
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testSetNeedInitialFocus() {
         mSettings.setNeedInitialFocus(false);
 
         mSettings.setNeedInitialFocus(true);
     }
 
-    @TestTargetNew(
-        level = TestLevel.SUFFICIENT,
-        method = "setRenderPriority",
-        args = {RenderPriority.class}
-    )
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods take effect")
     public void testSetRenderPriority() {
         mSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
 
@@ -935,20 +559,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         mSettings.setRenderPriority(WebSettings.RenderPriority.NORMAL);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "supportMultipleWindows",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setSupportMultipleWindows",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
     public void testAccessSupportMultipleWindows() {
         assertFalse(mSettings.supportMultipleWindows());
 
@@ -956,77 +566,280 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertTrue(mSettings.supportMultipleWindows());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "supportZoom",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setSupportZoom",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
-    public void testAccessSupportZoom() {
+    public void testAccessSupportZoom() throws Throwable {
         assertTrue(mSettings.supportZoom());
 
-        mSettings.setSupportZoom(false);
+        runTestOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mSettings.setSupportZoom(false);
+            }
+        });
         assertFalse(mSettings.supportZoom());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBuiltInZoomControls",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "setBuiltInZoomControls",
-            args = {boolean.class}
-        )
-    })
-    @ToBeFixed( bug = "1665811", explanation = "Can not check whether methods " +
-            "take effect by automatic testing")
-    public void testAccessBuiltInZoomControls() {
+    public void testAccessBuiltInZoomControls() throws Throwable {
         assertFalse(mSettings.getBuiltInZoomControls());
 
-        mSettings.setBuiltInZoomControls(true);
+        runTestOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mSettings.setBuiltInZoomControls(true);
+            }
+        });
         assertTrue(mSettings.getBuiltInZoomControls());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setAppCacheEnabled",
-            args = {}
-        )
-    })
-    public void testSetAppCacheEnabled() throws Exception {
-        // Tests that when AppCache is enabled and used, but the database path
-        // is not set or is set to an inaccessible path, the WebView does not crash.
+    public void testAppCacheDisabled() throws Throwable {
+        // Test that when AppCache is disabled, we don't get any AppCache
+        // callbacks.
         startWebServer();
-        String url = mWebServer.getAppCacheUrl();
+        final String url = mWebServer.getAppCacheUrl();
+        mSettings.setJavaScriptEnabled(true);
+
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            protected boolean check() {
+                return "Loaded".equals(mOnUiThread.getTitle());
+            }
+        }.run();
+        // The page is now loaded. Wait for a further 1s to check no AppCache
+        // callbacks occur.
+        Thread.sleep(1000);
+        assertEquals("Loaded", mOnUiThread.getTitle());
+    }
+
+    public void testAppCacheEnabled() throws Throwable {
+        // Note that the AppCache path can only be set once. This limits the
+        // amount of testing we can do, and means that we must test all aspects
+        // of setting the AppCache path in a single test to guarantee ordering.
+
+        // Test that when AppCache is enabled but no valid path is provided,
+        // we don't get any AppCache callbacks.
+        startWebServer();
+        final String url = mWebServer.getAppCacheUrl();
         mSettings.setAppCacheEnabled(true);
         mSettings.setJavaScriptEnabled(true);
 
-        mWebView.loadUrl(url);
-        new DelayedCheck(10000) {
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
             protected boolean check() {
-                return mWebView.getTitle().equals("Done");
+                return "Loaded".equals(mOnUiThread.getTitle());
             }
         }.run();
+        // The page is now loaded. Wait for a further 1s to check no AppCache
+        // callbacks occur.
+        Thread.sleep(1000);
+        assertEquals("Loaded", mOnUiThread.getTitle());
 
-        mSettings.setAppCachePath("/data/foo");
-        mWebView.loadUrl(url);
-        new DelayedCheck(10000) {
+        // Test that when AppCache is enabled and a valid path is provided, we
+        // get an AppCache callback of some kind.
+        mSettings.setAppCachePath(getActivity().getDir("appcache", 0).getPath());
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        new PollingCheck(WEBVIEW_TIMEOUT) {
+            @Override
             protected boolean check() {
-                return mWebView.getTitle().equals("Done");
+                return mOnUiThread.getTitle() != null
+                        && mOnUiThread.getTitle().endsWith("Callback");
             }
         }.run();
+    }
+
+    public void testLoadsImagesAutomatically() throws Throwable {
+        assertTrue(mSettings.getLoadsImagesAutomatically());
+
+        startWebServer();
+        mSettings.setJavaScriptEnabled(true);
+
+        // Check that by default network and data url images are loaded.
+        mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
+        assertEquals(NETWORK_IMAGE_HEIGHT, mOnUiThread.getTitle());
+        mOnUiThread.loadDataAndWaitForCompletion(DATA_URL_IMAGE_HTML, "text/html", null);
+        assertEquals(DATA_URL_IMAGE_HEIGHT, mOnUiThread.getTitle());
+
+        // Check that with auto-loading turned off no images are loaded.
+        // Also check that images are loaded automatically once we enable the setting,
+        // without reloading the page.
+        mSettings.setLoadsImagesAutomatically(false);
+        mOnUiThread.clearCache(true);
+        mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
+        assertEquals(EMPTY_IMAGE_HEIGHT, mOnUiThread.getTitle());
+        mSettings.setLoadsImagesAutomatically(true);
+        waitForNonEmptyImage();
+        assertEquals(NETWORK_IMAGE_HEIGHT, mOnUiThread.getTitle());
+
+        mSettings.setLoadsImagesAutomatically(false);
+        mOnUiThread.clearCache(true);
+        mOnUiThread.loadDataAndWaitForCompletion(DATA_URL_IMAGE_HTML, "text/html", null);
+        assertEquals(EMPTY_IMAGE_HEIGHT, mOnUiThread.getTitle());
+        mSettings.setLoadsImagesAutomatically(true);
+        waitForNonEmptyImage();
+        assertEquals(DATA_URL_IMAGE_HEIGHT, mOnUiThread.getTitle());
+    }
+
+    public void testBlockNetworkImage() throws Throwable {
+        assertFalse(mSettings.getBlockNetworkImage());
+
+        startWebServer();
+        mSettings.setJavaScriptEnabled(true);
+
+        // Check that by default network and data url images are loaded.
+        mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
+        assertEquals(NETWORK_IMAGE_HEIGHT, mOnUiThread.getTitle());
+        mOnUiThread.loadDataAndWaitForCompletion(DATA_URL_IMAGE_HTML, "text/html", null);
+        assertEquals(DATA_URL_IMAGE_HEIGHT, mOnUiThread.getTitle());
+
+        // Check that only network images are blocked, data url images are still loaded.
+        // Also check that network images are loaded automatically once we disable the setting,
+        // without reloading the page.
+        mSettings.setBlockNetworkImage(true);
+        mOnUiThread.clearCache(true);
+        mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
+        assertEquals(EMPTY_IMAGE_HEIGHT, mOnUiThread.getTitle());
+        mSettings.setBlockNetworkImage(false);
+        waitForNonEmptyImage();
+        assertEquals(NETWORK_IMAGE_HEIGHT, mOnUiThread.getTitle());
+
+        mSettings.setBlockNetworkImage(true);
+        mOnUiThread.clearCache(true);
+        mOnUiThread.loadDataAndWaitForCompletion(DATA_URL_IMAGE_HTML, "text/html", null);
+        assertEquals(DATA_URL_IMAGE_HEIGHT, mOnUiThread.getTitle());
+    }
+
+    public void testBlockNetworkLoads() throws Throwable {
+        assertFalse(mSettings.getBlockNetworkLoads());
+
+        startWebServer();
+        mSettings.setJavaScriptEnabled(true);
+
+        // Check that by default network resources and data url images are loaded.
+        mOnUiThread.loadUrlAndWaitForCompletion(
+            mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL));
+        assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, mOnUiThread.getTitle());
+        mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
+        assertEquals(NETWORK_IMAGE_HEIGHT, mOnUiThread.getTitle());
+        mOnUiThread.loadDataAndWaitForCompletion(DATA_URL_IMAGE_HTML, "text/html", null);
+        assertEquals(DATA_URL_IMAGE_HEIGHT, mOnUiThread.getTitle());
+
+        // Check that only network resources are blocked, data url images are still loaded.
+        mSettings.setBlockNetworkLoads(true);
+        mOnUiThread.clearCache(true);
+        mOnUiThread.loadUrlAndWaitForCompletion(
+            mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL));
+        assertEquals(TestHtmlConstants.WEBPAGE_NOT_AVAILABLE_TITLE, mOnUiThread.getTitle());
+        mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
+        assertEquals(EMPTY_IMAGE_HEIGHT, mOnUiThread.getTitle());
+        mOnUiThread.loadDataAndWaitForCompletion(DATA_URL_IMAGE_HTML, "text/html", null);
+        assertEquals(DATA_URL_IMAGE_HEIGHT, mOnUiThread.getTitle());
+
+        // Check that network resources are loaded once we disable the setting and reload the page.
+        mSettings.setBlockNetworkLoads(false);
+        mOnUiThread.loadUrlAndWaitForCompletion(
+            mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL));
+        assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, mOnUiThread.getTitle());
+        mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
+        assertEquals(NETWORK_IMAGE_HEIGHT, mOnUiThread.getTitle());
+    }
+
+    // Verify that an image in local file system can be loaded by an asset
+    public void testLocalImageLoads() throws Throwable {
+
+        mSettings.setJavaScriptEnabled(true);
+        // Check that local images are loaded without issues regardless of domain checkings
+        mSettings.setAllowUniversalAccessFromFileURLs(false);
+        mSettings.setAllowFileAccessFromFileURLs(false);
+        String url = TestHtmlConstants.getFileUrl(TestHtmlConstants.IMAGE_ACCESS_URL);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        waitForNonEmptyImage();
+        assertEquals(NETWORK_IMAGE_HEIGHT, mOnUiThread.getTitle());
+    }
+
+    // Verify that javascript cross-domain request permissions matches file domain settings
+    // for iframes
+    public void testIframesWhenAccessFromFileURLsEnabled() throws Throwable {
+
+        mSettings.setJavaScriptEnabled(true);
+        // disable universal access from files
+        mSettings.setAllowUniversalAccessFromFileURLs(false);
+        mSettings.setAllowFileAccessFromFileURLs(true);
+
+        // when cross file scripting is enabled, make sure cross domain requests succeed
+        String url = TestHtmlConstants.getFileUrl(TestHtmlConstants.IFRAME_ACCESS_URL);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        String iframeUrl = TestHtmlConstants.getFileUrl(TestHtmlConstants.HELLO_WORLD_URL);
+        assertEquals(iframeUrl, mOnUiThread.getTitle());
+    }
+
+    // Verify that javascript cross-domain request permissions matches file domain settings
+    // for iframes
+    public void testIframesWhenAccessFromFileURLsDisabled() throws Throwable {
+
+        mSettings.setJavaScriptEnabled(true);
+        // disable universal access from files
+        mSettings.setAllowUniversalAccessFromFileURLs(false);
+        mSettings.setAllowFileAccessFromFileURLs(false);
+
+        // when cross file scripting is disabled, make sure cross domain requests fail
+        final ChromeClient webChromeClient = new ChromeClient(mOnUiThread);
+        mOnUiThread.setWebChromeClient(webChromeClient);
+        String url = TestHtmlConstants.getFileUrl(TestHtmlConstants.IFRAME_ACCESS_URL);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        String iframeUrl = TestHtmlConstants.getFileUrl(TestHtmlConstants.HELLO_WORLD_URL);
+        assertFalse(iframeUrl.equals(mOnUiThread.getTitle()));
+        assertEquals(ConsoleMessage.MessageLevel.ERROR, webChromeClient.getMessageLevel(10000));
+    }
+
+    // Verify that enabling file access from file URLs enable XmlHttpRequest (XHR) across files
+    public void testXHRWhenAccessFromFileURLsEnabled() throws Throwable {
+        verifyFileXHR(true);
+    }
+
+    // Verify that disabling file access from file URLs disable XmlHttpRequest (XHR) accross files
+    public void testXHRWhenAccessFromFileURLsDisabled() throws Throwable {
+
+        final ChromeClient webChromeClient = new ChromeClient(mOnUiThread);
+        mOnUiThread.setWebChromeClient(webChromeClient);
+        verifyFileXHR(false);
+        assertEquals(ConsoleMessage.MessageLevel.ERROR, webChromeClient.getMessageLevel(10000));
+    }
+
+    // verify XHR across files matches the allowFileAccessFromFileURLs setting
+    private void verifyFileXHR(boolean enableXHR) throws Throwable {
+        // target file content
+        String target ="<html><body>target</body><html>";
+
+        String targetPath = mContext.getFileStreamPath("target.html").getAbsolutePath();
+        // local file content that use XHR to read the target file
+        String local ="" +
+            "<html><body><script>" +
+            "var client = new XMLHttpRequest();" +
+            "client.open('GET', 'file://" + targetPath + "',false);" +
+            "client.send();" +
+            "document.title = client.responseText;" +
+            "</script></body></html>";
+
+        // create files in internal storage
+        writeFile("local.html", local);
+        writeFile("target.html", target);
+
+        mSettings.setJavaScriptEnabled(true);
+        // disable universal access from files
+        mSettings.setAllowUniversalAccessFromFileURLs(false);
+        mSettings.setAllowFileAccessFromFileURLs(enableXHR);
+        String localPath = mContext.getFileStreamPath("local.html").getAbsolutePath();
+        // when cross file scripting is enabled, make sure cross domain requests succeed
+        mOnUiThread.loadUrlAndWaitForCompletion("file://" + localPath);
+        if (enableXHR) assertEquals(target, mOnUiThread.getTitle());
+        else assertFalse(target.equals(mOnUiThread.getTitle()));
+    }
+
+    // Create a private file on internal storage from the given string
+    private void writeFile(String filename, String content) throws Exception {
+
+        FileOutputStream fos = mContext.openFileOutput(filename, Context.MODE_PRIVATE);
+        fos.write(content.getBytes());
+        fos.close();
     }
 
     /**
@@ -1052,22 +865,38 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
             startWebServer();
         }
         String url = mWebServer.getAssetUrl(asset);
-        loadUrl(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
     }
 
-    /**
-     * Fully load the page at the given URL.
-     *
-     * @param url The URL of the page to load.
-     */
-    private void loadUrl(String url) {
-        mWebView.loadUrl(url);
-        new DelayedCheck(10000) {
+    private String getNetworkImageHtml() {
+        return "<html>" +
+                "<head><script>function updateTitle(){" +
+                "document.title=document.getElementById('img').naturalHeight;}</script></head>" +
+                "<body onload='updateTitle()'>" +
+                "<img id='img' onload='updateTitle()' src='" +
+                mWebServer.getAssetUrl(TestHtmlConstants.SMALL_IMG_URL) +
+                "'></body></html>";
+    }
+
+    private void waitForNonEmptyImage() {
+        new PollingCheck(WEBVIEW_TIMEOUT) {
             @Override
             protected boolean check() {
-                return mWebView.getProgress() == 100;
+                return !EMPTY_IMAGE_HEIGHT.equals(mOnUiThread.getTitle());
             }
         }.run();
-        assertEquals(100, mWebView.getProgress());
+    }
+
+    private class IconListenerClient extends WaitForProgressClient {
+        public boolean mReceivedIcon;
+
+        public IconListenerClient() {
+            super(mOnUiThread);
+        }
+
+        @Override
+        public void onReceivedIcon(WebView view, Bitmap icon) {
+            mReceivedIcon = true;
+        }
     }
 }

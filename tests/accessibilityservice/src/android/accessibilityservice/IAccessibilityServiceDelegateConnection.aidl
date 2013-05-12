@@ -15,16 +15,40 @@
  */
 package android.accessibilityservice;
 
+import android.os.Bundle;
 import android.os.IBinder;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+
+import java.util.List;
 
 /**
- * Interface for registering an accessibility service delegate.
+ * Interface for registering an accessibility service delegate
+ * and asking it to perform some querying of the window for us.
  */
-oneway interface IAccessibilityServiceDelegateConnection {
+interface IAccessibilityServiceDelegateConnection {
 
-    /**
-     * Sets the delegate interface to which the
-     * {@link DelegatingAccessibilityService} to delegate.
-     */
     void setAccessibilityServiceDelegate(in IBinder binder);
+
+    List<AccessibilityNodeInfo> findAccessibilityNodeInfosByText(in AccessibilityNodeInfo root,
+        String text);
+
+    AccessibilityNodeInfo getParent(in AccessibilityNodeInfo child);
+
+    AccessibilityNodeInfo getChild(in AccessibilityNodeInfo parent, int index);
+
+    AccessibilityNodeInfo findFocus(in AccessibilityNodeInfo root, int focusType);
+
+    AccessibilityNodeInfo focusSearch(in AccessibilityNodeInfo current, int direction);
+
+    boolean performAccessibilityAction(in AccessibilityNodeInfo target, int action,
+           in Bundle arguments);
+
+    AccessibilityNodeInfo getSource(in AccessibilityEvent event);
+
+    void setFetchViewsNotExposedForAccessibility(boolean fetch);
+
+    boolean performGlobalAction(int action);
+
+    AccessibilityNodeInfo getRootInActiveWindow();
 }

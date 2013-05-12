@@ -20,6 +20,10 @@ LOCAL_MODULE_TAGS := tests
 
 LOCAL_JAVA_LIBRARIES := android.test.runner
 
+LOCAL_STATIC_JAVA_LIBRARIES := ctstestrunner
+
+LOCAL_JNI_SHARED_LIBRARIES := libctssecurity_jni
+
 LOCAL_SRC_FILES := $(call all-java-files-under, src)
 
 LOCAL_PACKAGE_NAME := CtsSecurityTestCases
@@ -28,4 +32,6 @@ LOCAL_INSTRUMENTATION_FOR := CtsTestStubs
 
 LOCAL_SDK_VERSION := current
 
-include $(BUILD_PACKAGE)
+include $(BUILD_CTS_PACKAGE)
+
+include $(call all-makefiles-under,$(LOCAL_PATH))

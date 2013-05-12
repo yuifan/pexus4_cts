@@ -16,10 +16,6 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.ContentResolver;
 import android.net.Uri;
@@ -28,7 +24,6 @@ import android.provider.Settings.Secure;
 import android.provider.Settings.SettingNotFoundException;
 import android.test.AndroidTestCase;
 
-@TestTargetClass(android.provider.Settings.Secure.class)
 public class Settings_SecureTest extends AndroidTestCase {
 
     private static final String NO_SUCH_SETTING = "NoSuchSetting";
@@ -37,7 +32,7 @@ public class Settings_SecureTest extends AndroidTestCase {
      * Setting that will have a string value to trigger SettingNotFoundException caused by
      * NumberFormatExceptions for getInt, getFloat, and getLong.
      */
-    private static final String STRING_VALUE_SETTING = Secure.ENABLED_ACCESSIBILITY_SERVICES;
+    private static final String STRING_VALUE_SETTING = Secure.ANDROID_ID;
 
     private ContentResolver cr;
 
@@ -63,23 +58,6 @@ public class Settings_SecureTest extends AndroidTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getInt",
-            args = {android.content.ContentResolver.class, java.lang.String.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLong",
-            args = {android.content.ContentResolver.class, java.lang.String.class, long.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getFloat",
-            args = {android.content.ContentResolver.class, java.lang.String.class, float.class}
-        )
-    })
     public void testGetDefaultValues() {
         assertEquals(10, Secure.getInt(cr, "int", 10));
         assertEquals(20, Secure.getLong(cr, "long", 20));
@@ -117,11 +95,10 @@ public class Settings_SecureTest extends AndroidTestCase {
         } catch (SecurityException expected) {
         }
 
-        // TODO: Should be fixed to throw SettingNotFoundException.
         try {
             Secure.getFloat(cr, NO_SUCH_SETTING);
-            fail("NullPointerException should have been thrown!");
-        } catch (NullPointerException expected) {
+            fail("SettingNotFoundException should have been thrown!");
+        } catch (SettingNotFoundException expected) {
         }
 
         try {
@@ -167,16 +144,16 @@ public class Settings_SecureTest extends AndroidTestCase {
         assertNull(Secure.getString(cr, NO_SUCH_SETTING));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getUriFor",
-        args = {java.lang.String.class}
-    )
     public void testGetUriFor() {
         String name = "table";
 
         Uri uri = Secure.getUriFor(name);
         assertNotNull(uri);
         assertEquals(Uri.withAppendedPath(Secure.CONTENT_URI, name), uri);
+    }
+
+    public void testUnknownSourcesOffByDefault() throws SettingNotFoundException {
+        assertEquals("Device should not ship with 'Unknown Sources' enabled by default.",
+                0, Settings.Global.getInt(cr, Settings.Global.INSTALL_NON_MARKET_APPS));
     }
 }

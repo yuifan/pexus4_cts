@@ -16,43 +16,44 @@
 
 package android.text.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.ToBeFixed;
+
+import static android.view.View.LAYOUT_DIRECTION_LTR;
+import static android.view.View.LAYOUT_DIRECTION_RTL;
 
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.graphics.Paint.FontMetricsInt;
+import android.graphics.Typeface;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.test.AndroidTestCase;
 import android.text.GetChars;
-import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.SpannedString;
 import android.text.TextPaint;
 import android.text.TextUtils;
-import android.text.TextUtils.EllipsizeCallback;
 import android.text.TextUtils.TruncateAt;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ReplacementSpan;
 import android.text.style.TextAppearanceSpan;
 import android.text.style.URLSpan;
+import android.util.Log;
 import android.util.StringBuilderPrinter;
 
+import dalvik.annotation.TestLevel;
+import dalvik.annotation.TestTargetNew;
+
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
  * Test {@link TextUtils}.
  */
-@TestTargetClass(TextUtils.class)
 public class TextUtilsTest extends AndroidTestCase {
     private static String mEllipsis;
     private int mStart;
@@ -82,13 +83,6 @@ public class TextUtilsTest extends AndroidTestCase {
         return re.substring(0, re.indexOf("x"));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "commaEllipsize",
-        args = {CharSequence.class, TextPaint.class, float.class, String.class, String.class}
-    )
-    @ToBeFixed(bug = "1688347 ", explanation = "The javadoc for commaEllipsize() " +
-            "does not discuss any of the corner cases")
     public void testCommaEllipsize() {
         TextPaint p = new TextPaint();
         String text = "long, string, to, truncate";
@@ -139,25 +133,8 @@ public class TextUtilsTest extends AndroidTestCase {
         } catch (NullPointerException e) {
             // issue 1688347, not clear what is supposed to happen if TextPaint is null.
         }
-
-        try {
-            TextUtils.commaEllipsize(text, p, textWidth, "plus 1", null);
-            fail("Should throw NullPointerException");
-        } catch (NullPointerException e) {
-            // issue 1688347, not clear what is supposed to happen
-            // if the string for "%d more" in the current locale is null.
-        }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "concat",
-        args = {CharSequence[].class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for concat() is incomplete." +
-            "1. doesn't explain @param and @return" +
-            "2. doesn't describe the expected result when parameter is empty" +
-            "3. doesn't discuss the case that parameter is expectional.")
     public void testConcat() {
         // issue 1695243
         // the javadoc for concat() doesn't describe the expected result when parameter is empty.
@@ -203,12 +180,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "copySpansFrom",
-        args = {Spanned.class, int.class, int.class, Class.class, Spannable.class, int.class}
-    )
-    @ToBeFixed(bug = "1688347", explanation = "the javadoc for copySpansFrom() does not exist.")
     public void testCopySpansFrom() {
         Object[] spans;
         String text = "content";
@@ -351,36 +322,24 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "ellipsize",
-        args = {CharSequence.class, TextPaint.class, float.class, TruncateAt.class}
-    )
-    @ToBeFixed(bug = "1688347", explanation = "" +
-            "1. the javadoc for ellipsize() is incomplete." +
-            "   - doesn't explain @param and @return" +
-            "   - doesn't describe expected behavior if user pass an exceptional argument." +
-            "2. ellipsize() is not defined for TruncateAt.MARQUEE. " +
-            "   In the code it looks like this does the same as MIDDLE. " +
-            "   In other methods, MARQUEE is equivalent to END, except for the first line.")
     public void testEllipsize() {
         TextPaint p = new TextPaint();
-        
+
         // turn off kerning. with kerning enabled, different methods of measuring the same text
         // produce different results.
         p.setFlags(p.getFlags() & ~p.DEV_KERN_TEXT_FLAG);
-        
+
         CharSequence text = "long string to truncate";
 
-        float textWidth = p.measureText(mEllipsis + "uncate");
+        float textWidth = p.measureText(mEllipsis) + p.measureText("uncate");
         assertEquals(mEllipsis + "uncate",
                 TextUtils.ellipsize(text, p, textWidth, TruncateAt.START).toString());
 
-        textWidth = p.measureText("long str" + mEllipsis);
+        textWidth = p.measureText("long str") + p.measureText(mEllipsis);
         assertEquals("long str" + mEllipsis,
                 TextUtils.ellipsize(text, p, textWidth, TruncateAt.END).toString());
 
-        textWidth = p.measureText("long" + mEllipsis + "ate");
+        textWidth = p.measureText("long") + p.measureText(mEllipsis) + p.measureText("ate");
         assertEquals("long" + mEllipsis + "ate",
                 TextUtils.ellipsize(text, p, textWidth, TruncateAt.MIDDLE).toString());
 
@@ -391,16 +350,14 @@ public class TextUtilsTest extends AndroidTestCase {
                 TextUtils.ellipsize(text, p, textWidth, TruncateAt.MARQUEE).toString());
 
         textWidth = p.measureText(mEllipsis);
-        assertEquals(mEllipsis, TextUtils.ellipsize(text, p, textWidth, TruncateAt.END).toString());
+        assertEquals("", TextUtils.ellipsize(text, p, textWidth, TruncateAt.END).toString());
         assertEquals("", TextUtils.ellipsize(text, p, textWidth - 1, TruncateAt.END).toString());
         assertEquals("", TextUtils.ellipsize(text, p, -1f, TruncateAt.END).toString());
         assertEquals(text,
                 TextUtils.ellipsize(text, p, Float.MAX_VALUE, TruncateAt.END).toString());
 
-        assertEquals(mEllipsis,
-                TextUtils.ellipsize(text, p, textWidth, TruncateAt.START).toString());
-        assertEquals(mEllipsis,
-                TextUtils.ellipsize(text, p, textWidth, TruncateAt.MIDDLE).toString());
+        assertEquals("", TextUtils.ellipsize(text, p, textWidth, TruncateAt.START).toString());
+        assertEquals("", TextUtils.ellipsize(text, p, textWidth, TruncateAt.MIDDLE).toString());
 
         try {
             TextUtils.ellipsize(text, null, textWidth, TruncateAt.MIDDLE);
@@ -417,26 +374,13 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "ellipsize",
-        args = {CharSequence.class, TextPaint.class, float.class, TruncateAt.class,
-                boolean.class, EllipsizeCallback.class}
-    )
-    @ToBeFixed(bug = "1688347", explanation = "" +
-            "1. the javadoc for ellipsize() is incomplete." +
-            "   - doesn't explain @param and @return" +
-            "   - doesn't describe expected behavior if user pass an exceptional argument." +
-            "2. ellipsize() is not defined for TruncateAt.MARQUEE. " +
-            "   In the code it looks like this does the same as MIDDLE. " +
-            "   In other methods, MARQUEE is equivalent to END, except for the first line.")
     public void testEllipsizeCallback() {
         TextPaint p = new TextPaint();
 
         // turn off kerning. with kerning enabled, different methods of measuring the same text
         // produce different results.
         p.setFlags(p.getFlags() & ~p.DEV_KERN_TEXT_FLAG);
-        
+
         TextUtils.EllipsizeCallback callback = new TextUtils.EllipsizeCallback() {
             public void ellipsized(final int start, final int end) {
                 mStart = start;
@@ -523,14 +467,14 @@ public class TextUtilsTest extends AndroidTestCase {
 
         // avail is long enough for ELLIPSIS, and preserveLength is specified.
         resetRange();
-        assertEquals(getBlankString(true, text.length()),
+        assertEquals(getBlankString(false, text.length()),
                 TextUtils.ellipsize(text, p, textWidth, TruncateAt.END, true, callback).toString());
         assertEquals(0, mStart);
         assertEquals(text.length(), mEnd);
 
         // avail is long enough for ELLIPSIS, and preserveLength doesn't be specified.
         resetRange();
-        assertEquals(mEllipsis,
+        assertEquals("",
                 TextUtils.ellipsize(text, p, textWidth, TruncateAt.END, false,
                         callback).toString());
         assertEquals(0, mStart);
@@ -580,11 +524,6 @@ public class TextUtilsTest extends AndroidTestCase {
         return buf.toString();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "equals",
-        args = {CharSequence.class, CharSequence.class}
-    )
     public void testEquals() {
         // compare with itself.
         // String is a subclass of CharSequence and overrides equals().
@@ -624,15 +563,6 @@ public class TextUtilsTest extends AndroidTestCase {
         assertFalse(TextUtils.equals(null, string));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "expandTemplate",
-        args = {CharSequence.class, CharSequence[].class}
-    )
-    @ToBeFixed(bug = "1695243", explanation =
-            "the javadoc for expandTemplate() is incomplete." +
-            "1. not clear what is supposed to happen if template or values is null." +
-            "2. doesn't discuss the case that ^0 in template string.")
     public void testExpandTemplate() {
         // ^1 at the start of template string.
         assertEquals("value1 template to be expanded",
@@ -761,12 +691,6 @@ public class TextUtilsTest extends AndroidTestCase {
         return array;
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getChars",
-        args = {CharSequence.class, int.class, int.class, char[].class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for getChars() does not exist.")
     public void testGetChars() {
         char[] destOriginal = "destination".toCharArray();
         char[] destResult = destOriginal.clone();
@@ -990,12 +914,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getOffsetAfter",
-        args = {CharSequence.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for getOffsetAfter() does not exist.")
     public void testGetOffsetAfter() {
         // the first '\uD800' is index 9, the second 'uD800' is index 16
         // the '\uDBFF' is index 26
@@ -1057,12 +975,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getOffsetBefore",
-        args = {CharSequence.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for getOffsetBefore() does not exist.")
     public void testGetOffsetBefore() {
         // the first '\uDC00' is index 10, the second 'uDC00' is index 17
         // the '\uDFFF' is index 27
@@ -1109,12 +1021,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getReverse",
-        args = {CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for getReverse() does not exist.")
     public void testGetReverse() {
         String source = "string to be reversed";
         assertEquals("gnirts", TextUtils.getReverse(source, 0, "string".length()).toString());
@@ -1169,14 +1075,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getTrimmedLength",
-        args = {CharSequence.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for getReverse() is incomplete." +
-            "1. doesn't explain @param and @return." +
-            "2. doesn't discuss the case that parameter is expectional.")
     public void testGetTrimmedLength() {
         assertEquals("normalstring".length(), TextUtils.getTrimmedLength("normalstring"));
         assertEquals("normal string".length(), TextUtils.getTrimmedLength("normal string"));
@@ -1199,15 +1097,8 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "htmlEncode",
-        args = {String.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for htmlEncode() is incomplete." +
-            "1. doesn't discuss the case that parameter is expectional.")
     public void testHtmlEncode() {
-        assertEquals("&lt;_html_&gt;\\ &amp;&quot;&apos;string&apos;&quot;",
+        assertEquals("&lt;_html_&gt;\\ &amp;&quot;&#39;string&#39;&quot;",
                 TextUtils.htmlEncode("<_html_>\\ &\"'string'\""));
 
          try {
@@ -1218,12 +1109,6 @@ public class TextUtilsTest extends AndroidTestCase {
          }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "indexOf",
-        args = {CharSequence.class, char.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for indexOf() does not exist.")
     public void testIndexOf1() {
         String searchString = "string to be searched";
         final int INDEX_OF_FIRST_R = 2;     // first occurrence of 'r'
@@ -1250,12 +1135,6 @@ public class TextUtilsTest extends AndroidTestCase {
         assertEquals(INDEX_OF_FIRST_R, TextUtils.indexOf(mockCharSequence, 'r'));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "indexOf",
-        args = {CharSequence.class, char.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for indexOf() does not exist.")
     public void testIndexOf2() {
         String searchString = "string to be searched";
         final int INDEX_OF_FIRST_R = 2;
@@ -1265,7 +1144,7 @@ public class TextUtilsTest extends AndroidTestCase {
         assertEquals(INDEX_OF_SECOND_R, TextUtils.indexOf(searchString, 'r', INDEX_OF_FIRST_R + 1));
         assertEquals(-1, TextUtils.indexOf(searchString, 'r', searchString.length()));
         assertEquals(INDEX_OF_FIRST_R, TextUtils.indexOf(searchString, 'r', Integer.MIN_VALUE));
-        assertEquals(2, TextUtils.indexOf(searchString, 'r', Integer.MAX_VALUE));
+        assertEquals(-1, TextUtils.indexOf(searchString, 'r', Integer.MAX_VALUE));
 
         StringBuffer stringBuffer = new StringBuffer(searchString);
         assertEquals(INDEX_OF_SECOND_R, TextUtils.indexOf(stringBuffer, 'r', INDEX_OF_FIRST_R + 1));
@@ -1290,12 +1169,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 INDEX_OF_FIRST_R + 1));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "indexOf",
-        args = {CharSequence.class, char.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for indexOf() does not exist.")
     public void testIndexOf3() {
         String searchString = "string to be searched";
         final int INDEX_OF_FIRST_R = 2;
@@ -1341,12 +1214,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 INDEX_OF_FIRST_R + 1, searchString.length()));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "indexOf",
-        args = {CharSequence.class, CharSequence.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for indexOf() does not exist.")
     public void testIndexOf4() {
         String searchString = "string to be searched by string";
         final int SEARCH_INDEX = 13;
@@ -1370,12 +1237,6 @@ public class TextUtilsTest extends AndroidTestCase {
         assertEquals(SEARCH_INDEX, TextUtils.indexOf(mockCharSequence, "search"));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "indexOf",
-        args = {CharSequence.class, CharSequence.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for indexOf() does not exist.")
     public void testIndexOf5() {
         String searchString = "string to be searched by string";
         final int INDEX_OF_FIRST_STRING = 0;
@@ -1387,7 +1248,7 @@ public class TextUtilsTest extends AndroidTestCase {
         assertEquals(-1, TextUtils.indexOf(searchString, "string", INDEX_OF_SECOND_STRING + 1));
         assertEquals(INDEX_OF_FIRST_STRING, TextUtils.indexOf(searchString, "string",
                 Integer.MIN_VALUE));
-        assertEquals(0, TextUtils.indexOf(searchString, "string", Integer.MAX_VALUE));
+        assertEquals(-1, TextUtils.indexOf(searchString, "string", Integer.MAX_VALUE));
 
         assertEquals(1, TextUtils.indexOf(searchString, "", 1));
         assertEquals(Integer.MAX_VALUE, TextUtils.indexOf(searchString, "", Integer.MAX_VALUE));
@@ -1420,12 +1281,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 INDEX_OF_FIRST_STRING + 1));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "indexOf",
-        args = {CharSequence.class, CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for indexOf() does not exist.")
     public void testIndexOf6() {
         String searchString = "string to be searched by string";
         final int INDEX_OF_FIRST_STRING = 0;
@@ -1439,7 +1294,7 @@ public class TextUtilsTest extends AndroidTestCase {
                 INDEX_OF_SECOND_STRING - 1));
         assertEquals(INDEX_OF_FIRST_STRING, TextUtils.indexOf(searchString, "string",
                 Integer.MIN_VALUE, INDEX_OF_SECOND_STRING - 1));
-        assertEquals(0, TextUtils.indexOf(searchString, "string", Integer.MAX_VALUE,
+        assertEquals(-1, TextUtils.indexOf(searchString, "string", Integer.MAX_VALUE,
                 INDEX_OF_SECOND_STRING - 1));
 
         assertEquals(INDEX_OF_SECOND_STRING, TextUtils.indexOf(searchString, "string",
@@ -1477,12 +1332,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 INDEX_OF_FIRST_STRING + 1, searchString.length()));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isDigitsOnly",
-        args = {CharSequence.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for isDigitsOnly() is incomplete.")
     public void testIsDigitsOnly() {
         assertFalse(TextUtils.isDigitsOnly("no digit"));
         assertFalse(TextUtils.isDigitsOnly("character and 56 digits"));
@@ -1497,11 +1346,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isEmpty",
-        args = {CharSequence.class}
-    )
     public void testIsEmpty() {
         assertFalse(TextUtils.isEmpty("not empty"));
         assertFalse(TextUtils.isEmpty("    "));
@@ -1509,12 +1353,6 @@ public class TextUtilsTest extends AndroidTestCase {
         assertTrue(TextUtils.isEmpty(null));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isGraphic",
-        args = {char.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for isGraphic() is incomplete.")
     public void testIsGraphicChar() {
         assertTrue(TextUtils.isGraphic('a'));
         assertTrue(TextUtils.isGraphic("\uBA00"));
@@ -1545,12 +1383,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isGraphic",
-        args = {CharSequence.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for isGraphic() is incomplete.")
     public void testIsGraphicCharSequence() {
         assertTrue(TextUtils.isGraphic("printable characters"));
 
@@ -1567,12 +1399,6 @@ public class TextUtilsTest extends AndroidTestCase {
     }
 
     @SuppressWarnings("unchecked")
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "join",
-        args = {CharSequence.class, Iterable.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for join() is incomplete.")
     public void testJoin1() {
         ArrayList<CharSequence> charTokens = new ArrayList<CharSequence>();
         charTokens.add("string1");
@@ -1598,12 +1424,6 @@ public class TextUtilsTest extends AndroidTestCase {
         assertEquals("span 1;span 2;span 3", TextUtils.join(";", spannableStringTokens));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "join",
-        args = {CharSequence.class, Object[].class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for join() is incomplete.")
     public void testJoin2() {
         CharSequence[] charTokens = new CharSequence[] { "string1", "string2", "string3" };
         assertEquals("string1|string2|string3", TextUtils.join("|", charTokens));
@@ -1626,12 +1446,6 @@ public class TextUtilsTest extends AndroidTestCase {
         assertEquals("span 1;span 2;span 3", TextUtils.join(";", spannableStringTokens));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "lastIndexOf",
-        args = {CharSequence.class, char.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for lastIndexOf() does not exist.")
     public void testLastIndexOf1() {
         String searchString = "string to be searched";
         final int INDEX_OF_LAST_R = 16;
@@ -1657,12 +1471,6 @@ public class TextUtilsTest extends AndroidTestCase {
         assertEquals(INDEX_OF_LAST_R, TextUtils.lastIndexOf(mockCharSequence, 'r'));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "lastIndexOf",
-        args = {CharSequence.class, char.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for lastIndexOf() does not exist.")
     public void testLastIndexOf2() {
         String searchString = "string to be searched";
         final int INDEX_OF_FIRST_R = 2;
@@ -1697,12 +1505,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 TextUtils.lastIndexOf(mockCharSequence, 'r', INDEX_OF_FIRST_R));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "lastIndexOf",
-        args = {CharSequence.class, char.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for lastIndexOf() does not exist.")
     public void testLastIndexOf3() {
         String searchString = "string to be searched";
         final int INDEX_OF_FIRST_R = 2;
@@ -1743,12 +1545,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 INDEX_OF_SECOND_R - 1));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "regionMatches",
-        args = {CharSequence.class, int.class, CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for regionMatches() does not exist.")
     public void testRegionMatches() {
         assertFalse(TextUtils.regionMatches("one", 0, "two", 0, "one".length()));
         assertTrue(TextUtils.regionMatches("one", 0, "one", 0, "one".length()));
@@ -1819,12 +1615,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "replace",
-        args = {CharSequence.class, String[].class, CharSequence[].class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for replace() is incomplete.")
     public void testReplace() {
         String template = "this is a string to be as the template for replacement";
 
@@ -1875,13 +1665,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "split",
-        args = {String.class, Pattern.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for split() is incomplete." +
-            "1. not clear what is supposed result if the pattern string is empty.")
     public void testSplitPattern() {
         String testString = "abccbadecdebz";
         assertEquals(calculateCharsCount(testString, "c") + 1,
@@ -1929,13 +1712,6 @@ public class TextUtilsTest extends AndroidTestCase {
         return count;
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "split",
-        args = {String.class, String.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for split() is incomplete." +
-            "1. not clear what is supposed result if the pattern string is empty.")
     public void testSplitString() {
         String testString = "abccbadecdebz";
         assertEquals(calculateCharsCount(testString, "c") + 1,
@@ -1965,13 +1741,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "stringOrSpannedString",
-        args = {CharSequence.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for" +
-            " stringOrSpannedString() does not exist.")
     public void testStringOrSpannedString() {
         assertNull(TextUtils.stringOrSpannedString(null));
 
@@ -1991,15 +1760,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 TextUtils.stringOrSpannedString(stringBuffer).getClass());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "substring",
-        args = {CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for substring() is incomplete." +
-            "1. doesn't explain @param and @return" +
-            "2. not clear what is supposed to happen if source is null." +
-            "3. doesn't explain the thrown IndexOutOfBoundsException")
     public void testSubString() {
         String string = "String";
         assertSame(string, TextUtils.substring(string, 0, string.length()));
@@ -2057,82 +1817,84 @@ public class TextUtilsTest extends AndroidTestCase {
         assertTrue(mockGetChars.hasCalledGetChars());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {CharSequence.class, Parcel.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for writeToParcel() is incomplete." +
-            "1. doesn't explain @param and @return" +
-            "2. not clear is it the supposed result when the CharSequence is null.")
     public void testWriteToParcel() {
-        Parcel p = Parcel.obtain();
-
         Parcelable.Creator<CharSequence> creator = TextUtils.CHAR_SEQUENCE_CREATOR;
-
         String string = "String";
-        TextUtils.writeToParcel(string, p, 0);
-        p.setDataPosition(0);
-        assertEquals(string, creator.createFromParcel(p).toString());
-        p.recycle();
+        Parcel p = Parcel.obtain();
+        try {
+            TextUtils.writeToParcel(string, p, 0);
+            p.setDataPosition(0);
+            assertEquals(string, creator.createFromParcel(p).toString());
+        } finally {
+            p.recycle();
+        }
 
         p = Parcel.obtain();
-        TextUtils.writeToParcel(null, p, 0);
-        p.setDataPosition(0);
-        assertNull(creator.createFromParcel(p));
-        p.recycle();
+        try {
+            TextUtils.writeToParcel(null, p, 0);
+            p.setDataPosition(0);
+            assertNull(creator.createFromParcel(p));
+        } finally {
+            p.recycle();
+        }
 
-        p = Parcel.obtain();
         SpannableString spannableString = new SpannableString("Spannable String");
-        URLSpan urlSpan = new URLSpan("URL Span");
         int urlSpanStart = spannableString.length() >> 1;
         int urlSpanEnd = spannableString.length();
-        spannableString.setSpan(urlSpan, urlSpanStart, urlSpanEnd,
-                Spanned.SPAN_INCLUSIVE_INCLUSIVE);
-        TextUtils.writeToParcel(spannableString, p, 0);
-        p.setDataPosition(0);
-        SpannableString ret = (SpannableString) creator.createFromParcel(p);
-        assertEquals("Spannable String", ret.toString());
-        Object[] spans = ret.getSpans(0, ret.length(), Object.class);
-        assertEquals(1, spans.length);
-        assertEquals("URL Span", ((URLSpan) spans[0]).getURL());
-        assertEquals(urlSpanStart, ret.getSpanStart(spans[0]));
-        assertEquals(urlSpanEnd, ret.getSpanEnd(spans[0]));
-        assertEquals(Spanned.SPAN_INCLUSIVE_INCLUSIVE, ret.getSpanFlags(spans[0]));
-        p.recycle();
+        p = Parcel.obtain();
+        try {
+            URLSpan urlSpan = new URLSpan("URL Span");
+            spannableString.setSpan(urlSpan, urlSpanStart, urlSpanEnd,
+                    Spanned.SPAN_INCLUSIVE_INCLUSIVE);
+            TextUtils.writeToParcel(spannableString, p, 0);
+            p.setDataPosition(0);
+            SpannableString ret = (SpannableString) creator.createFromParcel(p);
+            assertEquals("Spannable String", ret.toString());
+            Object[] spans = ret.getSpans(0, ret.length(), Object.class);
+            assertEquals(1, spans.length);
+            assertEquals("URL Span", ((URLSpan) spans[0]).getURL());
+            assertEquals(urlSpanStart, ret.getSpanStart(spans[0]));
+            assertEquals(urlSpanEnd, ret.getSpanEnd(spans[0]));
+            assertEquals(Spanned.SPAN_INCLUSIVE_INCLUSIVE, ret.getSpanFlags(spans[0]));
+        } finally {
+            p.recycle();
+        }
 
         p = Parcel.obtain();
-        ColorStateList colors = new ColorStateList(new int[][] {
-                new int[] {android.R.attr.state_focused}, new int[0]},
-                new int[] {Color.rgb(0, 255, 0), Color.BLACK});
-        int textSize = 20;
-        TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan(
-                null, Typeface.ITALIC, textSize, colors, null);
-        int textAppearanceSpanStart = 0;
-        int textAppearanceSpanEnd = spannableString.length() >> 1;
-        spannableString.setSpan(textAppearanceSpan, textAppearanceSpanStart,
-                textAppearanceSpanEnd, Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-        TextUtils.writeToParcel(spannableString, p, -1);
-        p.setDataPosition(0);
-        ret = (SpannableString) creator.createFromParcel(p);
-        assertEquals("Spannable String", ret.toString());
-        spans = ret.getSpans(0, ret.length(), Object.class);
-        assertEquals(2, spans.length);
-        assertEquals("URL Span", ((URLSpan) spans[0]).getURL());
-        assertEquals(urlSpanStart, ret.getSpanStart(spans[0]));
-        assertEquals(urlSpanEnd, ret.getSpanEnd(spans[0]));
-        assertEquals(Spanned.SPAN_INCLUSIVE_INCLUSIVE, ret.getSpanFlags(spans[0]));
-        assertEquals(null, ((TextAppearanceSpan) spans[1]).getFamily());
+        try {
+            ColorStateList colors = new ColorStateList(new int[][] {
+                    new int[] {android.R.attr.state_focused}, new int[0]},
+                    new int[] {Color.rgb(0, 255, 0), Color.BLACK});
+            int textSize = 20;
+            TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan(
+                    null, Typeface.ITALIC, textSize, colors, null);
+            int textAppearanceSpanStart = 0;
+            int textAppearanceSpanEnd = spannableString.length() >> 1;
+            spannableString.setSpan(textAppearanceSpan, textAppearanceSpanStart,
+                    textAppearanceSpanEnd, Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+            TextUtils.writeToParcel(spannableString, p, -1);
+            p.setDataPosition(0);
+            SpannableString ret = (SpannableString) creator.createFromParcel(p);
+            assertEquals("Spannable String", ret.toString());
+            Object[] spans = ret.getSpans(0, ret.length(), Object.class);
+            assertEquals(2, spans.length);
+            assertEquals("URL Span", ((URLSpan) spans[0]).getURL());
+            assertEquals(urlSpanStart, ret.getSpanStart(spans[0]));
+            assertEquals(urlSpanEnd, ret.getSpanEnd(spans[0]));
+            assertEquals(Spanned.SPAN_INCLUSIVE_INCLUSIVE, ret.getSpanFlags(spans[0]));
+            assertEquals(null, ((TextAppearanceSpan) spans[1]).getFamily());
 
-        assertEquals(Typeface.ITALIC, ((TextAppearanceSpan) spans[1]).getTextStyle());
-        assertEquals(textSize, ((TextAppearanceSpan) spans[1]).getTextSize());
+            assertEquals(Typeface.ITALIC, ((TextAppearanceSpan) spans[1]).getTextStyle());
+            assertEquals(textSize, ((TextAppearanceSpan) spans[1]).getTextSize());
 
-        assertEquals(colors.toString(), ((TextAppearanceSpan) spans[1]).getTextColor().toString());
-        assertEquals(null, ((TextAppearanceSpan) spans[1]).getLinkTextColor());
-        assertEquals(textAppearanceSpanStart, ret.getSpanStart(spans[1]));
-        assertEquals(textAppearanceSpanEnd, ret.getSpanEnd(spans[1]));
-        assertEquals(Spanned.SPAN_INCLUSIVE_EXCLUSIVE, ret.getSpanFlags(spans[1]));
-        p.recycle();
+            assertEquals(colors.toString(), ((TextAppearanceSpan) spans[1]).getTextColor().toString());
+            assertEquals(null, ((TextAppearanceSpan) spans[1]).getLinkTextColor());
+            assertEquals(textAppearanceSpanStart, ret.getSpanStart(spans[1]));
+            assertEquals(textAppearanceSpanEnd, ret.getSpanEnd(spans[1]));
+            assertEquals(Spanned.SPAN_INCLUSIVE_EXCLUSIVE, ret.getSpanFlags(spans[1]));
+        } finally {
+            p.recycle();
+        }
 
         try {
             TextUtils.writeToParcel(spannableString, null, 0);
@@ -2142,12 +1904,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getCapsMode",
-        args = {CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1586346", explanation = "return cap mode which is NOT set in reqModes")
     public void testGetCapsMode() {
         final int CAP_MODE_ALL = TextUtils.CAP_MODE_CHARACTERS
                 | TextUtils.CAP_MODE_WORDS | TextUtils.CAP_MODE_SENTENCES;
@@ -2232,13 +1988,6 @@ public class TextUtilsTest extends AndroidTestCase {
                 TextUtils.getCapsMode(testString, offset, CAP_MODE_ALL));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getCapsMode",
-        args = {CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for substring() is incomplete." +
-            "1. doesn't describe the expected result when parameter is exceptional.")
     public void testGetCapsModeException() {
         String testString = "Start. Sentence word!No space before\n\t" +
                 "Paragraph? (\"\'skip begin\'\"). skip end";
@@ -2265,11 +2014,6 @@ public class TextUtilsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "dumpSpans",
-        args = {java.lang.CharSequence.class, android.util.Printer.class, java.lang.String.class}
-    )
     public void testDumpSpans() {
         StringBuilder builder = new StringBuilder();
         StringBuilderPrinter printer = new StringBuilderPrinter(builder);
@@ -2288,4 +2032,174 @@ public class TextUtilsTest extends AndroidTestCase {
         TextUtils.dumpSpans(spanned, printer, prefix);
         assertTrue(builder.length() > 0);
     }
-}
+
+    @TestTargetNew(
+            level = TestLevel.COMPLETE,
+            method = "getLayoutDirectionFromLocale",
+            args = {Locale.class}
+    )
+    public void testGetLayoutDirectionFromLocale() {
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(null));
+
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.ENGLISH));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.CANADA));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.CANADA_FRENCH));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.FRANCE));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.FRENCH));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.GERMAN));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.GERMANY));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.ITALIAN));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.ITALY));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.UK));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.US));
+
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.ROOT));
+
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.CHINA));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.CHINESE));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.JAPAN));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.JAPANESE));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.KOREA));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.KOREAN));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.PRC));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.SIMPLIFIED_CHINESE));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.TAIWAN));
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(Locale.TRADITIONAL_CHINESE));
+
+        Locale locale = new Locale("ar");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "AE");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "BH");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "DZ");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "EG");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "IQ");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "JO");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "KW");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "LB");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "LY");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "MA");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "OM");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "QA");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "SA");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "SD");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "SY");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "TN");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ar", "YE");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+
+        locale = new Locale("fa");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("fa", "AF");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("fa", "IR");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+
+        locale = new Locale("iw");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("iw", "IL");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("he");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("he", "IL");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+
+        locale = new Locale("pa_Arab");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("pa_Arab", "PK");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+
+        locale = new Locale("ps");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ps", "AF");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+
+        locale = new Locale("ur");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ur", "IN");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("ur", "PK");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+
+        locale = new Locale("uz_Arab");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+        locale = new Locale("uz_Arab", "AF");
+        assertEquals(LAYOUT_DIRECTION_RTL,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+
+        // Locale without a real language
+        locale = new Locale("zz");
+        assertEquals(LAYOUT_DIRECTION_LTR,
+                TextUtils.getLayoutDirectionFromLocale(locale));
+    }}

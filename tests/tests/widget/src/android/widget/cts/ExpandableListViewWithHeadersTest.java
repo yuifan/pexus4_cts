@@ -16,25 +16,21 @@
 
 package android.widget.cts;
 
+
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.suitebuilder.annotation.LargeTest;
 import android.test.suitebuilder.annotation.MediumTest;
 import android.view.KeyEvent;
 import android.widget.ExpandableListView;
 import android.widget.cts.util.ListUtil;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
 
-@TestTargetClass(ExpandableListView.class)
 public class ExpandableListViewWithHeadersTest extends
         ActivityInstrumentationTestCase2<ExpandableListWithHeaders> {
     private ExpandableListView mExpandableListView;
     private ListUtil mListUtil;
 
     public ExpandableListViewWithHeadersTest() {
-        super("com.android.cts.stub", ExpandableListWithHeaders.class);
+        super(ExpandableListWithHeaders.class);
     }
 
     @Override
@@ -50,12 +46,6 @@ public class ExpandableListViewWithHeadersTest extends
         assertNotNull(mExpandableListView);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ExpandableListView#expandGroup(int)}",
-        method = "expandGroup",
-        args = {int.class}
-    )
     @MediumTest
     public void testExpandOnFirstPosition() {
         // Should be a header, and hence the first group should NOT have expanded
@@ -65,17 +55,31 @@ public class ExpandableListViewWithHeadersTest extends
         assertFalse(mExpandableListView.isGroupExpanded(0));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ExpandableListView#expandGroup(int)}",
-        method = "expandGroup",
-        args = {int.class}
-    )
     @LargeTest
     public void testExpandOnFirstGroup() {
         mListUtil.arrowScrollToSelectedPosition(getActivity().getNumOfHeadersAndFooters());
         sendKeys(KeyEvent.KEYCODE_DPAD_CENTER);
         getInstrumentation().waitForIdleSync();
         assertTrue(mExpandableListView.isGroupExpanded(0));
+    }
+
+    @MediumTest
+    public void testContextMenus() {
+        ExpandableListTester tester = new ExpandableListTester(mExpandableListView, this);
+        tester.testContextMenus();
+    }
+
+    @MediumTest
+    public void testConvertionBetweenFlatAndPacked() {
+        ExpandableListTester tester = new ExpandableListTester(mExpandableListView, this);
+        tester.testConvertionBetweenFlatAndPackedOnGroups();
+        tester.testConvertionBetweenFlatAndPackedOnChildren();
+    }
+
+    @MediumTest
+    public void testSelectedPosition() {
+        ExpandableListTester tester = new ExpandableListTester(mExpandableListView, this);
+        tester.testSelectedPositionOnGroups();
+        tester.testSelectedPositionOnChildren();
     }
 }

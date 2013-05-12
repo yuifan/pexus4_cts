@@ -18,6 +18,7 @@ package android.view.cts;
 
 import android.app.Instrumentation;
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.graphics.Canvas;
 import android.graphics.PixelFormat;
 import android.graphics.Region;
@@ -28,14 +29,8 @@ import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.cts.SurfaceViewStubActivity.MockSurfaceView;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(SurfaceView.class)
 public class SurfaceViewTest extends ActivityInstrumentationTestCase2<SurfaceViewStubActivity> {
-    private static final long WAIT_TIME = 1000;
 
     private Context mContext;
     private Instrumentation mInstrumentation;
@@ -53,76 +48,12 @@ public class SurfaceViewTest extends ActivityInstrumentationTestCase2<SurfaceVie
         mMockSurfaceView = getActivity().getSurfaceView();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructor(s) of {@link SurfaceView}",
-            method = "SurfaceView",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructor(s) of {@link SurfaceView}",
-            method = "SurfaceView",
-            args = {Context.class, AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructor(s) of {@link SurfaceView}",
-            method = "SurfaceView",
-            args = {Context.class, AttributeSet.class, int.class}
-        )
-    })
     public void testConstructor() {
         new SurfaceView(mContext);
         new SurfaceView(mContext, null);
         new SurfaceView(mContext, null, 0);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test method: draw",
-            method = "draw",
-            args = {Canvas.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test method: dispatchDraw",
-            method = "dispatchDraw",
-            args = {Canvas.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test method: gatherTransparentRegion",
-            method = "gatherTransparentRegion",
-            args = {Region.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test method: getHolder",
-            method = "getHolder",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test method: onAttachedToWindow",
-            method = "onAttachedToWindow",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test method: onMeasure",
-            method = "onMeasure",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test method: onWindowVisibilityChanged",
-            method = "onWindowVisibilityChanged",
-            args = {int.class}
-        )
-    })
     public void testSurfaceView() {
         final int left = 40;
         final int top = 30;
@@ -160,12 +91,6 @@ public class SurfaceViewTest extends ActivityInstrumentationTestCase2<SurfaceVie
         assertTrue(actual instanceof SurfaceHolder);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test method: onSizeChanged",
-        method = "onSizeChanged",
-        args = {int.class, int.class, int.class, int.class}
-    )
     @UiThreadTest
     /**
      * check point:
@@ -190,12 +115,6 @@ public class SurfaceViewTest extends ActivityInstrumentationTestCase2<SurfaceVie
         assertEquals(bottom - top, mMockSurfaceView.getHeight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test method: onScrollChanged",
-        method = "onScrollChanged",
-        args = {int.class, int.class, int.class, int.class}
-    )
     @UiThreadTest
     /**
      * check point:
@@ -216,20 +135,18 @@ public class SurfaceViewTest extends ActivityInstrumentationTestCase2<SurfaceVie
         assertEquals(scrollToY, mMockSurfaceView.getScrollY());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test method: onDetachedFromWindow",
-        method = "onDetachedFromWindow",
-        args = {}
-    )
     public void testOnDetachedFromWindow() {
-        MockSurfaceView mockSurfaceView = getActivity().getSurfaceView();
+        final MockSurfaceView mockSurfaceView = getActivity().getSurfaceView();
         assertFalse(mockSurfaceView.isDetachedFromWindow());
         assertTrue(mockSurfaceView.isShown());
         sendKeys(KeyEvent.KEYCODE_BACK);
-        sleep(WAIT_TIME);
-        assertTrue(mockSurfaceView.isDetachedFromWindow());
-        assertFalse(mockSurfaceView.isShown());
+        new PollingCheck() {
+            @Override
+            protected boolean check() {
+                return mockSurfaceView.isDetachedFromWindow() &&
+                       !mockSurfaceView.isShown();
+            }
+        }.run();
     }
 
     private void sleep(long time) {

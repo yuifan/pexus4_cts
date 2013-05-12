@@ -16,13 +16,9 @@
 
 package android.telephony.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -33,9 +29,10 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.test.AndroidTestCase;
 
+import com.android.internal.telephony.PhoneConstants;
+
 import java.util.regex.Pattern;
 
-@TestTargetClass(TelephonyManager.class)
 public class TelephonyManagerTest extends AndroidTestCase {
     private TelephonyManager mTelephonyManager;
     private boolean mOnCellLocationChangedCalled = false;
@@ -43,12 +40,14 @@ public class TelephonyManagerTest extends AndroidTestCase {
     private static final int TOLERANCE = 1000;
     private Looper mLooper;
     private PhoneStateListener mListener;
+    private static ConnectivityManager mCm;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
         mTelephonyManager =
             (TelephonyManager)getContext().getSystemService(Context.TELEPHONY_SERVICE);
+        mCm = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
     }
 
     @Override
@@ -60,11 +59,6 @@ public class TelephonyManagerTest extends AndroidTestCase {
         super.tearDown();
     }
 
-    @TestTargetNew(
-      level = TestLevel.COMPLETE,
-      method = "listen",
-      args = {PhoneStateListener.class, int.class}
-    )
     public void testListen() throws Throwable {
         if (mTelephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_CDMA) {
             // TODO: temp workaround, need to adjust test to for CDMA
@@ -133,118 +127,6 @@ public class TelephonyManagerTest extends AndroidTestCase {
      * it's no need to get details of these information, just make sure they are in right
      * condition(>0 or not null).
      */
-    @TestTargets({
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNetworkType",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getPhoneType",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getVoiceMailNumber",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSimOperatorName",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNetworkCountryIso",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getCellLocation",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDeviceSoftwareVersion",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSimState",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSimSerialNumber",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDeviceId",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSimOperator",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNetworkOperatorName",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSubscriberId",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getLine1Number",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNetworkOperator",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSimCountryIso",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDataActivity",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDataState",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getCallState",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isNetworkRoaming",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getVoiceMailAlphaTag",
-        args = {}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNeighboringCellInfo",
-        args = {}
-      )
-    })
     public void testTelephonyManager() {
         assertTrue(mTelephonyManager.getNetworkType() >= TelephonyManager.NETWORK_TYPE_UNKNOWN);
         assertTrue(mTelephonyManager.getPhoneType() >= TelephonyManager.PHONE_TYPE_NONE);
@@ -278,11 +160,6 @@ public class TelephonyManagerTest extends AndroidTestCase {
      * GSM, a valid MEID or ESN if CDMA, or a valid MAC address if
      * only a WiFi device.
      */
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDeviceId",
-        args = {}
-    )
     public void testGetDeviceId() {
         String deviceId = mTelephonyManager.getDeviceId();
         int phoneType = mTelephonyManager.getPhoneType();
@@ -292,13 +169,23 @@ public class TelephonyManagerTest extends AndroidTestCase {
                 break;
 
             case TelephonyManager.PHONE_TYPE_CDMA:
-                assertCdmaDeviceId(deviceId);
+                // LTE device is using IMEI as device id
+                if (mTelephonyManager.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE) {
+                    assertGsmDeviceId(deviceId);
+                } else {
+                    assertCdmaDeviceId(deviceId);
+                }
                 break;
 
             case TelephonyManager.PHONE_TYPE_NONE:
-                assertNull(deviceId);
-                assertSerialNumber();
-                assertMacAddressReported();
+                boolean nwSupported = mCm.isNetworkSupported(mCm.TYPE_WIFI);
+                if (nwSupported) {
+                    assertSerialNumber();
+                    assertMacAddressReported();
+                } else {
+                    nwSupported = mCm.isNetworkSupported(mCm.TYPE_ETHERNET);
+                    assertTrue(nwSupported);
+                }
                 break;
 
             default:

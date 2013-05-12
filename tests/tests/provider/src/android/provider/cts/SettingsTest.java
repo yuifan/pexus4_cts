@@ -16,20 +16,17 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestTargetClass;
 
+import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
-import android.content.IContentProvider;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
 import android.os.RemoteException;
 import android.provider.Settings;
 import android.test.AndroidTestCase;
-import android.util.Log;
 
-@TestTargetClass(android.provider.Settings.class)
 public class SettingsTest extends AndroidTestCase {
     public void testSystemTable() throws RemoteException {
         final String[] SYSTEM_PROJECTION = new String[] {
@@ -47,7 +44,8 @@ public class SettingsTest extends AndroidTestCase {
 
         // get provider
         ContentResolver cr = mContext.getContentResolver();
-        IContentProvider provider = cr.acquireProvider(Settings.System.CONTENT_URI);
+        ContentProviderClient provider =
+                cr.acquireContentProviderClient(Settings.System.CONTENT_URI);
         Cursor cursor = null;
 
         try {
@@ -58,7 +56,7 @@ public class SettingsTest extends AndroidTestCase {
 
             provider.insert(Settings.System.CONTENT_URI, value);
             cursor = provider.query(Settings.System.CONTENT_URI, SYSTEM_PROJECTION,
-                    Settings.System.NAME + "=\"" + insertName + "\"", null, null);
+                    Settings.System.NAME + "=\"" + insertName + "\"", null, null, null);
             assertNotNull(cursor);
             assertEquals(1, cursor.getCount());
             assertTrue(cursor.moveToFirst());
@@ -75,7 +73,7 @@ public class SettingsTest extends AndroidTestCase {
             provider.update(Settings.System.CONTENT_URI, value,
                     Settings.System.NAME + "=\"" + insertName + "\"", null);
             cursor = provider.query(Settings.System.CONTENT_URI, SYSTEM_PROJECTION,
-                    Settings.System._ID + " = " + Id, null, null);
+                    Settings.System._ID + " = " + Id, null, null, null);
             assertNotNull(cursor);
             assertEquals(1, cursor.getCount());
             assertTrue(cursor.moveToFirst());
@@ -87,7 +85,7 @@ public class SettingsTest extends AndroidTestCase {
             provider.delete(Settings.System.CONTENT_URI,
                     Settings.System.NAME + "=\"" + updateName + "\"", null);
             cursor = provider.query(Settings.System.CONTENT_URI, SYSTEM_PROJECTION,
-                    Settings.System._ID + " = " + Id, null, null);
+                    Settings.System._ID + " = " + Id, null, null, null);
             assertNotNull(cursor);
             assertEquals(0, cursor.getCount());
         } finally {
@@ -115,7 +113,7 @@ public class SettingsTest extends AndroidTestCase {
         // get provider
         Uri uri = Uri.parse("content://settings/bluetooth_devices");
         ContentResolver cr = mContext.getContentResolver();
-        IContentProvider provider = cr.acquireProvider(uri);
+        ContentProviderClient provider = cr.acquireContentProviderClient(uri);
         Cursor cursor = null;
 
         try {
@@ -128,7 +126,7 @@ public class SettingsTest extends AndroidTestCase {
 
             provider.insert(uri, value);
             cursor = provider.query(uri, BLUETOOTH_DEVICES_PROJECTION,
-                    "name=\"" + insertName + "\"", null, null);
+                    "name=\"" + insertName + "\"", null, null, null);
             assertNotNull(cursor);
             assertEquals(1, cursor.getCount());
             assertTrue(cursor.moveToFirst());
@@ -147,7 +145,7 @@ public class SettingsTest extends AndroidTestCase {
 
             provider.update(uri, value, "name=\"" + insertName + "\"", null);
             cursor = provider.query(uri, BLUETOOTH_DEVICES_PROJECTION,
-                    "name=\"" + updateName + "\"", null, null);
+                    "name=\"" + updateName + "\"", null, null, null);
             assertNotNull(cursor);
             assertEquals(1, cursor.getCount());
             assertTrue(cursor.moveToFirst());
@@ -158,7 +156,8 @@ public class SettingsTest extends AndroidTestCase {
 
             // Test: delete
             provider.delete(uri, "name=\"" + updateName + "\"", null);
-            cursor = provider.query(uri, BLUETOOTH_DEVICES_PROJECTION, "_id = " + Id, null, null);
+            cursor = provider.query(uri, BLUETOOTH_DEVICES_PROJECTION, "_id = " + Id,
+                    null, null, null);
             assertNotNull(cursor);
             assertEquals(0, cursor.getCount());
         } finally {
@@ -174,14 +173,16 @@ public class SettingsTest extends AndroidTestCase {
         };
 
         ContentResolver cr = mContext.getContentResolver();
-        IContentProvider provider = cr.acquireProvider(Settings.Secure.CONTENT_URI);
+        ContentProviderClient provider =
+                cr.acquireContentProviderClient(Settings.Secure.CONTENT_URI);
         assertNotNull(provider);
 
         // Test that the secure table can be read from.
         Cursor cursor = null;
         try {
-            cursor = provider.query(Settings.Secure.CONTENT_URI, SECURE_PROJECTION,
-                    Settings.Secure.NAME + "=\"" + Settings.Secure.ADB_ENABLED + "\"", null, null);
+            cursor = provider.query(Settings.Global.CONTENT_URI, SECURE_PROJECTION,
+                    Settings.Global.NAME + "=\"" + Settings.Global.ADB_ENABLED + "\"",
+                    null, null, null);
             assertNotNull(cursor);
         } finally {
             if (cursor != null) {

@@ -16,11 +16,6 @@
 
 package android.app.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -30,10 +25,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.test.InstrumentationTestCase;
-import android.view.KeyEvent;
 import android.widget.TabHost;
 
-@TestTargetClass(TabActivity.class)
 public class TabActivityTest extends InstrumentationTestCase {
     private Instrumentation mInstrumentation;
     private MockTabActivity mActivity;
@@ -59,56 +52,6 @@ public class TabActivityTest extends InstrumentationTestCase {
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "TabActivity",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDefaultTab",
-            args = {java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDefaultTab",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onContentChanged",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTabHost",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTabWidget",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onPostCreate",
-            args = {android.os.Bundle.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onRestoreInstanceState",
-            args = {android.os.Bundle.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onSaveInstanceState",
-            args = {android.os.Bundle.class}
-        )
-    })
-    @ToBeFixed(bug = "1701364", explanation = "When testing TabActivity#setDefaultTab(int index),"
-            + " setDefaultTab(String tag), we find that the set values are hard to get, there"
-            + " is no proper method or other way to obtain these two default values.")
     public void testTabActivity() throws Throwable {
         // Test constructor
         new TabActivity();
@@ -132,28 +75,8 @@ public class TabActivityTest extends InstrumentationTestCase {
         final TabHost tabHost = mActivity.getTabHost();
         assertNotNull(tabHost);
         assertNotNull(tabHost.getTabWidget());
-
-        // Test onSaveInstanceState
-        assertFalse(mActivity.isOnSaveInstanceStateCalled);
-        final Intent embedded = new Intent(mInstrumentation.getTargetContext(),
-                ChildTabActivity.class);
-        mActivity.startActivity(embedded);
-        mInstrumentation.waitForIdleSync();
-        assertTrue(mActivity.isOnSaveInstanceStateCalled);
-
-        // Test onRestoreInstanceState
-        sendKeys(KeyEvent.KEYCODE_BACK);
-        mInstrumentation.waitForIdleSync();
-        assertFalse(MockTabActivity.isOnRestoreInstanceStateCalled);
-        OrientationTestUtils.toggleOrientationSync(mActivity, mInstrumentation);
-        assertTrue(MockTabActivity.isOnRestoreInstanceStateCalled);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onChildTitleChanged",
-        args = {android.app.Activity.class, java.lang.CharSequence.class}
-    )
     public void testChildTitleCallback() throws Exception {
         final Context context = mInstrumentation.getTargetContext();
         final Intent intent = new Intent(context, MockTabActivity.class);

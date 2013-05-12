@@ -15,11 +15,16 @@
  */
 package com.android.cts.tradefed.result;
 
-import com.android.ddmlib.testrunner.TestIdentifier;
 import com.android.ddmlib.testrunner.ITestRunListener.TestFailure;
+import com.android.ddmlib.testrunner.TestIdentifier;
+import com.android.tradefed.build.IFolderBuildInfo;
+import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.XmlResultReporter;
-import com.android.tradefed.targetsetup.BuildInfo;
 import com.android.tradefed.util.FileUtil;
+
+import junit.framework.TestCase;
+
+import org.easymock.EasyMock;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -27,8 +32,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collections;
 import java.util.Map;
-
-import junit.framework.TestCase;
 
 /**
  * Unit tests for {@link XmlResultReporter}.
@@ -38,6 +41,7 @@ public class CtsXmlResultReporterTest extends TestCase {
     private CtsXmlResultReporter mResultReporter;
     private ByteArrayOutputStream mOutputStream;
     private File mReportDir;
+    private IFolderBuildInfo mMockBuild;
 
     /**
      * {@inheritDoc}
@@ -61,6 +65,9 @@ public class CtsXmlResultReporterTest extends TestCase {
         // TODO: use mock file dir instead
         mReportDir = FileUtil.createTempDir("foo");
         mResultReporter.setReportDir(mReportDir);
+        mMockBuild = EasyMock.createNiceMock(IFolderBuildInfo.class);
+        EasyMock.expect(mMockBuild.getDeviceSerial()).andStubReturn(null);
+        EasyMock.replay(mMockBuild);
     }
 
     @Override
@@ -75,14 +82,23 @@ public class CtsXmlResultReporterTest extends TestCase {
      * A simple test to ensure expected output is generated for test run with no tests.
      */
     public void testEmptyGeneration() {
-        final String expectedOutput = "<?xml version='1.0' encoding='UTF-8' standalone='no' ?>" +
-            "<?xml-stylesheet type=\"text/xsl\" href=\"cts_result.xsl\"?>" +
-            "<TestResult testPlan=\"unknown\" profile=\"unknown\" starttime=\"ignore\" endtime=\"ignore\" version=\"2.0\"> " +
-            "<Summary failed=\"0\" notExecuted=\"0\" timeout=\"0\" omitted=\"0\" pass=\"0\" total=\"0\" />" +
-            "</TestResult>";
-        mResultReporter.invocationStarted(new BuildInfo(1, "test", "test"));
+        final String expectedHeaderOutput = "<?xml version='1.0' encoding='UTF-8' standalone='no' ?>" +
+            "<?xml-stylesheet type=\"text/xsl\" href=\"cts_result.xsl\"?>";
+        final String expectedTestOutput =
+            "<TestResult testPlan=\"NA\" starttime=\"ignore\" endtime=\"ignore\" version=\"1.13\"> ";
+        final String expectedSummaryOutput =
+            "<Summary failed=\"0\" notExecuted=\"0\" timeout=\"0\" pass=\"0\" />";
+        final String expectedEndTag = "</TestResult>";
+        mResultReporter.invocationStarted(mMockBuild);
         mResultReporter.invocationEnded(1);
-        assertEquals(expectedOutput, getOutput());
+        String actualOutput = getOutput();
+        assertTrue(actualOutput.startsWith(expectedHeaderOutput));
+        assertTrue(String.format("test output did not contain expected test result. Got %s",
+                actualOutput), actualOutput.contains(expectedTestOutput));
+        assertTrue(String.format("test output did not contain expected test summary. Got %s",
+                actualOutput), actualOutput.contains(expectedSummaryOutput));
+        assertTrue(String.format("test output did not contain expected TestResult end tag. Got %s",
+                actualOutput), actualOutput.endsWith(expectedEndTag));
     }
 
     /**
@@ -91,22 +107,23 @@ public class CtsXmlResultReporterTest extends TestCase {
     public void testSinglePass() {
         Map<String, String> emptyMap = Collections.emptyMap();
         final TestIdentifier testId = new TestIdentifier("com.foo.FooTest", "testFoo");
-        mResultReporter.invocationStarted(new BuildInfo());
+        mResultReporter.invocationStarted(mMockBuild);
         mResultReporter.testRunStarted("run", 1);
         mResultReporter.testStarted(testId);
         mResultReporter.testEnded(testId, emptyMap);
         mResultReporter.testRunEnded(3000, emptyMap);
         mResultReporter.invocationEnded(1);
         String output =  getOutput();
+        CLog.d("Actual output: %s", output);
+        System.out.println(output);
         // TODO: consider doing xml based compare
         assertTrue(output.contains(
-                "<Summary failed=\"0\" notExecuted=\"0\" timeout=\"0\" omitted=\"0\" pass=\"1\" total=\"1\" />"));
-        assertTrue(output.contains("<TestPackage name=\"run\" runTime=\"3s\" digest=\"\" " +
-                "failed=\"0\" notExecuted=\"0\" timeout=\"0\" omitted=\"0\" pass=\"1\" total=\"1\">"));
-        assertTrue(output.contains(String.format("<TestCase name=\"%s\">", testId.getClassName())));
+                "<Summary failed=\"0\" notExecuted=\"0\" timeout=\"0\" pass=\"1\" />"));
+        assertTrue(output.contains("<TestPackage name=\"\" appPackageName=\"run\" digest=\"\">"));
+        assertTrue(output.contains("<TestCase name=\"FooTest\" priority=\"\">"));
 
         final String testCaseTag = String.format(
-                "<Test name=\"%s\" result=\"pass\" />", testId.getTestName());
+                "<Test name=\"%s\" result=\"pass\"", testId.getTestName());
         assertTrue(output.contains(testCaseTag));
     }
 
@@ -116,8 +133,8 @@ public class CtsXmlResultReporterTest extends TestCase {
     public void testSingleFail() {
         Map<String, String> emptyMap = Collections.emptyMap();
         final TestIdentifier testId = new TestIdentifier("FooTest", "testFoo");
-        final String trace = "this is a trace\nmore trace";
-        mResultReporter.invocationStarted(new BuildInfo());
+        final String trace = "this is a trace\nmore trace\nyet more trace";
+        mResultReporter.invocationStarted(mMockBuild);
         mResultReporter.testRunStarted("run", 1);
         mResultReporter.testStarted(testId);
         mResultReporter.testFailed(TestFailure.FAILURE, testId, trace);
@@ -128,9 +145,10 @@ public class CtsXmlResultReporterTest extends TestCase {
         System.out.print(getOutput());
         // TODO: consider doing xml based compare
         assertTrue(output.contains(
-                "<Summary failed=\"1\" notExecuted=\"0\" timeout=\"0\" omitted=\"0\" pass=\"0\" total=\"1\" />"));
+                "<Summary failed=\"1\" notExecuted=\"0\" timeout=\"0\" pass=\"0\" />"));
         final String failureTag =
-                "<FailedScene message=\"this is a trace\">this is a tracemore trace";
+            "<FailedScene message=\"this is a trace&#10;more trace\">     " +
+            "<StackTrace>this is a tracemore traceyet more trace</StackTrace>";
         assertTrue(output.contains(failureTag));
     }
 

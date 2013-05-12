@@ -22,10 +22,14 @@ import android.accessibilityservice.IAccessibilityServiceDelegate;
 import android.accessibilityservice.IAccessibilityServiceDelegateConnection;
 import android.app.Service;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+
+import java.util.List;
 
 /**
  * This class is an accessibility service mock to which the system is bound and
@@ -64,14 +68,6 @@ public class DelegatingAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onServiceConnected() {
-        AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-        info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK;
-        info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
-        info.packageNames = new String[] {
-            "com.android.cts.accessibilityservice"
-        };
-        setServiceInfo(info);
-
         // the service is ready to be used only
         // after the system has bound to it
         sServiceDelegate = this;
@@ -136,9 +132,68 @@ public class DelegatingAccessibilityService extends AccessibilityService {
         private class AccessibilityServiceDelegateConnection extends
                 IAccessibilityServiceDelegateConnection.Stub {
 
+            @Override
             public void setAccessibilityServiceDelegate(IBinder binder) {
                 sServiceDelegate.setDelegateInterface(IAccessibilityServiceDelegate.Stub
                         .asInterface(binder));
+            }
+
+            @Override
+            public List<AccessibilityNodeInfo> findAccessibilityNodeInfosByText(
+                    AccessibilityNodeInfo root, String text) {
+                return root.findAccessibilityNodeInfosByText(text);
+            }
+
+            @Override
+            public AccessibilityNodeInfo getChild(AccessibilityNodeInfo parent, int index) {
+                return parent.getChild(index);
+            }
+
+            @Override
+            public AccessibilityNodeInfo getParent(AccessibilityNodeInfo child) {
+                return child.getParent();
+            }
+
+            @Override
+            public AccessibilityNodeInfo findFocus(AccessibilityNodeInfo root, int focusType) {
+                return root.findFocus(focusType);
+            }
+
+            @Override
+            public AccessibilityNodeInfo focusSearch(AccessibilityNodeInfo current, int direction) {
+                return current.focusSearch(direction);
+            }
+
+            @Override
+            public AccessibilityNodeInfo getSource(AccessibilityEvent event) {
+                return event.getSource();
+            }
+
+            @Override
+            public boolean performAccessibilityAction(AccessibilityNodeInfo target, int action,
+                    Bundle arguments) {
+                return target.performAction(action, arguments);
+            }
+
+            @Override
+            public void setFetchViewsNotExposedForAccessibility(boolean fetch) {
+                AccessibilityServiceInfo info = sServiceDelegate.getServiceInfo();
+                if (fetch) {
+                    info.flags |= AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
+                } else {
+                    info.flags &= ~AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
+                }
+                sServiceDelegate.setServiceInfo(info);
+            }
+
+            @Override
+            public boolean performGlobalAction(int action) {
+                return sServiceDelegate.performGlobalAction(action);
+            }
+
+            @Override
+            public AccessibilityNodeInfo getRootInActiveWindow() {
+                return sServiceDelegate.getRootInActiveWindow();
             }
         }
     }

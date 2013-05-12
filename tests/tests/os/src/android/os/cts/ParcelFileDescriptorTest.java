@@ -16,11 +16,6 @@
 
 package android.os.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.content.Context;
 import android.os.Parcel;
@@ -28,32 +23,24 @@ import android.os.ParcelFileDescriptor;
 import android.os.Parcelable;
 import android.os.ParcelFileDescriptor.AutoCloseInputStream;
 import android.test.AndroidTestCase;
+import android.test.MoreAsserts;
 
 import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-@TestTargetClass(ParcelFileDescriptor.class)
 public class ParcelFileDescriptorTest extends AndroidTestCase {
     private static final long DURATION = 100l;
 
     private TestThread mTestThread;
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "ParcelFileDescriptor",
-            args = {android.os.ParcelFileDescriptor.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "open",
-            args = {java.io.File.class, int.class}
-        )
-    })
     public void testConstructorAndOpen() throws Exception {
         ParcelFileDescriptor tempFile = makeParcelFileDescriptor(getContext());
 
@@ -70,11 +57,6 @@ public class ParcelFileDescriptorTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "fromSocket",
-        args = {java.net.Socket.class}
-    )
     public void testFromSocket() throws Throwable {
         final int PORT = 12222;
         final int DATA = 1;
@@ -109,21 +91,66 @@ public class ParcelFileDescriptorTest extends AndroidTestCase {
         mTestThread.joinAndCheck(DURATION * 2);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "toString",
-        args = {}
-    )
+    public void testFromData() throws IOException {
+        assertNull(ParcelFileDescriptor.fromData(null, null));
+        byte[] data = new byte[] { 0 };
+        assertFileDescriptorContent(data, ParcelFileDescriptor.fromData(data, null));
+        data = new byte[] { 0, 1, 2, 3 };
+        assertFileDescriptorContent(data, ParcelFileDescriptor.fromData(data, null));
+        data = new byte[0];
+        assertFileDescriptorContent(data, ParcelFileDescriptor.fromData(data, null));
+
+        // Check that modifying the data does not modify the data in the FD
+        data = new byte[] { 0, 1, 2, 3 };
+        ParcelFileDescriptor pfd = ParcelFileDescriptor.fromData(data, null);
+        data[1] = 42;
+        assertFileDescriptorContent(new byte[] { 0, 1, 2, 3 }, pfd);
+    }
+
+    private static void assertFileDescriptorContent(byte[] expected, ParcelFileDescriptor fd)
+        throws IOException {
+        assertInputStreamContent(expected, new ParcelFileDescriptor.AutoCloseInputStream(fd));
+    }
+
+    private static void assertInputStreamContent(byte[] expected, InputStream is)
+            throws IOException {
+        try {
+            byte[] observed = new byte[expected.length];
+            int count = is.read(observed);
+            assertEquals(expected.length, count);
+            assertEquals(-1, is.read());
+            MoreAsserts.assertEquals(expected, observed);
+        } finally {
+            is.close();
+        }
+    }
+
+    public void testFromDataSkip() throws IOException {
+        byte[] data = new byte[] { 40, 41, 42, 43, 44, 45, 46 };
+        ParcelFileDescriptor pfd = ParcelFileDescriptor.fromData(data, null);
+        assertNotNull(pfd);
+        FileDescriptor fd = pfd.getFileDescriptor();
+        assertNotNull(fd);
+        assertTrue(fd.valid());
+        FileInputStream is = new FileInputStream(fd);
+        try {
+            assertEquals(1, is.skip(1));
+            assertEquals(41, is.read());
+            assertEquals(42, is.read());
+            assertEquals(2, is.skip(2));
+            assertEquals(45, is.read());
+            assertEquals(46, is.read());
+            assertEquals(-1, is.read());
+        } finally {
+            is.close();
+        }
+    }
+
     public void testToString() {
         ParcelFileDescriptor pfd = ParcelFileDescriptor.fromSocket(new Socket());
         assertNotNull(pfd.toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {android.os.Parcel.class, int.class}
-    )
     public void testWriteToParcel() throws Exception {
         ParcelFileDescriptor pf = makeParcelFileDescriptor(getContext());
 
@@ -143,11 +170,6 @@ public class ParcelFileDescriptorTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "close",
-        args = {}
-    )
     public void testClose() throws Exception {
         ParcelFileDescriptor pf = makeParcelFileDescriptor(getContext());
         AutoCloseInputStream in1 = new AutoCloseInputStream(pf);
@@ -170,24 +192,11 @@ public class ParcelFileDescriptorTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.SUFFICIENT,
-        method = "getStatSize",
-        args = {}
-    )
-    @ToBeFixed(bug="1695243", explanation="getStatSize() will return -1 if the fd is not a file,"
-            + " but here it will throw IllegalArgumentException, it's not the same with javadoc.")
     public void testGetStatSize() throws Exception {
         ParcelFileDescriptor pf = makeParcelFileDescriptor(getContext());
         assertTrue(pf.getStatSize() >= 0);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test method: getFileDescriptor",
-        method = "getFileDescriptor",
-        args = {}
-    )
     public void testGetFileDescriptor() {
         ParcelFileDescriptor pfd = ParcelFileDescriptor.fromSocket(new Socket());
         assertNotNull(pfd.getFileDescriptor());
@@ -196,12 +205,6 @@ public class ParcelFileDescriptorTest extends AndroidTestCase {
         assertSame(pfd.getFileDescriptor(), p.getFileDescriptor());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test method: describeContents",
-        method = "describeContents",
-        args = {}
-    )
     public void testDescribeContents() {
         ParcelFileDescriptor pfd = ParcelFileDescriptor.fromSocket(new Socket());
         assertTrue((Parcelable.CONTENTS_FILE_DESCRIPTOR & pfd.describeContents()) != 0);

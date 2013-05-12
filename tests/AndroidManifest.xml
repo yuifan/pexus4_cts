@@ -28,12 +28,18 @@
         <meta-data android:name="android.app.cts.float" android:value="100.1" />
         <meta-data android:name="android.app.cts.reference" android:resource="@xml/metadata" />
     </permission>
-
+    
     <uses-permission android:name="android.permission.GET_TASKS" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.SET_TIME_ZONE" />
-    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />        
+    <uses-permission android:name="android.permission.WRITE_SOCIAL_STREAM" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />    
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_SOCIAL_STREAM" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.DEVICE_POWER" />
     <uses-permission android:name="android.permission.STATUS_BAR" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
@@ -66,6 +72,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.DUMP" />
     <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS" />
+    <uses-permission android:name="com.android.voicemail.permission.ADD_VOICEMAIL" />
 
     <!-- Used for PackageManager test, don't delete this INTERNET permission -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -80,6 +88,7 @@
     <uses-permission android:name="android.permission.GET_PACKAGE_SIZE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="com.android.browser.permission.READ_HISTORY_BOOKMARKS" />
     <uses-permission android:name="com.android.browser.permission.WRITE_HISTORY_BOOKMARKS" />
@@ -108,33 +117,15 @@
     <uses-configuration/>
 
     <application android:label="Android TestCase"
-                android:icon="@drawable/size_48x48" android:name="android.app.cts.MockApplication">
+                android:icon="@drawable/size_48x48"
+                android:name="android.app.cts.MockApplication"
+                android:supportsRtl="true">
 
-        <activity android:name="android.media.cts.AudioManagerStub"
-            android:label="AudioManagerStub"/>
-        <activity android:name="android.media.cts.AudioManagerStubHelper"
-            android:label="AudioManagerStubHelper"/>
-
+        <activity android:name="android.app.cts.ActionBarActivity" />
         <activity android:name="android.widget.cts.TwoLineListItemStubActivity"
             android:label="TwoLineListItemStubActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
-            </intent-filter>
-        </activity>
-
-        <activity android:name="android.media.cts.MediaStubActivity"
-            android:label="MediaStubActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
-            </intent-filter>
-        </activity>
-
-        <activity android:name="android.media.cts.RingtonePickerActivity"
-            android:label="RingtonePickerActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
             </intent-filter>
         </activity>
@@ -156,7 +147,8 @@
         </activity>
 
         <activity android:name="android.app.cts.DialogStubActivity"
-            android:label="DialogStubActivity">
+            android:label="DialogStubActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
@@ -252,6 +244,14 @@
             </intent-filter>
         </activity>
 
+        <activity android:name="android.widget.cts.LayoutDirectionStubActivity"
+            android:label="LayoutDirectionStubActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
+            </intent-filter>
+        </activity>
+
         <activity android:name="android.widget.cts.ProgressBarStubActivity"
             android:label="ProgressBarStubActivity">
             <intent-filter>
@@ -314,6 +314,7 @@
         </activity>
 
         <activity android:name="android.view.cts.WindowStubActivity"
+            android:theme="@android:style/Theme.Holo.NoActionBar"
             android:label="WindowStubActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -492,18 +493,19 @@
 
         <activity android:name="android.widget.cts.GalleryStubActivity"
             android:label="GalleryStubActivity">
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
+            </intent-filter>
         </activity>
 
         <activity android:name="android.widget.cts.MockPopupWindowStubActivity"
             android:label="MockPopupWindowStubActivity">
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
+            </intent-filter>
         </activity>
-
-       <activity android:name="android.media.cts.FaceDetectorStub"
-            android:label="FaceDetectorStub"/>
 
         <activity android:name="android.widget.cts.ListViewStubActivity"
             android:label="ListViewStubActivity">
@@ -635,9 +637,11 @@
 
         <activity android:name="android.app.cts.InstrumentationTestActivity"
             android:label="InstrumentationTestActivity">
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.DEFAULT" />
-            <data android:mimeType="vnd.android.cursor.dir/person" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.dir/person" />
+            </intent-filter>
         </activity>
 
         <activity android:name="android.app.cts.AliasActivityStub">
@@ -746,12 +750,15 @@
 
         <activity android:name="android.view.cts.FocusFinderStubActivity"
             android:label="FocusFinderStubActivity">
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.DEFAULT" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <activity android:name="android.view.cts.GestureDetectorStubActivity"
-            android:label="GestureDetectorStubActivity"/>
+            android:label="GestureDetectorStubActivity"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
 
         <!--Test for PackageManager-->
         <activity android:name="android.content.pm.cts.TestPmActivity"
@@ -787,7 +794,10 @@
         <provider android:name="android.content.cts.DummyProvider"
             android:authorities="android.content.cts.dummyprovider"
             android:multiprocess="true" />
-
+        <provider android:name="android.content.cts.MockRemoteContentProvider"
+            android:authorities="remotectstest"
+            android:process=":remoteprovider" android:multiprocess="false" />
+        
         <activity android:name="android.app.cts.ChildTabActivity" android:label="ChildTabActivity" />
 
         <activity android:name="android.app.cts.LauncherActivityStub"
@@ -903,7 +913,7 @@
         <service android:name="android.app.cts.IntentServiceStub"/>
 
         <activity android:name="android.app.cts.LaunchpadActivity" 
-                  android:configChanges="keyboardHidden|orientation"
+                  android:configChanges="keyboardHidden|orientation|screenSize"
                   android:multiprocess="true">
         </activity>
 
@@ -933,12 +943,38 @@
 
         <activity android:name="android.opengl.cts.EglConfigStubActivity"/>
 
+        <activity android:name="android.opengl.cts.CompressedTextureStubActivity"
+            android:label="CompressedTextureStubActivity"
+            android:screenOrientation="nosensor">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
+            </intent-filter>
+        </activity>
+
         <activity android:name="android.preference.cts.PreferenceStubActivity">
             <meta-data android:name="android.preference" 
                     android:resource="@xml/preferences_from_intent" />
         </activity>
+                
+        <activity android:name="android.content.cts.ClipboardManagerListenerActivity"/>
 
+        <activity android:name="android.app.cts.ActivityManagerMemoryClassLaunchActivity" />
+
+        <activity android:name="android.app.cts.ActivityManagerMemoryClassTestActivity"
+                android:process=":memoryclass" />
+
+        <service android:name="android.speech.tts.cts.StubTextToSpeechService">
+            <intent-filter>
+                <action android:name="android.intent.action.TTS_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <activity android:name="android.renderscript.cts.RenderscriptGLStubActivity"
+                  android:label="RenderscriptGLStub"/>
     </application>
+
 
     <!--Test for PackageManager, please put this at the very beginning-->
     <instrumentation android:name="android.content.pm.cts.TestPmInstrumentation"

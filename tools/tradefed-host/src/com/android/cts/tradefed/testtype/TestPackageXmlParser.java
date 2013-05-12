@@ -20,7 +20,6 @@ import com.android.ddmlib.testrunner.TestIdentifier;
 import com.android.tradefed.util.xml.AbstractXmlParser;
 
 import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import java.util.Iterator;
@@ -36,7 +35,13 @@ public class TestPackageXmlParser extends AbstractXmlParser {
 
     private static final String LOG_TAG = "TestPackageXmlParser";
 
+    private final boolean mIncludeKnownFailures;
+
     private TestPackageDef mPackageDef;
+
+    public TestPackageXmlParser(boolean includeKnownFailures) {
+        mIncludeKnownFailures = includeKnownFailures;
+    }
 
     /**
      * SAX callback object. Handles parsing data from the xml tags.
@@ -58,28 +63,30 @@ public class TestPackageXmlParser extends AbstractXmlParser {
         private Stack<String> mClassNameStack = new Stack<String>();
 
         @Override
-        public void startElement(String uri, String localName, String name, Attributes attributes)
-                throws SAXException {
+        public void startElement(String uri, String localName, String name, Attributes attributes) {
             if (TEST_PACKAGE_TAG.equals(localName)) {
                 // appPackageName is used as the uri
                 final String entryUriValue = attributes.getValue("appPackageName");
                 final String testPackageNameSpace = attributes.getValue("appNameSpace");
                 final String packageName = attributes.getValue("name");
                 final String runnerName = attributes.getValue("runner");
-                final String hostSideTest = attributes.getValue("hostSideOnly");
                 final String jarPath = attributes.getValue("jarPath");
                 final String signatureCheck = attributes.getValue("signatureCheck");
-                final String referenceApp = attributes.getValue("referenceAppTest");
+                final String javaPackageFilter = attributes.getValue("javaPackageFilter");
+                final String targetBinaryName = attributes.getValue("targetBinaryName");
+                final String targetNameSpace = attributes.getValue("targetNameSpace");
 
                 mPackageDef = new TestPackageDef();
                 mPackageDef.setUri(entryUriValue);
                 mPackageDef.setAppNameSpace(testPackageNameSpace);
                 mPackageDef.setName(packageName);
                 mPackageDef.setRunner(runnerName);
-                mPackageDef.setIsHostSideTest(parseBoolean(hostSideTest));
+                mPackageDef.setTestType(getTestType(attributes));
                 mPackageDef.setJarPath(jarPath);
                 mPackageDef.setIsSignatureCheck(parseBoolean(signatureCheck));
-                mPackageDef.setIsReferenceApp(parseBoolean(referenceApp));
+                mPackageDef.setTestPackageName(javaPackageFilter);
+                mPackageDef.setTargetBinaryName(targetBinaryName);
+                mPackageDef.setTargetNameSpace(targetNameSpace);
 
                 // reset the class name
                 mClassNameStack = new Stack<String>();
@@ -117,16 +124,34 @@ public class TestPackageXmlParser extends AbstractXmlParser {
                             classNameBuilder.append(".");
                         }
                     }
-                    TestIdentifier testdef = new TestIdentifier(classNameBuilder.toString(),
+                    int timeout = -1;
+                    String timeoutStr = attributes.getValue("timeout");
+                    if (timeoutStr != null) {
+                        timeout = Integer.parseInt(timeoutStr);
+                    }
+                    TestIdentifier testId = new TestIdentifier(classNameBuilder.toString(),
                             methodName);
-                    mPackageDef.addTest(testdef);
+                    boolean isKnownFailure = "failure".equals(attributes.getValue("expectation"));
+                    if (!isKnownFailure || mIncludeKnownFailures) {
+                        mPackageDef.addTest(testId, timeout);
+                    }
                 }
             }
 
         }
 
+        private String getTestType(Attributes attributes) {
+            if (parseBoolean(attributes.getValue("hostSideOnly"))) {
+                return TestPackageDef.HOST_SIDE_ONLY_TEST;
+            } else if (parseBoolean(attributes.getValue("vmHostTest"))) {
+                return TestPackageDef.VM_HOST_TEST;
+            } else {
+                return attributes.getValue("testType");
+            }
+        }
+
         @Override
-        public void endElement (String uri, String localName, String qName) throws SAXException {
+        public void endElement (String uri, String localName, String qName) {
             if (TEST_SUITE_TAG.equals(localName) || TEST_CASE_TAG.equals(localName)) {
                 mClassNameStack.pop();
             }

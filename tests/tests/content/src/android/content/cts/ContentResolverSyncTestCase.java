@@ -57,6 +57,9 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
         // Need to clean up created account
         removeAccount(sAccountManager, ACCOUNT, null /* callback */);
 
+        // Need to cancel any sync that was started.
+        cancelSync(null, AUTHORITY, LATCH_TIMEOUT_MS);
+
         super.tearDown();
     }
 
@@ -87,13 +90,13 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
     }
 
     private CountDownLatch setNewLatch(CountDownLatch latch) {
-        getMockSyncAdapter().setLatch(latch);
         getMockSyncAdapter().clearData();
+        getMockSyncAdapter().setLatch(latch);
         return latch;
     }
 
     private void addAccountAndVerifyInitSync(Account account, String password,
-            String authority, int latchTimeoutMs) {
+            String authority, int latchTimeoutMs, int accountIndex) {
 
         CountDownLatch latch = setNewLatch(new CountDownLatch(1));
 
@@ -101,7 +104,9 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
 
         // Wait with timeout for the callback to do its work
         try {
-            latch.await(latchTimeoutMs, TimeUnit.MILLISECONDS);
+            if (!latch.await(latchTimeoutMs, TimeUnit.MILLISECONDS)) {
+                fail("should not time out waiting on latch");
+            }
         } catch (InterruptedException e) {
             fail("should not throw an InterruptedException");
         }
@@ -109,7 +114,7 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
         assertFalse(getMockSyncAdapter().isStartSync());
         assertFalse(getMockSyncAdapter().isCancelSync());
         assertTrue(getMockSyncAdapter().isInitialized());
-        assertEquals(account, getMockSyncAdapter().getAccount());
+        assertEquals(account, getMockSyncAdapter().getAccounts().get(accountIndex));
         assertEquals(authority, getMockSyncAdapter().getAuthority());
     }
 
@@ -159,8 +164,11 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
         ContentResolver.setMasterSyncAutomatically(false);
         assertEquals(false, ContentResolver.getMasterSyncAutomatically());
 
-        addAccountAndVerifyInitSync(ACCOUNT, MockAccountAuthenticator.ACCOUNT_PASSWORD, AUTHORITY,
-                LATCH_TIMEOUT_MS);
+        addAccountAndVerifyInitSync(ACCOUNT,
+                MockAccountAuthenticator.ACCOUNT_PASSWORD,
+                AUTHORITY,
+                LATCH_TIMEOUT_MS,
+                0);
 
         getMockSyncAdapter().clearData();
 
@@ -174,7 +182,7 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
         assertTrue(getMockSyncAdapter().isStartSync());
         assertFalse(getMockSyncAdapter().isCancelSync());
         assertFalse(getMockSyncAdapter().isInitialized());
-        assertEquals(ACCOUNT, getMockSyncAdapter().getAccount());
+        assertEquals(ACCOUNT, getMockSyncAdapter().getAccounts().get(0));
         assertEquals(AUTHORITY, getMockSyncAdapter().getAuthority());
     }
 
@@ -188,8 +196,11 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
         ContentResolver.setMasterSyncAutomatically(false);
         assertEquals(false, ContentResolver.getMasterSyncAutomatically());
 
-        addAccountAndVerifyInitSync(ACCOUNT, MockAccountAuthenticator.ACCOUNT_PASSWORD, AUTHORITY,
-                LATCH_TIMEOUT_MS);
+        addAccountAndVerifyInitSync(ACCOUNT,
+                MockAccountAuthenticator.ACCOUNT_PASSWORD,
+                AUTHORITY,
+                LATCH_TIMEOUT_MS,
+                0);
 
         getMockSyncAdapter().clearData();
 
@@ -224,6 +235,10 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
      * Test if we can set and get the SyncAutomatically switch for an account
      */
     public void testGetAndSetSyncAutomatically() {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+        }
         // Prevent auto sync
         ContentResolver.setMasterSyncAutomatically(false);
         assertEquals(false, ContentResolver.getMasterSyncAutomatically());
@@ -315,5 +330,36 @@ public class ContentResolverSyncTestCase extends AndroidTestCase {
         } catch (IllegalArgumentException e) {
             //expected.
         }
+    }
+
+    /**
+     * Test to verify that a SyncAdapter is called on all the accounts accounts
+     */
+    public void testCallMultipleAccounts() {
+        // Prevent auto sync
+        ContentResolver.setMasterSyncAutomatically(false);
+        assertEquals(false, ContentResolver.getMasterSyncAutomatically());
+
+        addAccountAndVerifyInitSync(ACCOUNT,
+                MockAccountAuthenticator.ACCOUNT_PASSWORD,
+                AUTHORITY,
+                LATCH_TIMEOUT_MS,
+                0);
+
+        getMockSyncAdapter().clearData();
+
+        setIsSyncable(ACCOUNT, AUTHORITY, true);
+        cancelSync(ACCOUNT, AUTHORITY, LATCH_TIMEOUT_MS);
+
+        getMockSyncAdapter().clearData();
+
+        requestSync(null /* all accounts */, AUTHORITY, LATCH_TIMEOUT_MS);
+
+        assertTrue(getMockSyncAdapter().isStartSync());
+        assertFalse(getMockSyncAdapter().isCancelSync());
+        assertFalse(getMockSyncAdapter().isInitialized());
+        assertEquals(ACCOUNT, getMockSyncAdapter().getAccounts().get(0));
+        assertEquals(AUTHORITY, getMockSyncAdapter().getAuthority());
+
     }
 }

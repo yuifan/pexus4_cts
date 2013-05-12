@@ -18,16 +18,12 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import org.xmlpull.v1.XmlPullParser;
 
 import android.app.Activity;
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.graphics.Rect;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.UiThreadTest;
@@ -39,14 +35,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.MeasureSpec;
 import android.view.ViewGroup.LayoutParams;
-import android.view.animation.cts.DelayedCheck;
 import android.widget.HorizontalScrollView;
 import android.widget.TextView;
 
 /**
  * Test {@link HorizontalScrollView}.
  */
-@TestTargetClass(HorizontalScrollView.class)
 public class HorizontalScrollViewTest
         extends ActivityInstrumentationTestCase2<HorizontalScrollViewStubActivity> {
     private static final int ITEM_WIDTH  = 250;
@@ -69,23 +63,6 @@ public class HorizontalScrollViewTest
         mScrollView = (MyHorizontalScrollView) mActivity.findViewById(R.id.horizontal_scroll_view);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "HorizontalScrollView",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "HorizontalScrollView",
-            args = {Context.class, AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "HorizontalScrollView",
-            args = {Context.class, AttributeSet.class, int.class}
-        )
-    })
     public void testConstructor() {
         XmlPullParser parser = mActivity.getResources().getLayout(R.layout.horizontal_scrollview);
         AttributeSet attrs = Xml.asAttributeSet(parser);
@@ -96,11 +73,6 @@ public class HorizontalScrollViewTest
         new HorizontalScrollView(mActivity, attrs, 0);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getMaxScrollAmount",
-        args = {}
-    )
     public void testGetMaxScrollAmount() {
         HorizontalScrollView scrollView = new HorizontalScrollView(mActivity);
         scrollView.layout(0, 0, 100, 200);
@@ -110,14 +82,6 @@ public class HorizontalScrollViewTest
         assertEquals((150 - 0) / 2, scrollView.getMaxScrollAmount());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addView",
-        args = {View.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete."
-            + " @throws clause should be added into javadoc of "
-            + "HorizontalScrollView#addView(View) when there is already one child in the view.")
     public void testAddView() {
         HorizontalScrollView scrollView = new HorizontalScrollView(mActivity);
         TextView child0 = new TextView(mActivity);
@@ -135,15 +99,6 @@ public class HorizontalScrollViewTest
         assertEquals(1, scrollView.getChildCount());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addView",
-        args = {View.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete."
-            + " @throws clause should be added into javadoc of "
-            + "HorizontalScrollView#addView(View, int) when there "
-            + "is already one child in the view.")
     public void testAddViewWithIndex() {
         HorizontalScrollView scrollView = new HorizontalScrollView(mActivity);
         TextView child0 = new TextView(mActivity);
@@ -185,15 +140,6 @@ public class HorizontalScrollViewTest
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addView",
-        args = {View.class, LayoutParams.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete."
-            + " @throws clause should be added into javadoc of "
-            + "HorizontalScrollView#addView(View, LayoutParams) when there is already"
-            + " one child in the view or the layoutparams is null")
     public void testAddViewWithLayoutParams() {
         HorizontalScrollView scrollView = new HorizontalScrollView(mActivity);
         TextView child0 = new TextView(mActivity);
@@ -223,15 +169,6 @@ public class HorizontalScrollViewTest
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addView",
-        args = {View.class, int.class, LayoutParams.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete."
-            + " @throws clause should be added into javadoc of "
-            + "HorizontalScrollView#addView(View, int, LayoutParams) when there is already"
-            + " one child in the view or the layoutparams is null")
     public void testAddViewWithIndexAndLayoutParams() {
         HorizontalScrollView scrollView = new HorizontalScrollView(mActivity);
         TextView child0 = new TextView(mActivity);
@@ -287,18 +224,6 @@ public class HorizontalScrollViewTest
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isFillViewport",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setFillViewport",
-            args = {boolean.class}
-        )
-    })
     public void testAccessFillViewport() {
         HorizontalScrollView scrollView = new HorizontalScrollView(mActivity);
         assertFalse(scrollView.isFillViewport());
@@ -321,18 +246,6 @@ public class HorizontalScrollViewTest
         assertTrue(scrollView.isLayoutRequested());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isSmoothScrollingEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setSmoothScrollingEnabled",
-            args = {boolean.class}
-        )
-    })
     public void testAccessSmoothScrollingEnabled() throws Throwable {
         assertTrue(mScrollView.isSmoothScrollingEnabled());
 
@@ -363,7 +276,7 @@ public class HorizontalScrollViewTest
                 mScrollView.fullScroll(View.FOCUS_RIGHT);
             }
         });
-        delayedCheckSmoothScrolling(0, SCROLL_RIGHT, 0, 0);
+        pollingCheckSmoothScrolling(0, SCROLL_RIGHT, 0, 0);
         assertEquals(SCROLL_RIGHT, mScrollView.getScrollX());
 
         runTestOnUiThread(new Runnable() {
@@ -371,15 +284,10 @@ public class HorizontalScrollViewTest
                 mScrollView.fullScroll(View.FOCUS_LEFT);
             }
         });
-        delayedCheckSmoothScrolling(SCROLL_RIGHT, 0, 0, 0);
+        pollingCheckSmoothScrolling(SCROLL_RIGHT, 0, 0, 0);
         assertEquals(0, mScrollView.getScrollX());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "measureChild",
-        args = {View.class, int.class, int.class}
-    )
     public void testMeasureChild() {
         MyHorizontalScrollView scrollView = new MyHorizontalScrollView(mActivity);
 
@@ -401,11 +309,6 @@ public class HorizontalScrollViewTest
         assertEquals(30, child.getMeasuredWidth());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "measureChildWithMargins",
-        args = {View.class, int.class, int.class, int.class, int.class}
-    )
     public void testMeasureChildWithMargins() {
         MyHorizontalScrollView scrollView = new MyHorizontalScrollView(mActivity);
 
@@ -428,11 +331,6 @@ public class HorizontalScrollViewTest
         assertEquals(30, child.getMeasuredWidth());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "pageScroll",
-        args = {int.class}
-    )
     @UiThreadTest
     public void testPageScroll() {
         mScrollView.setSmoothScrollingEnabled(false);
@@ -453,11 +351,6 @@ public class HorizontalScrollViewTest
         assertEquals(0, mScrollView.getScrollX());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "fullScroll",
-        args = {int.class}
-    )
     @UiThreadTest
     public void testFullScroll() {
         mScrollView.setSmoothScrollingEnabled(false);
@@ -476,11 +369,6 @@ public class HorizontalScrollViewTest
         assertEquals(0, mScrollView.getScrollX());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "arrowScroll",
-        args = {int.class}
-    )
     @UiThreadTest
     public void testArrowScroll() {
         mScrollView.setSmoothScrollingEnabled(false);
@@ -507,11 +395,6 @@ public class HorizontalScrollViewTest
         assertEquals(0, mScrollView.getScrollX());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "smoothScrollBy",
-        args = {int.class, int.class}
-    )
     public void testSmoothScrollBy() throws Throwable {
         assertEquals(0, mScrollView.getScrollX());
         assertEquals(0, mScrollView.getScrollY());
@@ -521,7 +404,7 @@ public class HorizontalScrollViewTest
                 mScrollView.smoothScrollBy(SCROLL_RIGHT, 0);
             }
         });
-        delayedCheckSmoothScrolling(0, SCROLL_RIGHT, 0, 0);
+        pollingCheckSmoothScrolling(0, SCROLL_RIGHT, 0, 0);
         assertEquals(SCROLL_RIGHT, mScrollView.getScrollX());
         assertEquals(0, mScrollView.getScrollY());
 
@@ -530,16 +413,11 @@ public class HorizontalScrollViewTest
                 mScrollView.smoothScrollBy(-SCROLL_RIGHT, 0);
             }
         });
-        delayedCheckSmoothScrolling(SCROLL_RIGHT, 0, 0, 0);
+        pollingCheckSmoothScrolling(SCROLL_RIGHT, 0, 0, 0);
         assertEquals(0, mScrollView.getScrollX());
         assertEquals(0, mScrollView.getScrollY());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "smoothScrollTo",
-        args = {int.class, int.class}
-    )
     public void testSmoothScrollTo() throws Throwable {
         assertEquals(0, mScrollView.getScrollX());
         assertEquals(0, mScrollView.getScrollY());
@@ -549,7 +427,7 @@ public class HorizontalScrollViewTest
                 mScrollView.smoothScrollTo(SCROLL_RIGHT, 0);
             }
         });
-        delayedCheckSmoothScrolling(0, SCROLL_RIGHT, 0, 0);
+        pollingCheckSmoothScrolling(0, SCROLL_RIGHT, 0, 0);
         assertEquals(SCROLL_RIGHT, mScrollView.getScrollX());
         assertEquals(0, mScrollView.getScrollY());
 
@@ -558,16 +436,11 @@ public class HorizontalScrollViewTest
                 mScrollView.smoothScrollTo(0, 0);
             }
         });
-        delayedCheckSmoothScrolling(SCROLL_RIGHT, 0, 0, 0);
+        pollingCheckSmoothScrolling(SCROLL_RIGHT, 0, 0, 0);
         assertEquals(0, mScrollView.getScrollX());
         assertEquals(0, mScrollView.getScrollY());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "computeScrollDeltaToGetChildRectOnScreen",
-        args = {android.graphics.Rect.class}
-    )
     public void testComputeScrollDeltaToGetChildRectOnScreen() {
         mScrollView.setSmoothScrollingEnabled(false);
         int edge = mScrollView.getHorizontalFadingEdgeLength();
@@ -584,11 +457,6 @@ public class HorizontalScrollViewTest
         assertEquals(edge, mScrollView.computeScrollDeltaToGetChildRectOnScreen(rect));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "computeHorizontalScrollRange",
-        args = {}
-    )
     public void testComputeHorizontalScrollRange() {
         assertTrue(mScrollView.getChildCount() > 0);
         assertEquals(ITEM_WIDTH * ITEM_COUNT, mScrollView.computeHorizontalScrollRange());
@@ -598,11 +466,6 @@ public class HorizontalScrollViewTest
         assertEquals(0, myScrollView.computeVerticalScrollRange());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "requestChildFocus",
-        args = {View.class, View.class}
-    )
     @UiThreadTest
     public void testRequestChildFocus() {
         mScrollView.setSmoothScrollingEnabled(false);
@@ -622,11 +485,6 @@ public class HorizontalScrollViewTest
         assertTrue(mScrollView.getScrollX() < scrollX);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "requestChildRectangleOnScreen",
-        args = {View.class, Rect.class, boolean.class}
-    )
     @UiThreadTest
     public void testRequestChildRectangleOnScreen() {
         mScrollView.setSmoothScrollingEnabled(false);
@@ -645,12 +503,6 @@ public class HorizontalScrollViewTest
         assertEquals(0, mScrollView.getScrollY());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "The method is simply called to make sure no exception is thrown.",
-        method = "requestLayout",
-        args = {}
-    )
     @UiThreadTest
     public void testRequestLayout() {
         mScrollView.requestLayout();
@@ -658,13 +510,6 @@ public class HorizontalScrollViewTest
         assertTrue(mScrollView.isLayoutRequested());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "fling",
-        args = {int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "As javadoc says, scrolls towards the left "
-            + "when velocityX is positive. But it scrolls to right actually.")
     public void testFling() throws Throwable {
         mScrollView.setSmoothScrollingEnabled(true);
         assertEquals(0, mScrollView.getScrollX());
@@ -677,7 +522,7 @@ public class HorizontalScrollViewTest
                 mScrollView.fling(velocityX);
             }
         });
-        delayedCheckFling(0, true);
+        pollingCheckFling(0, true);
 
         final int currentX = mScrollView.getScrollX();
         // fling towards left
@@ -686,15 +531,9 @@ public class HorizontalScrollViewTest
                 mScrollView.fling(-velocityX);
             }
         });
-        delayedCheckFling(currentX, false);
+        pollingCheckFling(currentX, false);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "scrollTo",
-        args = {int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "scrollTo can not affect y.")
     @UiThreadTest
     public void testScrollTo() {
         mScrollView.setSmoothScrollingEnabled(false);
@@ -717,18 +556,6 @@ public class HorizontalScrollViewTest
         assertEquals(0, mScrollView.getScrollX());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLeftFadingEdgeStrength",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRightFadingEdgeStrength",
-            args = {}
-        )
-    })
     public void testGetHorizontalFadingEdgeStrengths() {
         assertTrue(mScrollView.getChildCount() > 0);
         assertTrue(mScrollView.getLeftFadingEdgeStrength() <= 1.0f);
@@ -744,83 +571,38 @@ public class HorizontalScrollViewTest
         assertTrue(mScrollView.getRightFadingEdgeStrength() >= 0.0f);
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onLayout",
-        args = {boolean.class, int.class, int.class, int.class, int.class}
-    )
     public void testOnLayout() {
         // onLayout() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onMeasure",
-        args = {int.class, int.class}
-    )
     public void testOnMeasure() {
         // onMeasure() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "executeKeyEvent",
-        args = {KeyEvent.class}
-    )
     public void testExecuteKeyEvent() {
         // executeKeyEvent() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onRequestFocusInDescendants",
-        args = {int.class, Rect.class}
-    )
     public void testOnRequestFocusInDescendants() {
         // onRequestFocusInDescendants() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onSizeChanged",
-        args = {int.class, int.class, int.class, int.class}
-    )
     public void testOnSizeChanged() {
         // onSizeChanged() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "dispatchKeyEvent",
-        args = {KeyEvent.class}
-    )
     public void testDispatchKeyEvent() {
         // dispatchKeyEvent() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onInterceptTouchEvent",
-        args = {MotionEvent.class}
-    )
     public void testOnInterceptTouchEvent() {
         // onInterceptTouchEvent() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onTouchEvent",
-        args = {MotionEvent.class}
-    )
     public void testOnTouchEvent() {
         // onTouchEvent() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "computeScroll",
-        args = {}
-    )
     public void testComputeScroll() {
         // computeScroll() is implementation details, do NOT test
     }
@@ -832,7 +614,7 @@ public class HorizontalScrollViewTest
         return current <= from && current >= to;
     }
 
-    private void delayedCheckSmoothScrolling(final int fromX, final int toX,
+    private void pollingCheckSmoothScrolling(final int fromX, final int toX,
             final int fromY, final int toY) {
 
         if (fromX == toX && fromY == toY) {
@@ -840,7 +622,7 @@ public class HorizontalScrollViewTest
         }
 
         if (fromY != toY) {
-            new DelayedCheck() {
+            new PollingCheck() {
                 @Override
                 protected boolean check() {
                     return isInRange(mScrollView.getScrollY(), fromY, toY);
@@ -849,7 +631,7 @@ public class HorizontalScrollViewTest
         }
 
         if (fromX != toX) {
-            new DelayedCheck() {
+            new PollingCheck() {
                 @Override
                 protected boolean check() {
                     return isInRange(mScrollView.getScrollX(), fromX, toX);
@@ -857,7 +639,7 @@ public class HorizontalScrollViewTest
             }.run();
         }
 
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return toX == mScrollView.getScrollX() && toY == mScrollView.getScrollY();
@@ -865,8 +647,8 @@ public class HorizontalScrollViewTest
         }.run();
     }
 
-    private void delayedCheckFling(final int startPosition, final boolean movingRight) {
-        new DelayedCheck() {
+    private void pollingCheckFling(final int startPosition, final boolean movingRight) {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 if (movingRight) {
@@ -876,7 +658,7 @@ public class HorizontalScrollViewTest
             }
         }.run();
 
-        new DelayedCheck() {
+        new PollingCheck() {
             private int mPreviousScrollX = mScrollView.getScrollX();
 
             @Override

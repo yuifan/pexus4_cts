@@ -18,11 +18,6 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import org.xmlpull.v1.XmlPullParser;
 
@@ -43,7 +38,6 @@ import android.widget.DialerFilter;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 
-@TestTargetClass(DialerFilter.class)
 public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFilterStubActivity> {
     private Activity mActivity;
     private Instrumentation mInstrumentation;
@@ -63,19 +57,6 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         mDialerFilter = (DialerFilter) mActivity.findViewById(R.id.dialer_filter);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "DialerFilter",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "DialerFilter",
-            args = {Context.class, AttributeSet.class}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testConstructor() {
         final XmlPullParser parser = mActivity.getResources().getXml(R.layout.dialerfilter_layout);
         final AttributeSet attrs = Xml.asAttributeSet(parser);
@@ -84,29 +65,11 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         new DialerFilter(mActivity, attrs);
     }
 
-    @TestTargetNew(
-        level = TestLevel.SUFFICIENT,
-        method = "isQwertyKeyboard",
-        args = {}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testIsQwertyKeyboard() {
         // Simply call the method. Return value may depend on the default keyboard.
         mDialerFilter.isQwertyKeyboard();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "onKeyUp",
-            args = {int.class, KeyEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "onKeyDown",
-            args = {int.class, KeyEvent.class}
-        )
-    })
     public void testOnKeyUpDown() {
         // The exact behavior depends on the implementation of DialerKeyListener and
         // TextKeyListener, but even that may be changed. Simply assert basic scenarios.
@@ -114,9 +77,12 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         mInstrumentation.runOnMainSync(new Runnable() {
             public void run() {
                 mDialerFilter.setMode(DialerFilter.DIGITS_ONLY);
+                mDialerFilter.requestFocus();
             }
         });
         mInstrumentation.waitForIdleSync();
+
+        assertTrue(mDialerFilter.hasFocus());
 
         mInstrumentation.sendStringSync("123");
         assertEquals("", mDialerFilter.getLetters().toString());
@@ -132,7 +98,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
 
         // 12-key support
         KeyCharacterMap keymap
-                = KeyCharacterMap.load(KeyCharacterMap.BUILT_IN_KEYBOARD);
+                = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
         if (keymap.getKeyboardType() == KeyCharacterMap.NUMERIC) {
             // "adg" in case of 12-key(NUMERIC) keyboard
             mInstrumentation.sendStringSync("234");
@@ -175,20 +141,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals("123", mDialerFilter.getDigits().toString());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setMode",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMode",
-            args = {}
-        )
-    })
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testAccessMode() {
         mDialerFilter.setMode(DialerFilter.DIGITS_AND_LETTERS_NO_LETTERS);
         assertEquals(DialerFilter.DIGITS_AND_LETTERS_NO_LETTERS, mDialerFilter.getMode());
@@ -200,13 +153,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals(-1, mDialerFilter.getMode());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getLetters",
-        args = {}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testGetLetters() {
         assertEquals("", mDialerFilter.getLetters().toString());
 
@@ -215,13 +162,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals("ANDROID", mDialerFilter.getLetters().toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDigits",
-        args = {}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testGetDigits() {
         assertEquals("", mDialerFilter.getDigits().toString());
 
@@ -230,13 +171,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals("12345", mDialerFilter.getDigits().toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getFilterText",
-        args = {}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testGetFilterText() {
         assertEquals("", mDialerFilter.getFilterText().toString());
 
@@ -251,40 +186,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals("CTS12345", mDialerFilter.getFilterText().toString());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "append",
-            args = {java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setMode",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLetters",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDigits",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getFilterText",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "clearText",
-            args = {}
-        )
-    })
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testAppend() {
         mDialerFilter.setMode(DialerFilter.LETTERS_ONLY);
         mDialerFilter.append("ANDROID");
@@ -334,11 +236,6 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "clearText",
-        args = {}
-    )
     @UiThreadTest
     public void testClearText() {
         assertEquals("", mDialerFilter.getLetters().toString());
@@ -355,13 +252,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals(DialerFilter.DIGITS_AND_LETTERS, mDialerFilter.getMode());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setLettersWatcher",
-        args = {TextWatcher.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testSetLettersWatcher() {
         MockTextWatcher tw = new MockTextWatcher("A");
 
@@ -393,13 +284,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setDigitsWatcher",
-        args = {TextWatcher.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testSetDigitsWatcher() {
         final MockTextWatcher tw = new MockTextWatcher("9");
 
@@ -416,13 +301,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals("12345", tw.getText());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setFilterWatcher",
-        args = {TextWatcher.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testSetFilterWatcher() {
         final MockTextWatcher tw = new MockTextWatcher("A");
 
@@ -445,13 +324,7 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals("12345", tw.getText());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "removeFilterWatcher",
-        args = {TextWatcher.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testRemoveFilterWatcher() {
         final MockTextWatcher tw = new MockTextWatcher("A");
 
@@ -476,29 +349,14 @@ public class DialerFilterTest extends ActivityInstrumentationTestCase2<DialerFil
         assertEquals(-1, span.getSpanEnd(tw));
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onFinishInflate",
-        args = {}
-    )
     public void testOnFinishInflate() {
         // onFinishInflate() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onFocusChanged",
-        args = {boolean.class, int.class, android.graphics.Rect.class}
-    )
     public void testOnFocusChanged() {
         // onFocusChanged() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onModeChange",
-        args = {int.class, int.class}
-    )
     @UiThreadTest
     public void testOnModechange() {
         final MockDialerFilter dialerFilter = createMyDialerFilter();

@@ -18,13 +18,9 @@ package android.graphics.drawable.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
 import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.IOException;
 
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
@@ -33,32 +29,16 @@ import android.graphics.ColorFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.ScaleDrawable;
-import android.graphics.drawable.Drawable.Callback;
 import android.graphics.drawable.Drawable.ConstantState;
+import android.graphics.drawable.ScaleDrawable;
 import android.test.AndroidTestCase;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.StateSet;
 import android.view.Gravity;
 
-import java.io.IOException;
-
-@TestTargetClass(android.graphics.drawable.ScaleDrawable.class)
 public class ScaleDrawableTest extends AndroidTestCase {
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "ScaleDrawable",
-            args = {android.graphics.drawable.Drawable.class, int.class, float.class, float.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDrawable",
-            args = {}
-        )
-    })
     @SuppressWarnings("deprecation")
     public void testConstructor() {
         Drawable d = new BitmapDrawable();
@@ -68,11 +48,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         new ScaleDrawable(null, -1, Float.MAX_VALUE, Float.MIN_VALUE);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "invalidateDrawable",
-        args = {android.graphics.drawable.Drawable.class}
-    )
     @SuppressWarnings("deprecation")
     public void testInvalidateDrawable() {
         ScaleDrawable scaleDrawable = new ScaleDrawable(new BitmapDrawable(),
@@ -93,11 +68,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertFalse(cb.hasCalledInvalidate());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "scheduleDrawable",
-        args = {android.graphics.drawable.Drawable.class, java.lang.Runnable.class, long.class}
-    )
     @SuppressWarnings("deprecation")
     public void testScheduleDrawable() {
         ScaleDrawable scaleDrawable = new ScaleDrawable(new BitmapDrawable(),
@@ -121,11 +91,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertFalse(cb.hasCalledSchedule());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "unscheduleDrawable",
-        args = {android.graphics.drawable.Drawable.class, java.lang.Runnable.class}
-    )
     @SuppressWarnings("deprecation")
     public void testUnscheduleDrawable() {
         ScaleDrawable scaleDrawable = new ScaleDrawable(new BitmapDrawable(),
@@ -149,7 +114,7 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertFalse(cb.hasCalledUnschedule());
     }
 
-    private static class MockCallback implements Callback {
+    private static class MockCallback implements Drawable.Callback {
         private boolean mCalledInvalidate;
         private boolean mCalledSchedule;
         private boolean mCalledUnschedule;
@@ -178,6 +143,10 @@ public class ScaleDrawableTest extends AndroidTestCase {
             return mCalledUnschedule;
         }
 
+        public int getResolvedLayoutDirection(Drawable who) {
+            return 0;
+        }
+
         public void reset() {
             mCalledInvalidate = false;
             mCalledSchedule = false;
@@ -185,11 +154,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "draw",
-        args = {android.graphics.Canvas.class}
-    )
     public void testDraw() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -208,11 +172,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledDraw());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getChangingConfigurations",
-        args = {}
-    )
     public void testGetChangingConfigurations() {
         final int SUPER_CONFIG = 1;
         final int CONTAINED_DRAWABLE_CONFIG = 2;
@@ -230,13 +189,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
                 scaleDrawable.getChangingConfigurations());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getPadding",
-        args = {android.graphics.Rect.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for getPadding is incomplete." +
-            "1. not clear what is supposed to happen if padding is null.")
     public void testGetPadding() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -253,11 +205,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setVisible",
-        args = {boolean.class, boolean.class}
-    )
     public void testSetVisible() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -278,11 +225,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledSetVisible());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setAlpha",
-        args = {int.class}
-    )
     public void testSetAlpha() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -300,11 +242,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledSetAlpha());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setColorFilter",
-        args = {android.graphics.ColorFilter.class}
-    )
     public void testSetColorFilter() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -318,11 +255,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledSetColorFilter());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getOpacity",
-        args = {}
-    )
     public void testGetOpacity() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -332,11 +264,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledGetOpacity());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isStateful",
-        args = {}
-    )
     public void testIsStateful() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -346,11 +273,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledIsStateful());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onStateChange",
-        args = {int[].class}
-    )
     public void testOnStateChange() {
         MockDrawable mockDrawable = new MockDrawable();
         MockScaleDrawable mockScaleDrawable = new MockScaleDrawable(
@@ -367,11 +289,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockScaleDrawable.hasCalledOnBoundsChange());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onLevelChange",
-        args = {int.class}
-    )
     public void testOnLevelChange() {
         MockDrawable mockDrawable = new MockDrawable();
         MockScaleDrawable mockScaleDrawable = new MockScaleDrawable(
@@ -388,11 +305,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockScaleDrawable.hasCalledOnBoundsChange());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onBoundsChange",
-        args = {android.graphics.Rect.class}
-    )
     public void testOnBoundsChange() {
         MockDrawable mockDrawable = new MockDrawable();
         float scaleWidth = 0.3f;
@@ -450,11 +362,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertEquals(bounds.bottom, mockDrawable.getBounds().bottom);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getIntrinsicWidth",
-        args = {}
-    )
     public void testGetIntrinsicWidth() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -464,11 +371,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledGetIntrinsicWidth());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getIntrinsicHeight",
-        args = {}
-    )
     public void testGetIntrinsicHeight() {
         MockDrawable mockDrawable = new MockDrawable();
         ScaleDrawable scaleDrawable = new ScaleDrawable(mockDrawable, Gravity.CENTER, 100, 200);
@@ -478,11 +380,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable.hasCalledGetIntrinsicHeight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getConstantState",
-        args = {}
-    )
     @SuppressWarnings("deprecation")
     public void testGetConstantState() {
         ScaleDrawable scaleDrawable = new ScaleDrawable(new BitmapDrawable(),
@@ -498,14 +395,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         assertEquals(1, constantState.getChangingConfigurations());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "inflate",
-        args = {android.content.res.Resources.class, org.xmlpull.v1.XmlPullParser.class,
-                android.util.AttributeSet.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for inflate is incomplete." +
-            "1. not clear what is supposed to happen if any parameter is null.")
     @SuppressWarnings("deprecation")
     public void testInflate() throws XmlPullParserException, IOException {
         ScaleDrawable scaleDrawable = new ScaleDrawable(new BitmapDrawable(),
@@ -515,7 +404,8 @@ public class ScaleDrawableTest extends AndroidTestCase {
         XmlResourceParser parser = res.getXml(R.xml.scaledrawable);
         AttributeSet attrs = DrawableTestUtils.getAttributeSet(parser, "scale_allattrs");
         scaleDrawable.inflate(res, parser, attrs);
-        int bitmapSize = 48 * res.getDisplayMetrics().densityDpi / DisplayMetrics.DENSITY_DEFAULT;
+        int bitmapSize = (int) Math.ceil(48.0 *
+                res.getDisplayMetrics().densityDpi / DisplayMetrics.DENSITY_DEFAULT);
         assertEquals(bitmapSize, scaleDrawable.getIntrinsicWidth());
         assertEquals(bitmapSize, scaleDrawable.getIntrinsicHeight());
 
@@ -546,11 +436,6 @@ public class ScaleDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "mutate",
-        args = {}
-    )
     public void testMutate() {
         Resources resources = mContext.getResources();
         ScaleDrawable d1 = (ScaleDrawable) resources.getDrawable(R.drawable.scaledrawable);

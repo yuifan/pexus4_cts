@@ -17,16 +17,11 @@
 package android.widget.cts;
 
 import com.android.cts.stub.R;
-import com.android.common.ArrayListCursor;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.test.InstrumentationTestCase;
@@ -35,12 +30,9 @@ import android.widget.ImageView;
 import android.widget.SimpleCursorTreeAdapter;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-
 /**
  * Test {@link SimpleCursorTreeAdapter}.
  */
-@TestTargetClass(SimpleCursorTreeAdapter.class)
 public class SimpleCursorTreeAdapterTest extends InstrumentationTestCase {
     private static final int GROUP_LAYOUT = R.layout.cursoradapter_group0;
 
@@ -78,32 +70,6 @@ public class SimpleCursorTreeAdapterTest extends InstrumentationTestCase {
         mContext = getInstrumentation().getTargetContext();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructors",
-            method = "SimpleCursorTreeAdapter",
-            args = {android.content.Context.class, android.database.Cursor.class, int.class,
-                    int.class, java.lang.String[].class, int[].class, int.class, int.class,
-                    java.lang.String[].class, int[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructors",
-            method = "SimpleCursorTreeAdapter",
-            args = {android.content.Context.class, android.database.Cursor.class, int.class,
-                    int.class, java.lang.String[].class, int[].class, int.class,
-                    java.lang.String[].class, int[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructors",
-            method = "SimpleCursorTreeAdapter",
-            args = {android.content.Context.class, android.database.Cursor.class, int.class,
-                    java.lang.String[].class, int[].class, int.class, java.lang.String[].class,
-                    int[].class}
-        )
-    })
     public void testConstructor() {
         mGroupCursor = createTestCursor(2, 20, "group");
         new MockSimpleCursorTreeAdapter(mContext, mGroupCursor,
@@ -119,12 +85,6 @@ public class SimpleCursorTreeAdapterTest extends InstrumentationTestCase {
                 CHILD_LAYOUT, CHILD_LAYOUT, COLUMNS_CHILD_FROM, VIEWS_CHILD_TO);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "bindChildView",
-        args = {android.view.View.class, android.content.Context.class,
-                android.database.Cursor.class, boolean.class}
-    )
     public void testBindChildView() {
         mGroupCursor = createTestCursor(2, 20, "group");
         mChildCursor = createTestCursor(3, 4, "child");
@@ -143,12 +103,6 @@ public class SimpleCursorTreeAdapterTest extends InstrumentationTestCase {
         assertEquals("child12", view.getText().toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "bindGroupView",
-        args = {android.view.View.class, android.content.Context.class,
-                android.database.Cursor.class, boolean.class}
-    )
     // The param context and isExpanded is never readed.
     public void testBindGroupView() {
         mGroupCursor = createTestCursor(2, 20, "group");
@@ -166,14 +120,6 @@ public class SimpleCursorTreeAdapterTest extends InstrumentationTestCase {
         assertEquals("group11", view.getText().toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link SimpleCursorTreeAdapter#setViewImage(ImageView, String)}",
-        method = "setViewImage",
-        args = {android.widget.ImageView.class, java.lang.String.class}
-    )
-    @ToBeFixed(bug = "1417734", explanation = "should add @throws clause into javadoc of "
-            + "SimpleCursorTreeAdapter#setViewImage(ImageView, String) if the param String is null")
     public void testSetViewImage() {
         mGroupCursor = createTestCursor(2, 20, "group");
         mSimpleCursorTreeAdapter = new MockSimpleCursorTreeAdapter(mContext, mGroupCursor,
@@ -232,21 +178,22 @@ public class SimpleCursorTreeAdapterTest extends InstrumentationTestCase {
      */
     @SuppressWarnings("unchecked")
     private Cursor createTestCursor(int colCount, int rowCount, String prefix) {
-        ArrayList<ArrayList> list = new ArrayList<ArrayList>();
-        String[] columns = new String[colCount];
+        String[] columns = new String[colCount + 1];
         for (int i = 0; i < colCount; i++) {
             columns[i] = "column" + i;
         }
+        columns[colCount] = "_id";
 
+        MatrixCursor cursor = new MatrixCursor(columns, rowCount);
+        Object[] row = new Object[colCount + 1];
         for (int i = 0; i < rowCount; i++) {
-            ArrayList<String> row = new ArrayList<String>();
             for (int j = 0; j < colCount; j++) {
-                row.add(prefix + i + "" + j);
+                row[j] = prefix + i + "" + j;
             }
-            list.add(row);
+            row[colCount] = i;
+            cursor.addRow(row);
         }
-
-        return new ArrayListCursor(columns, list);
+        return cursor;
     }
 
     private class MockSimpleCursorTreeAdapter extends SimpleCursorTreeAdapter {

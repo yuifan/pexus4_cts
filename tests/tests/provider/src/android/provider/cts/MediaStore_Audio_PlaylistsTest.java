@@ -16,10 +16,6 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.ToBeFixed;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -30,7 +26,8 @@ import android.os.Environment;
 import android.provider.MediaStore.Audio.Playlists;
 import android.test.InstrumentationTestCase;
 
-@TestTargetClass(Playlists.class)
+import java.util.regex.Pattern;
+
 public class MediaStore_Audio_PlaylistsTest extends InstrumentationTestCase {
     private ContentResolver mContentResolver;
 
@@ -41,13 +38,6 @@ public class MediaStore_Audio_PlaylistsTest extends InstrumentationTestCase {
         mContentResolver = getInstrumentation().getContext().getContentResolver();
     }
 
-    @TestTargetNew(
-      level = TestLevel.COMPLETE,
-      method = "getContentUri",
-      args = {String.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. @throw clause "
-            + "should be added in to javadoc when getting uri for internal volume.")
     public void testGetContentUri() {
         assertNotNull(mContentResolver.query(
                 Playlists.getContentUri(MediaStoreAudioTestHelper.EXTERNAL_VOLUME_NAME), null, null,
@@ -74,9 +64,8 @@ public class MediaStore_Audio_PlaylistsTest extends InstrumentationTestCase {
         ContentValues values = new ContentValues();
         values.put(Playlists.NAME, "My favourites");
         values.put(Playlists.DATA, externalPlaylistPath);
-        long dateAdded = System.currentTimeMillis();
-        values.put(Playlists.DATE_ADDED, dateAdded);
-        long dateModified = System.currentTimeMillis();
+        long dateAdded = System.currentTimeMillis() / 1000;
+        long dateModified = System.currentTimeMillis() / 1000;
         values.put(Playlists.DATE_MODIFIED, dateModified);
         // insert
         Uri uri = mContentResolver.insert(Playlists.EXTERNAL_CONTENT_URI, values);
@@ -91,7 +80,8 @@ public class MediaStore_Audio_PlaylistsTest extends InstrumentationTestCase {
             assertEquals(externalPlaylistPath,
                     c.getString(c.getColumnIndex(Playlists.DATA)));
 
-            assertEquals(dateAdded, c.getLong(c.getColumnIndex(Playlists.DATE_ADDED)));
+            long realDateAdded = c.getLong(c.getColumnIndex(Playlists.DATE_ADDED));
+            assertTrue(realDateAdded >= dateAdded);
             assertEquals(dateModified, c.getLong(c.getColumnIndex(Playlists.DATE_MODIFIED)));
             assertTrue(c.getLong(c.getColumnIndex(Playlists._ID)) > 0);
             c.close();
@@ -108,7 +98,7 @@ public class MediaStore_Audio_PlaylistsTest extends InstrumentationTestCase {
             assertEquals(externalPlaylistPath,
                     c.getString(c.getColumnIndex(Playlists.DATA)));
 
-            assertEquals(dateAdded, c.getLong(c.getColumnIndex(Playlists.DATE_ADDED)));
+            assertEquals(realDateAdded, c.getLong(c.getColumnIndex(Playlists.DATE_ADDED)));
             assertEquals(dateModified, c.getLong(c.getColumnIndex(Playlists.DATE_MODIFIED)));
             c.close();
         } finally {
@@ -117,7 +107,6 @@ public class MediaStore_Audio_PlaylistsTest extends InstrumentationTestCase {
     }
 
     public void testStoreAudioPlaylistsInternal() {
-        // the internal database does not have play lists
         ContentValues values = new ContentValues();
         values.put(Playlists.NAME, "My favourites");
         values.put(Playlists.DATA, "/data/data/com.android.cts.stub/files/my_favorites.pl");
@@ -125,7 +114,16 @@ public class MediaStore_Audio_PlaylistsTest extends InstrumentationTestCase {
         values.put(Playlists.DATE_ADDED, dateAdded);
         long dateModified = System.currentTimeMillis();
         values.put(Playlists.DATE_MODIFIED, dateModified);
+        // insert
         Uri uri = mContentResolver.insert(Playlists.INTERNAL_CONTENT_URI, values);
-        assertNull(uri);
+        assertNotNull(uri);
+
+        try {
+            assertTrue(Pattern.matches("content://media/internal/audio/playlists/\\d+",
+                    uri.toString()));
+        } finally {
+            // delete the playlists
+            assertEquals(1, mContentResolver.delete(uri, null, null));
+        }
     }
 }

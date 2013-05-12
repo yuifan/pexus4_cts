@@ -16,10 +16,6 @@
 
 package android.text.method.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.ToBeFixed;
 
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
@@ -45,7 +41,6 @@ import android.widget.TextView.BufferType;
  *
  * @see android.widget.cts.TextViewTest
  */
-@TestTargetClass(ArrowKeyMovementMethod.class)
 public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2<StubActivity> {
     private static final String THREE_LINES_TEXT = "first line\nsecond line\nlast line";
     private static final int END_OF_ALL_TEXT = THREE_LINES_TEXT.length();
@@ -70,7 +65,6 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         mArrowKeyMovementMethod = new ArrowKeyMovementMethod();
 
         initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
 
         getInstrumentation().runOnMainSync(new Runnable() {
             public void run() {
@@ -84,34 +78,14 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         assertTrue(mTextView.isFocused());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test constructor ArrowKeyMovementMethod#ArrowKeyMovementMethod().",
-        method = "ArrowKeyMovementMethod",
-        args = {}
-    )
     public void testConstructor() {
         new ArrowKeyMovementMethod();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#canSelectArbitrarily()}. "
-                + "It always returns true.",
-        method = "canSelectArbitrarily",
-        args = {}
-    )
     public void testCanSelectArbitrarily() {
         assertTrue(new ArrowKeyMovementMethod().canSelectArbitrarily());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#getInstance()}. "
-                + "This is a method for creating singleton.",
-        method = "getInstance",
-        args = {}
-    )
     public void testGetInstance() {
         MovementMethod method0 = ArrowKeyMovementMethod.getInstance();
         assertNotNull(method0);
@@ -121,15 +95,6 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         assertSame(method0, method1);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTakeFocus(TextView, Spannable, int)}. "
-                + "Test the method after the widget get layouted.",
-        method = "onTakeFocus",
-        args = {TextView.class, Spannable.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     public void testOnTakeFocus() throws Throwable {
         /*
          * The following assertions depend on whether the TextView has a layout.
@@ -186,35 +151,13 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         assertSelection(END_OF_ALL_TEXT);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTakeFocus(TextView, Spannable, int)}. "
-                + "Test the method before the widget get layouted.",
-        method = "onTakeFocus",
-        args = {TextView.class, Spannable.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     public void testOnTakeFoucusWithNullLayout() {
         initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
-
         assertSelectEndOfContent();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTakeFocus(TextView, Spannable, int)}. "
-                + "Test the method with null parameters.",
-        method = "onTakeFocus",
-        args = {TextView.class, Spannable.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. @throws clause "
-            + "should be added into javadoc of ArrowKeyMovementMethod#onTakeFocus(TextView, "
-            + "Spannable, int)} when the params view or text is null")
     public void testOnTakeFocusWithNullParameters() {
         initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
         try {
             mArrowKeyMovementMethod.onTakeFocus(null, mEditable, View.FOCUS_DOWN);
             fail("The method did not throw NullPointerException when param textView is null.");
@@ -230,15 +173,6 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyDown(TextView, Spannable, int, "
-                + "KeyEvent)}. KeyEvent parameter is never read.",
-        method = "onKeyDown",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     @UiThreadTest
     public void testOnKeyDownWithKeyCodeUp() {
         // first line
@@ -247,7 +181,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressBothShiftAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_UP, null));
+                KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_UP)));
         // |first line
         // second |line
         // last line
@@ -256,7 +191,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_UP, null));
+                KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_UP)));
         // first lin|e
         // second |line
         // last line
@@ -267,7 +203,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_UP, null));
+                KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_UP)));
         // |first line
         // second |line
         // last line
@@ -276,7 +213,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_UP, null));
+                KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_UP)));
         // |first line
         // second line
         // last line
@@ -285,29 +223,22 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         MetaKeyKeyListener.resetMetaState(mEditable);
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_UP, null));
+                KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_UP)));
         // first lin|e
         // second line
         // last line
         assertSelection(correspondingIn1stLine);
 
         assertFalse(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_UP, null));
+                KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_UP)));
         // first lin|e
         // second line
         // last line
         assertSelection(correspondingIn1stLine);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyDown(TextView, Spannable, int, "
-                + "KeyEvent)}. KeyEvent parameter is never read.",
-        method = "onKeyDown",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     @UiThreadTest
     public void testOnKeyDownWithKeyCodeDown() {
         // first line
@@ -316,7 +247,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressBothShiftAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_DOWN, null));
+                KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_DOWN)));
         // first line
         // second |line
         // last line|
@@ -325,7 +257,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_DOWN, null));
+                KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_DOWN)));
         // first line
         // second |line
         // last lin|e
@@ -336,7 +269,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_DOWN, null));
+                KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_DOWN)));
         // first line
         // second |line
         // last line|
@@ -345,7 +279,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_DOWN, null));
+                KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_DOWN)));
         // first line
         // second line
         // last line|
@@ -354,29 +289,22 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         MetaKeyKeyListener.resetMetaState(mEditable);
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_DOWN, null));
+                KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_DOWN)));
         // first line
         // second line
         // last lin|e
         assertSelection(correspondingIn3rdLine);
 
         assertFalse(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_DOWN, null));
+                KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_DOWN)));
         // first line
         // second line
         // last lin|e
         assertSelection(correspondingIn3rdLine);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyDown(TextView, Spannable, int, "
-                + "KeyEvent)}. KeyEvent parameter is never read.",
-        method = "onKeyDown",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     @UiThreadTest
     public void testOnKeyDownWithKeyCodeLeft() {
         // first line
@@ -385,7 +313,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressBothShiftAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line
         // |second |line
         // last line
@@ -393,7 +322,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressBothShiftAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line
         // |second |line
         // last line
@@ -402,7 +332,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line
         // second| |line
         // last line
@@ -410,7 +341,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line
         // secon|d |line
         // last line
@@ -419,7 +351,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line
         // |second line
         // last line
@@ -427,7 +360,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line
         // |second line
         // last line
@@ -436,7 +370,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         MetaKeyKeyListener.resetMetaState(mEditable);
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line
         // second| line
         // last line
@@ -447,22 +382,14 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         // |second line
         // last line
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_LEFT, null));
+                KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT)));
         // first line|
         // second line
         // last line
         assertSelection(END_OF_1ST_LINE);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyDown(TextView, Spannable, int, "
-                + "KeyEvent)}. KeyEvent parameter is never read.",
-        method = "onKeyDown",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     @UiThreadTest
     public void testOnKeyDownWithKeyCodeRight() {
         // first line
@@ -471,7 +398,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressBothShiftAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second |line|
         // last line
@@ -479,7 +407,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressBothShiftAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second |line|
         // last line
@@ -488,7 +417,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second |l|ine
         // last line
@@ -496,7 +426,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressShift();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second |li|ne
         // last line
@@ -505,7 +436,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         pressAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second line|
         // last line
@@ -513,7 +445,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
 
         pressAlt();
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second line|
         // last line
@@ -522,7 +455,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
         MetaKeyKeyListener.resetMetaState(mEditable);
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second l|ine
         // last line
@@ -533,27 +467,16 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         // second line|
         // last line
         assertTrue(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_RIGHT, null));
+                KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT)));
         // first line
         // second line
         // |last line
         assertSelection(START_OF_3RD_LINE);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyDown(TextView, Spannable, int, "
-                + "KeyEvent)}. Test the method before the widget get layouted.",
-        method = "onKeyDown",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. @throws clause "
-            + "should be added into javadoc of ArrowKeyMovementMethod#onKeyDown(TextView, "
-            + "Spannable, int, KeyEvent)} when the view does not get layout")
     public void testOnKeyDownWithNullLayout() {
         initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
-
         try {
             mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable, KeyEvent.KEYCODE_DPAD_RIGHT,
                     null);
@@ -563,14 +486,6 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyOther(TextView, Spannable, KeyEvent)}.",
-        method = "onKeyOther",
-        args = {TextView.class, Spannable.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     @UiThreadTest
     public void testOnKeyOther() {
         // first line
@@ -607,15 +522,6 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
                 new KeyEvent(0, 0, KeyEvent.ACTION_MULTIPLE, KeyEvent.KEYCODE_DPAD_RIGHT, 2)));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyDown(TextView, Spannable, int, "
-                + "KeyEvent)}. Test the method with other key code except up, down, left ,right.",
-        method = "onKeyDown",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     @UiThreadTest
     public void testOnKeyDownWithOtherKeyCode() {
         // first line
@@ -624,55 +530,18 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
 
         assertFalse(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_DPAD_CENTER, null));
+                KeyEvent.KEYCODE_DPAD_CENTER, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_CENTER)));
         assertFalse(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_0, null));
+                KeyEvent.KEYCODE_0, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_0)));
         assertFalse(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_E, null));
+                KeyEvent.KEYCODE_E, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_E)));
         assertFalse(mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable,
-                KeyEvent.KEYCODE_UNKNOWN, null));
+                KeyEvent.KEYCODE_UNKNOWN, new KeyEvent(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_UNKNOWN)));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyDown(TextView, Spannable, int, "
-                + "KeyEvent)}. Test the method with null parameters.",
-        method = "onKeyDown",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. @throws clause "
-            + "should be added into javadoc of ArrowKeyMovementMethod#onKeyDown(TextView, "
-            + "Spannable, int, KeyEvent)} when the params view or buffer is null")
-    public void testOnKeyDownWithNullParameters() {
-        initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
-        try {
-            mArrowKeyMovementMethod.onKeyDown(null, mEditable, KeyEvent.KEYCODE_DPAD_RIGHT,
-                    new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
-            fail("The method did not throw NullPointerException when param textView is null.");
-        } catch (NullPointerException e) {
-            // expected
-        }
-
-        try {
-            mArrowKeyMovementMethod.onKeyDown(mTextView, null, KeyEvent.KEYCODE_DPAD_RIGHT,
-                    new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
-            fail("The method did not throw NullPointerException when param spannable is null.");
-        } catch (NullPointerException e) {
-            // expected
-        }
-    }
-
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTouchEvent(TextView, Spannable,"
-            + " MotionEvent)}. Test the method while the widget is focused.",
-        method = "onTouchEvent",
-        args = {TextView.class, Spannable.class, MotionEvent.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1400249", explanation = "There is a side effect that the "
-            + "view scroll while dragging on the screen. Should be tested in functional test.")
     public void testOnTouchEvent() throws Throwable {
         long now = SystemClock.currentThreadTimeMillis();
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
@@ -686,19 +555,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         assertSelection(SPACE_IN_2ND_LINE);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTouchEvent(TextView, Spannable, "
-                + "MotionEvent)}. Test the method before the widget get layouted.",
-        method = "onTouchEvent",
-        args = {TextView.class, Spannable.class, MotionEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. @throws clause "
-            + "should be added into javadoc of ArrowKeyMovementMethod#onTouchEvent(TextView, "
-            + "Spannable, MotionEvent)} when the view does not get layout")
     public void testOnTouchEventWithNullLayout() {
         initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
         mTextView.setFocusable(true);
         mTextView.requestFocus();
         assertTrue(mTextView.isFocused());
@@ -708,16 +566,7 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
                     MotionEvent.obtain(now, now, MotionEvent.ACTION_UP, 1, 1, 0)));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTouchEvent(TextView, Spannable, "
-                + "MotionEvent)}. Test the method while the widget is not focused.",
-        method = "onTouchEvent",
-        args = {TextView.class, Spannable.class, MotionEvent.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document about the behaviour of this method.")
     public void testOnTouchEventWithoutFocus() {
         long now = SystemClock.currentThreadTimeMillis();
         Selection.setSelection(mEditable, SPACE_IN_2ND_LINE);
@@ -726,19 +575,8 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         assertSelection(SPACE_IN_2ND_LINE);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTouchEvent(TextView, Spannable, "
-            + "MotionEvent)}. Test the method with null parameters.",
-        method = "onTouchEvent",
-        args = {TextView.class, Spannable.class, MotionEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. @throws clause "
-            + "should be added into javadoc of ArrowKeyMovementMethod#onTouchEvent(TextView, "
-            + "Spannable, MotionEvent)} when the params view, buffer or event is null")
     public void testOnTouchEventWithNullParameters() {
         initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
         try {
             mArrowKeyMovementMethod.onTouchEvent(null, mEditable,
                     MotionEvent.obtain(0, 0, 0, 1, 1, 0));
@@ -763,16 +601,6 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#initialize(TextView, Spannable)}. "
-                + "TextView parameter is never read.",
-        method = "initialize",
-        args = {TextView.class, Spannable.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. @throws clause "
-            + "should be added into javadoc of ArrowKeyMovementMethod#initialize(TextView, "
-            + "Spannable)} when the params text is null")
     public void testInitialize() {
         Spannable spannable = new SpannableString("test content");
         ArrowKeyMovementMethod method = new ArrowKeyMovementMethod();
@@ -798,21 +626,11 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onTrackballEvent(TextView, Spannable, "
-                + "MotionEvent)}. This method always returns false.",
-        method = "onTrackballEvent",
-        args = {TextView.class, Spannable.class, MotionEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. "
-            + "There is no document about behaviour of this method.")
     public void testOnTrackballEven() {
         assertFalse(mArrowKeyMovementMethod.onTrackballEvent(mTextView, mEditable,
                 MotionEvent.obtain(0, 0, 0, 1, 1, 0)));
 
         initTextViewWithNullLayout();
-        mEditable = (Editable) mTextView.getText();
 
         assertFalse(mArrowKeyMovementMethod.onTrackballEvent(mTextView, mEditable,
                 MotionEvent.obtain(0, 0, 0, 1, 1, 0)));
@@ -823,15 +641,6 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         assertFalse(mArrowKeyMovementMethod.onTrackballEvent(mTextView, mEditable, null));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test {@link ArrowKeyMovementMethod#onKeyUp(TextView, Spannable, int, KeyEvent)}. "
-                + "It always returns false.",
-        method = "onKeyUp",
-        args = {TextView.class, Spannable.class, int.class, KeyEvent.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. "
-            + "There is no document about behaviour of this method.")
     public void testOnKeyUp() {
         ArrowKeyMovementMethod method = new ArrowKeyMovementMethod();
         SpannableString spannable = new SpannableString("Test Content");
@@ -846,10 +655,411 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         assertFalse(method.onKeyUp(view, spannable, KeyEvent.KEYCODE_0, null));
     }
 
+    private static final String TEXT_WORDS =
+            "Lorem ipsum; dolor sit \u00e4met, conse\u0ca0_\u0ca0ctetur?       Adipiscing"
+            + ".elit.integ\u00e9r. Etiam    tristique\ntortor nec   ?:?    \n\n"
+            + "lectus porta consequ\u00e4t...  LOReM iPSuM";
+
+    @UiThreadTest
+    public void testFollowingWordStartToEnd() {
+
+        // NOTE: there seems to be much variation in how word boundaries are
+        // navigated; the behaviors asserted here were derived from Google
+        // Chrome 10.0.648.133 beta.
+
+        initTextViewWithNullLayout(TEXT_WORDS);
+
+        // |Lorem ipsum; dolor sit $met,
+        Selection.setSelection(mEditable, 0);
+        assertSelection(0);
+
+        // Lorem| ipsum; dolor sit $met,
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(5);
+
+        // Lorem ipsum|; dolor sit $met,
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(11);
+
+        // Lorem ipsum; dolor| sit $met,
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(18);
+
+        // Lorem ipsum; dolor sit| $met,
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(22);
+
+        // $met|, conse$_$ctetur$       Adipiscing.elit.integ$r.
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(27);
+
+        // $met, conse$_$ctetur|$       Adipiscing.elit.integ$r.
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(43);
+
+        // TODO: enable these two additional word breaks when implemented
+//        // $met, conse$_$ctetur$       Adipiscing|.elit.integ$r.
+//        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+//        assertSelection(61);
+//
+//        // $met, conse$_$ctetur$       Adipiscing.elit|.integ$r.
+//        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+//        assertSelection(66);
+
+        // $met, conse$_$ctetur$       Adipiscing.elit.integ$r|.
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(74);
+
+        // integ$r. Etiam|    tristique$tortor nec   ?:?    $$lectus porta
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(81);
+
+        // integ$r. Etiam    tristique|$tortor nec   ?:?    $$lectus porta
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(94);
+
+        // integ$r. Etiam    tristique$tortor| nec   ?:?    $$lectus porta
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(101);
+
+        // integ$r. Etiam    tristique$tortor nec|   ?:?    $$lectus porta
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(105);
+
+        // integ$r. Etiam    tristique$tortor nec   ?:?    $$lectus| porta
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(123);
+
+        // $$lectus porta| consequ$t...  LOReM iPSuM
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(129);
+
+        // $$lectus porta consequ$t|...  LOReM iPSuM
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(139);
+
+        // $$lectus porta consequ$t...  LOReM| iPSuM
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(149);
+
+        // $$lectus porta consequ$t...  LOReM iPSuM|
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(155);
+
+        // keep trying to push beyond end, which should fail
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(155);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(155);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(155);
+
+    }
+
+    @UiThreadTest
+    public void testPrecedingWordEndToStart() {
+
+        // NOTE: there seems to be much variation in how word boundaries are
+        // navigated; the behaviors asserted here were derived from Google
+        // Chrome 10.0.648.133 beta.
+
+        initTextViewWithNullLayout(TEXT_WORDS);
+
+        // $$lectus porta consequ$t...  LOReM iPSuM|
+        Selection.setSelection(mEditable, mEditable.length());
+        assertSelection(155);
+
+        // $$lectus porta consequ$t...  LOReM |iPSuM
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(150);
+
+        // $$lectus porta consequ$t...  |LOReM iPSuM
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(144);
+
+        // $$lectus porta |consequ$t...  LOReM iPSuM
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(130);
+
+        // $$lectus |porta consequ$t...  LOReM iPSuM
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(124);
+
+        // integ$r. Etiam    tristique$tortor nec   ?:?    $$|lectus
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(117);
+
+        // integ$r. Etiam    tristique$tortor |nec   ?:?    $$lectus
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(102);
+
+        // integ$r. Etiam    tristique$|tortor nec   ?:?    $$lectus
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(95);
+
+        // integ$r. Etiam    |tristique$tortor nec   ?:?    $$lectus
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(85);
+
+        // integ$r. |Etiam    tristique$tortor nec   ?:?    $$lectus
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(76);
+
+        // TODO: enable these two additional word breaks when implemented
+//        // dolor sit $met, conse$_$ctetur$       Adipiscing.elit.|integ$r.
+//        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+//        assertSelection(67);
+//
+//        // dolor sit $met, conse$_$ctetur$       Adipiscing.|elit.integ$r.
+//        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+//        assertSelection(62);
+
+        // dolor sit $met, conse$_$ctetur$       |Adipiscing.elit.integ$r.
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(51);
+
+        // dolor sit $met, |conse$_$ctetur$       Adipiscing.elit.integ$r.
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(29);
+
+        // dolor sit |$met, conse$_$ctetur$       Adipiscing.elit.integ$r.
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(23);
+
+        // Lorem ipsum; dolor |sit $met
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(19);
+
+        // Lorem ipsum; |dolor sit $met
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(13);
+
+        // Lorem |ipsum; dolor sit $met
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(6);
+
+        // |Lorem ipsum; dolor sit $met
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+
+        // keep trying to push before beginning, which should fail
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+
+    }
+
+    private static final String TEXT_WORDS_WITH_NUMBERS =
+            "Lorem ipsum123,456.90   dolor sit.. 4-0.0=2 ADipiscing4";
+
+    @UiThreadTest
+    public void testFollowingWordStartToEndWithNumbers() {
+
+        initTextViewWithNullLayout(TEXT_WORDS_WITH_NUMBERS);
+
+        // |Lorem ipsum123,456.90   dolor sit.. 4-0.0=2 ADipiscing4
+        Selection.setSelection(mEditable, 0);
+        assertSelection(0);
+
+        // Lorem| ipsum123,456.90   dolor sit.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(5);
+
+        // Lorem ipsum123,456.90|   dolor sit.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(21);
+
+        // Lorem ipsum123,456.90   dolor| sit.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(29);
+
+        // Lorem ipsum123,456.90   dolor sit|.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(33);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4|-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(37);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4-0.0|=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(41);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4-0.0=2| ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(43);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4-0.0=2 ADipiscing4|
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(55);
+
+        // keep trying to push beyond end, which should fail
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(55);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(55);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(55);
+
+    }
+
+    @UiThreadTest
+    public void testFollowingWordEndToStartWithNumbers() {
+
+        initTextViewWithNullLayout(TEXT_WORDS_WITH_NUMBERS);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4-0.0=2 ADipiscing4|
+        Selection.setSelection(mEditable, mEditable.length());
+        assertSelection(55);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4-0.0=2 |ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(44);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4-0.0=|2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(42);
+
+        // Lorem ipsum123,456.90   dolor sit.. 4-|0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(38);
+
+        // Lorem ipsum123,456.90   dolor sit.. |4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(36);
+
+        // Lorem ipsum123,456.90   dolor |sit.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(30);
+
+        // Lorem ipsum123,456.90   |dolor sit.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(24);
+
+        // Lorem |ipsum123,456.90   dolor sit.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(6);
+
+        // |Lorem ipsum123,456.90   dolor sit.. 4-0.0=2 ADipiscing4
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+
+        // keep trying to push before beginning, which should fail
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+
+    }
+
+    private static final String TEXT_WORDS_WITH_1CHAR_FINAL_WORD = "abc d";
+
+    @UiThreadTest
+    public void testFollowingWordStartToEndWithOneCharFinalWord() {
+
+        initTextViewWithNullLayout(TEXT_WORDS_WITH_1CHAR_FINAL_WORD);
+
+        // |abc d
+        Selection.setSelection(mEditable, 0);
+        assertSelection(0);
+
+        // abc| d
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(3);
+
+        // abc d|
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+        assertSelection(mEditable.length());
+
+    }
+
+    @UiThreadTest
+    public void testFollowingWordEndToStartWithOneCharFinalWord() {
+
+        initTextViewWithNullLayout(TEXT_WORDS_WITH_1CHAR_FINAL_WORD);
+
+        // abc d|
+        Selection.setSelection(mEditable, mEditable.length());
+        assertSelection(5);
+
+        // abc |d
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(4);
+
+        // |abc d
+        assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+        assertSelection(0);
+
+    }
+
+    @UiThreadTest
+    public void testMovementFromMiddleOfWord() {
+
+        initTextViewWithNullLayout("before word after");
+        checkMoveFromInsideWord(7, 10);
+
+        // Surrogate characters: bairkan should be considered as a standard letter
+        final String BAIRKAN = "\uD800\uDF31";
+
+        initTextViewWithNullLayout("before wo" + BAIRKAN + "rd after");
+        checkMoveFromInsideWord(7, 12);
+
+        initTextViewWithNullLayout("before " + BAIRKAN + BAIRKAN + "xx after");
+        checkMoveFromInsideWord(7, 12);
+
+        initTextViewWithNullLayout("before xx" + BAIRKAN + BAIRKAN + " after");
+        checkMoveFromInsideWord(7, 12);
+
+        initTextViewWithNullLayout("before x" + BAIRKAN + "x" + BAIRKAN + " after");
+        checkMoveFromInsideWord(7, 12);
+
+        initTextViewWithNullLayout("before " + BAIRKAN + "x" + BAIRKAN + "x after");
+        checkMoveFromInsideWord(7, 12);
+
+        initTextViewWithNullLayout("before " + BAIRKAN + BAIRKAN + BAIRKAN + " after");
+        checkMoveFromInsideWord(7, 12);
+    }
+
+    private void checkMoveFromInsideWord(int wordStart, int wordEnd) {
+
+        CharSequence text = mTextView.getText();
+
+        // Check following always goes at the end of the word
+        for (int offset = wordStart; offset != wordEnd + 1; offset++) {
+            // Skip positions located between a pair of surrogate characters
+            if (Character.isSurrogatePair(text.charAt(offset - 1), text.charAt(offset))) {
+                continue;
+            }
+            Selection.setSelection(mEditable, offset);
+            assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_RIGHT));
+            assertSelection(wordEnd + 1);
+        }
+
+        // Check preceding always goes at the beginning of the word
+        for (int offset = wordEnd + 1; offset != wordStart; offset--) {
+            if (Character.isSurrogatePair(text.charAt(offset - 1), text.charAt(offset))) {
+                continue;
+            }
+            Selection.setSelection(mEditable, offset);
+            assertTrue(pressCtrlChord(KeyEvent.KEYCODE_DPAD_LEFT));
+            assertSelection(wordStart);
+        }
+    }
+
     private void initTextViewWithNullLayout() {
+        initTextViewWithNullLayout(THREE_LINES_TEXT);
+    }
+
+    private void initTextViewWithNullLayout(CharSequence text) {
         mTextView = new TextView(getActivity());
-        mTextView.setText(THREE_LINES_TEXT, BufferType.EDITABLE);
+        mTextView.setText(text, BufferType.EDITABLE);
         assertNull(mTextView.getLayout());
+        mEditable = (Editable) mTextView.getText();
     }
 
     private void pressMetaKey(int metakey, int expectedState) {
@@ -873,13 +1083,38 @@ public class ArrowKeyMovementMethodTest extends ActivityInstrumentationTestCase2
         pressMetaKey(KeyEvent.KEYCODE_ALT_LEFT, MetaKeyKeyListener.META_ALT_ON);
     }
 
-    private void assertSelection(int position) {
-        assertSelection(position, position);
+    private boolean pressCtrlChord(int keyCode) {
+        final long now = System.currentTimeMillis();
+        final KeyEvent keyEvent = new KeyEvent(
+                now, now, KeyEvent.ACTION_DOWN, keyCode, 0, KeyEvent.META_CTRL_LEFT_ON);
+        return mArrowKeyMovementMethod.onKeyDown(mTextView, mEditable, keyCode, keyEvent);
     }
 
-    private void assertSelection(int start, int end) {
-        assertEquals(start, Selection.getSelectionStart(mEditable));
-        assertEquals(end, Selection.getSelectionEnd(mEditable));
+    private void assertSelection(int expectedPosition) {
+        assertSelection(expectedPosition, expectedPosition);
+    }
+
+    private void assertSelection(int expectedStart, int expectedEnd) {
+        final int actualStart = Selection.getSelectionStart(mEditable);
+        final int actualEnd = Selection.getSelectionEnd(mEditable);
+
+        assertCharSequenceIndexEquals(mEditable, expectedStart, actualStart);
+        assertCharSequenceIndexEquals(mEditable, expectedEnd, actualEnd);
+    }
+
+    private static void assertCharSequenceIndexEquals(CharSequence text, int expected, int actual) {
+        final String message = "expected <" + getCursorSnippet(text, expected) + "> but was <"
+                + getCursorSnippet(text, actual) + ">";
+        assertEquals(message, expected, actual);
+    }
+
+    private static String getCursorSnippet(CharSequence text, int index) {
+        if (index >= 0 && index < text.length()) {
+            return text.subSequence(Math.max(0, index - 5), index) + "|"
+                    + text.subSequence(index, Math.min(text.length() - 1, index + 5));
+        } else {
+            return null;
+        }
     }
 
     private void assertSelectEndOfContent() {

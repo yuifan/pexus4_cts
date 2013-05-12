@@ -23,18 +23,14 @@ import android.media.audiofx.EnvironmentalReverb;
 import android.os.Looper;
 import android.test.AndroidTestCase;
 import android.util.Log;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(EnvironmentalReverb.class)
 public class EnvReverbTest extends AndroidTestCase {
 
     private String TAG = "EnvReverbTest";
     private final static int MILLIBEL_TOLERANCE = 100;            // +/-1dB
     private final static float DELAY_TOLERANCE = 1.05f;           // 5%
     private final static float RATIO_TOLERANCE = 1.05f;           // 5%
+    private final static int MAX_LOOPER_WAIT_COUNT = 10;
 
     private EnvironmentalReverb mReverb = null;
     private EnvironmentalReverb mReverb2 = null;
@@ -45,7 +41,7 @@ public class EnvReverbTest extends AndroidTestCase {
     private boolean mInitialized = false;
     private Looper mLooper = null;
     private final Object mLock = new Object();
-
+    private ListenerThread mEffectListenerLooper = null;
 
     //-----------------------------------------------------------------
     // ENVIRONMENTAL REVERB TESTS:
@@ -56,23 +52,6 @@ public class EnvReverbTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 0.0: test constructor and release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "EnvironmentalReverb",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void test0_0ConstructorAndRelease() throws Exception {
         EnvironmentalReverb envReverb = null;
          try {
@@ -100,28 +79,6 @@ public class EnvReverbTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 1.0: test room level and room HF level
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setRoomLevel",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRoomLevel",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setRoomHFLevel",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRoomHFLevel",
-            args = {}
-        )
-    })
     public void test1_0Room() throws Exception {
         getReverb(0);
         try {
@@ -153,28 +110,6 @@ public class EnvReverbTest extends AndroidTestCase {
     }
 
     //Test case 1.1: test decay time and ratio
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDecayTime",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDecayTime",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDecayHFRatio",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDecayHFRatio",
-            args = {}
-        )
-    })
     public void test1_1Decay() throws Exception {
         getReverb(0);
         try {
@@ -206,28 +141,6 @@ public class EnvReverbTest extends AndroidTestCase {
 
 
     //Test case 1.2: test reverb level and delay
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setReverbLevel",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getReverbLevel",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setReverbDelay",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getReverbDelay",
-            args = {}
-        )
-    })
     public void test1_2Reverb() throws Exception {
         getReverb(0);
         try {
@@ -261,28 +174,6 @@ public class EnvReverbTest extends AndroidTestCase {
     }
 
     //Test case 1.3: test early reflections level and delay
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setReflectionsLevel",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getReflectionsLevel",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setReflectionsDelay",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getReflectionsDelay",
-            args = {}
-        )
-    })
     public void test1_3Reflections() throws Exception {
         getReverb(0);
         try {
@@ -321,28 +212,6 @@ public class EnvReverbTest extends AndroidTestCase {
     }
 
     //Test case 1.4: test diffusion and density
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDiffusion",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDiffusion",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDensity",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDensity",
-            args = {}
-        )
-    })
     public void test1_4DiffusionAndDensity() throws Exception {
         getReverb(0);
         try {
@@ -374,18 +243,6 @@ public class EnvReverbTest extends AndroidTestCase {
     }
 
     //Test case 1.5: test properties
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getProperties",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setProperties",
-            args = {EnvironmentalReverb.Settings.class}
-        )
-    })
     public void test1_5Properties() throws Exception {
         getReverb(0);
         try {
@@ -415,18 +272,6 @@ public class EnvReverbTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 2.0: test setEnabled() and getEnabled() in valid state
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        )
-    })
     public void test2_0SetEnabledGetEnabled() throws Exception {
         getReverb(0);
         try {
@@ -442,18 +287,6 @@ public class EnvReverbTest extends AndroidTestCase {
     }
 
     //Test case 2.1: test setEnabled() throws exception after release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        )
-    })
     public void test2_1SetEnabledAfterRelease() throws Exception {
         getReverb(0);
         mReverb.release();
@@ -472,103 +305,71 @@ public class EnvReverbTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 3.0: test control status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setControlStatusListener",
-            args = {AudioEffect.OnControlStatusChangeListener.class}
-        )
-    })
     public void test3_0ControlStatusListener() throws Exception {
-        mHasControl = true;
-        createListenerLooper(true, false, false);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mHasControl = true;
+            mInitialized = false;
+            createListenerLooper(true, false, false);
+            waitForLooperInitialization_l();
+
+            getReverb(0);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mHasControl && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        synchronized(mLock) {
-            try {
-                getReverb(0);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseReverb();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseReverb();
         }
         assertFalse("effect control not lost by effect1", mHasControl);
     }
 
     //Test case 3.1: test enable status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnableStatusListener",
-            args = {AudioEffect.OnEnableStatusChangeListener.class}
-        )
-    })
     public void test3_1EnableStatusListener() throws Exception {
-        createListenerLooper(false, true, false);
-        synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+         synchronized(mLock) {
+            mInitialized = false;
+            createListenerLooper(false, true, false);
+            waitForLooperInitialization_l();
+
+            mReverb2.setEnabled(true);
+            mIsEnabled = true;
+            getReverb(0);
+            mReverb.setEnabled(false);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mIsEnabled && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        mReverb2.setEnabled(true);
-        mIsEnabled = true;
-        getReverb(0);
-        synchronized(mLock) {
-            try {
-                mReverb.setEnabled(false);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseReverb();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseReverb();
         }
         assertFalse("enable status not updated", mIsEnabled);
     }
 
     //Test case 3.2: test parameter changed listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameterListener",
-            args = {EnvironmentalReverb.OnParameterChangeListener.class}
-        )
-    })
     public void test3_2ParameterChangedListener() throws Exception {
-        createListenerLooper(false, false, true);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mInitialized = false;
+            createListenerLooper(false, false, true);
+            waitForLooperInitialization_l();
+
+            getReverb(0);
+            mChangedParameter = -1;
+            mReverb.setRoomLevel((short)0);
+
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while ((mChangedParameter == -1) && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        getReverb(0);
-        synchronized(mLock) {
-            try {
-                mChangedParameter = -1;
-                mReverb.setRoomLevel((short)0);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseReverb();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseReverb();
         }
         assertEquals("parameter change not received",
                 EnvironmentalReverb.PARAM_ROOM_LEVEL, mChangedParameter);
@@ -603,6 +404,17 @@ public class EnvReverbTest extends AndroidTestCase {
         }
     }
 
+    private void waitForLooperInitialization_l() {
+        int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+        while (!mInitialized && (looperWaitCount-- > 0)) {
+            try {
+                mLock.wait();
+            } catch(Exception e) {
+            }
+        }
+        assertTrue(mInitialized);
+    }
+
     // Initializes the reverb listener looper
     class ListenerThread extends Thread {
         boolean mControl;
@@ -615,11 +427,19 @@ public class EnvReverbTest extends AndroidTestCase {
             mEnable = enable;
             mParameter = parameter;
         }
+
+        public void cleanUp() {
+            if (mReverb2 != null) {
+                mReverb2.setControlStatusListener(null);
+                mReverb2.setEnableStatusListener(null);
+                mReverb2.setParameterListener(
+                            (EnvironmentalReverb.OnParameterChangeListener)null);
+            }
+        }
     }
 
     private void createListenerLooper(boolean control, boolean enable, boolean parameter) {
-        mInitialized = false;
-        new ListenerThread(control, enable, parameter) {
+        mEffectListenerLooper = new ListenerThread(control, enable, parameter) {
             @Override
             public void run() {
                 // Set up a looper
@@ -632,66 +452,75 @@ public class EnvReverbTest extends AndroidTestCase {
                 mReverb2 = new EnvironmentalReverb(0, 0);
                 assertNotNull("could not create reverb2", mReverb2);
 
-                if (mControl) {
-                    mReverb2.setControlStatusListener(
-                            new AudioEffect.OnControlStatusChangeListener() {
-                        public void onControlStatusChange(
-                                AudioEffect effect, boolean controlGranted) {
-                            synchronized(mLock) {
-                                if (effect == mReverb2) {
-                                    mHasControl = controlGranted;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mEnable) {
-                    mReverb2.setEnableStatusListener(
-                            new AudioEffect.OnEnableStatusChangeListener() {
-                        public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
-                            synchronized(mLock) {
-                                if (effect == mReverb2) {
-                                    mIsEnabled = enabled;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mParameter) {
-                    mReverb2.setParameterListener(new EnvironmentalReverb.OnParameterChangeListener() {
-                        public void onParameterChange(EnvironmentalReverb effect,
-                                int status, int param, int value)
-                        {
-                            synchronized(mLock) {
-                                if (effect == mReverb2) {
-                                    mChangedParameter = param;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-
                 synchronized(mLock) {
+                    if (mControl) {
+                        mReverb2.setControlStatusListener(
+                                new AudioEffect.OnControlStatusChangeListener() {
+                            public void onControlStatusChange(
+                                    AudioEffect effect, boolean controlGranted) {
+                                synchronized(mLock) {
+                                    if (effect == mReverb2) {
+                                        mHasControl = controlGranted;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mEnable) {
+                        mReverb2.setEnableStatusListener(
+                                new AudioEffect.OnEnableStatusChangeListener() {
+                            public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
+                                synchronized(mLock) {
+                                    if (effect == mReverb2) {
+                                        mIsEnabled = enabled;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mParameter) {
+                        mReverb2.setParameterListener(new EnvironmentalReverb.OnParameterChangeListener() {
+                            public void onParameterChange(EnvironmentalReverb effect,
+                                    int status, int param, int value)
+                            {
+                                synchronized(mLock) {
+                                    if (effect == mReverb2) {
+                                        mChangedParameter = param;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+
                     mInitialized = true;
                     mLock.notify();
                 }
                 Looper.loop();  // Blocks forever until Looper.quit() is called.
             }
-        }.start();
+        };
+        mEffectListenerLooper.start();
     }
 
     // Terminates the listener looper thread.
     private void terminateListenerLooper() {
+        if (mEffectListenerLooper != null) {
+            mEffectListenerLooper.cleanUp();
+            if (mLooper != null) {
+                mLooper.quit();
+                mLooper = null;
+            }
+            try {
+                mEffectListenerLooper.join();
+            } catch(InterruptedException e) {
+            }
+            mEffectListenerLooper = null;
+        }
         if (mReverb2 != null) {
             mReverb2.release();
             mReverb2 = null;
-        }
-        if (mLooper != null) {
-            mLooper.quit();
-            mLooper = null;
         }
     }
 

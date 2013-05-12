@@ -21,12 +21,9 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.test.AndroidTestCase;
 import android.util.Log;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(AudioTrack.class)
+import java.nio.ByteBuffer;
+
 public class AudioTrackTest extends AndroidTestCase {
     private String TAG = "AudioTrackTest";
     private final long WAIT_MSEC = 200;
@@ -116,13 +113,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 1: constructor for streaming AudioTrack, mono, 16bit at misc
     // valid sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorMono16MusicStream() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -134,13 +124,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 2: constructor for streaming AudioTrack, stereo, 16bit at misc
     // valid sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorStereo16MusicStream() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -152,13 +135,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 3: constructor for static AudioTrack, mono, 16bit at misc valid
     // sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorMono16MusicStatic() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -170,13 +146,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 4: constructor for static AudioTrack, stereo, 16bit at misc
     // valid sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorStereo16MusicStatic() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -192,13 +161,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 1: constructor for streaming AudioTrack, mono, 8bit at misc
     // valid sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorMono8MusicStream() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -210,13 +172,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 2: constructor for streaming AudioTrack, stereo, 8bit at misc
     // valid sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorStereo8MusicStream() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -228,13 +183,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 3: constructor for static AudioTrack, mono, 8bit at misc valid
     // sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorMono8MusicStatic() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -246,13 +194,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 4: constructor for static AudioTrack, stereo, 8bit at misc
     // valid sample rates
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorStereo8MusicStatic() throws Exception {
 
         TestResults res = constructorTestMultiSampleRate(AudioManager.STREAM_MUSIC,
@@ -267,13 +208,6 @@ public class AudioTrackTest extends AndroidTestCase {
     // ----------------------------------
 
     // Test case 1: constructor for all stream types
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testConstructorStreamType() throws Exception {
         // constants for test
         final int TYPE_TEST_SR = 22050;
@@ -323,23 +257,6 @@ public class AudioTrackTest extends AndroidTestCase {
     // ----------------------------------
 
     // Test case 1: getPlaybackHeadPosition() at 0 after initialization
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class,int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackHeadPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        )
-    })
     public void testPlaybackHeadPositionAfterInit() throws Exception {
         // constants for test
         final String TEST_NAME = "testPlaybackHeadPositionAfterInit";
@@ -360,28 +277,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 2: getPlaybackHeadPosition() increases after play()
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackHeadPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        )
-    })
     public void testPlaybackHeadPositionIncrease() throws Exception {
         // constants for test
         final String TEST_NAME = "testPlaybackHeadPositionIncrease";
@@ -409,38 +304,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 3: getPlaybackHeadPosition() is 0 after flush();
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackHeadPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "flush",
-            args = {}
-        )
-    })
     public void testPlaybackHeadPositionAfterFlush() throws Exception {
         // constants for test
         final String TEST_NAME = "testPlaybackHeadPositionAfterFlush";
@@ -470,43 +333,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 3: getPlaybackHeadPosition() is 0 after stop();
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackHeadPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "stop",
-            args = {}
-        )
-    })
     public void testPlaybackHeadPositionAfterStop() throws Exception {
         // constants for test
         final String TEST_NAME = "testPlaybackHeadPositionAfterStop";
@@ -515,6 +341,7 @@ public class AudioTrackTest extends AndroidTestCase {
         final int TEST_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
         final int TEST_MODE = AudioTrack.MODE_STREAM;
         final int TEST_STREAM_TYPE = AudioManager.STREAM_MUSIC;
+        final int TEST_LOOP_CNT = 10;
 
         // -------- initialization --------------
         int minBuffSize = AudioTrack.getMinBufferSize(TEST_SR, TEST_CONF, TEST_FORMAT);
@@ -528,52 +355,20 @@ public class AudioTrackTest extends AndroidTestCase {
         track.play();
         Thread.sleep(WAIT_MSEC);
         track.stop();
-        Thread.sleep(WAIT_MSEC);
-        int pos = track.getPlaybackHeadPosition();
-        log(TEST_NAME, "position =" + pos);
+        int count = 0;
+        int pos;
+        do {
+            Thread.sleep(WAIT_MSEC);
+            pos = track.getPlaybackHeadPosition();
+            count++;
+        } while((pos != 0) && (count < TEST_LOOP_CNT));
+        log(TEST_NAME, "position =" + pos + ", read count ="+count);
         assertTrue(TEST_NAME, pos == 0);
         // -------- tear down --------------
         track.release();
     }
 
     // Test case 4: getPlaybackHeadPosition() is > 0 after play(); pause();
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackHeadPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "pause",
-            args = {}
-        )
-    })
     public void testPlaybackHeadPositionAfterPause() throws Exception {
         // constants for test
         final String TEST_NAME = "testPlaybackHeadPositionAfterPause";
@@ -607,48 +402,6 @@ public class AudioTrackTest extends AndroidTestCase {
     // ----------------------------------
 
     // Test case 1: setStereoVolume() with max volume returns SUCCESS
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackHeadPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStereoVolume",
-            args = {float.class, float.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMaxVolume",
-            args = {}
-        )
-    })
     public void testSetStereoVolumeMax() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetStereoVolumeMax";
@@ -674,48 +427,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 2: setStereoVolume() with min volume returns SUCCESS
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackHeadPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStereoVolume",
-            args = {float.class, float.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinVolume",
-            args = {}
-        )
-    })
     public void testSetStereoVolumeMin() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetStereoVolumeMin";
@@ -741,43 +452,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 3: setStereoVolume() with mid volume returns SUCCESS
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStereoVolume",
-            args = {float.class, float.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinVolume",
-            args = {}
-        )
-    })
     public void testSetStereoVolumeMid() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetStereoVolumeMid";
@@ -804,38 +478,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 4: setPlaybackRate() with half the content rate returns SUCCESS
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackRate",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackRate() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackRate";
@@ -861,38 +503,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 5: setPlaybackRate(0) returns bad value error
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackRate",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackRateZero() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackRateZero";
@@ -915,43 +525,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 6: setPlaybackRate() accepts values twice the output sample
     // rate
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNativeOutputSampleRate",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackRate",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackRateTwiceOutputSR() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackRateTwiceOutputSR";
@@ -979,43 +552,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 7: setPlaybackRate() and retrieve value, should be the same for
     // half the content SR
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackRate",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlaybackRate",
-            args = {}
-        )
-    })
     public void testSetGetPlaybackRate() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetGetPlaybackRate";
@@ -1042,38 +578,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 8: setPlaybackRate() invalid operation if track not initialized
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackRate",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackRate",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackRateUninit() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackRateUninit";
@@ -1100,38 +604,6 @@ public class AudioTrackTest extends AndroidTestCase {
     // ----------------------------------
 
     // Test case 1: setPlaybackHeadPosition() on playing track
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackHeadPosition",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackHeadPositionPlaying() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackHeadPositionPlaying";
@@ -1158,53 +630,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 2: setPlaybackHeadPosition() on stopped track
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "stop",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlayState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackHeadPosition",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackHeadPositionStopped() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackHeadPositionStopped";
@@ -1232,53 +657,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 3: setPlaybackHeadPosition() on paused track
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlayState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "pause",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackHeadPosition",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackHeadPositionPaused() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackHeadPositionPaused";
@@ -1306,53 +684,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 4: setPlaybackHeadPosition() beyond what has been written
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPlayState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "stop",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPlaybackHeadPosition",
-            args = {int.class}
-        )
-    })
     public void testSetPlaybackHeadPositionTooFar() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetPlaybackHeadPositionTooFar";
@@ -1385,38 +716,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 5: setLoopPoints() fails for MODE_STREAM
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setLoopPoints",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testSetLoopPointsStream() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetLoopPointsStream";
@@ -1440,38 +739,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 6: setLoopPoints() fails start > end
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setLoopPoints",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testSetLoopPointsStartAfterEnd() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetLoopPointsStartAfterEnd";
@@ -1495,38 +762,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 6: setLoopPoints() success
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setLoopPoints",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testSetLoopPointsSuccess() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetLoopPointsSuccess";
@@ -1550,38 +785,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 7: setLoopPoints() fails with loop length bigger than content
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setLoopPoints",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testSetLoopPointsLoopTooLong() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetLoopPointsLoopTooLong";
@@ -1609,38 +812,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 8: setLoopPoints() fails with start beyond what can be written
     // for the track
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setLoopPoints",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testSetLoopPointsStartTooFar() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetLoopPointsStartTooFar";
@@ -1669,38 +840,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 9: setLoopPoints() fails with end beyond what can be written
     // for the track
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setLoopPoints",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testSetLoopPointsEndTooFar() throws Exception {
         // constants for test
         final String TEST_NAME = "testSetLoopPointsEndTooFar";
@@ -1733,33 +872,6 @@ public class AudioTrackTest extends AndroidTestCase {
     // ----------------------------------
 
     // Test case 1: write() fails when supplying less data (bytes) than declared
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteByteOffsetTooBig() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteByteOffsetTooBig";
@@ -1784,33 +896,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 2: write() fails when supplying less data (shorts) than
     // declared
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {short[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteShortOffsetTooBig() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteShortOffsetTooBig";
@@ -1835,33 +920,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 3: write() fails when supplying less data (bytes) than declared
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteByteSizeTooBig() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteByteSizeTooBig";
@@ -1886,33 +944,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 4: write() fails when supplying less data (shorts) than
     // declared
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {short[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteShortSizeTooBig() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteShortSizeTooBig";
@@ -1936,33 +967,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 5: write() fails with negative offset
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteByteNegativeOffset() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteByteNegativeOffset";
@@ -1986,33 +990,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 6: write() fails with negative offset
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {short[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteShortNegativeOffset() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteShortNegativeOffset";
@@ -2036,33 +1013,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 7: write() fails with negative size
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteByteNegativeSize() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteByteNegativeSize";
@@ -2087,33 +1037,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 8: write() fails with negative size
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {short[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteShortNegativeSize() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteShortNegativeSize";
@@ -2139,33 +1062,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 9: write() succeeds and returns the size that was written for
     // 16bit
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteByte() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteByte";
@@ -2189,38 +1085,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 10: write() succeeds and returns the size that was written for
     // 16bit
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {short[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "flush",
-            args = {}
-        )
-    })
     public void testWriteShort() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteShort";
@@ -2245,33 +1109,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 11: write() succeeds and returns the size that was written for
     // 8bit
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteByte8bit() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteByte8bit";
@@ -2295,33 +1132,6 @@ public class AudioTrackTest extends AndroidTestCase {
 
     // Test case 12: write() succeeds and returns the size that was written for
     // 8bit
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "write",
-            args = {short[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void testWriteShort8bit() throws Exception {
         // constants for test
         final String TEST_NAME = "testWriteShort8bit";
@@ -2348,13 +1158,6 @@ public class AudioTrackTest extends AndroidTestCase {
     // ----------------------------------
 
     // Test case 1: getMinBufferSize() return ERROR_BAD_VALUE if SR < 4000
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        )
-    })
     public void testGetMinBufferSizeTooLowSR() throws Exception {
         // constant for test
         final String TEST_NAME = "testGetMinBufferSizeTooLowSR";
@@ -2368,13 +1171,6 @@ public class AudioTrackTest extends AndroidTestCase {
     }
 
     // Test case 2: getMinBufferSize() return ERROR_BAD_VALUE if SR > 48000
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        )
-    })
     public void testGetMinBufferSizeTooHighSR() throws Exception {
         // constant for test
         final String TEST_NAME = "testGetMinBufferSizeTooHighSR";
@@ -2387,68 +1183,6 @@ public class AudioTrackTest extends AndroidTestCase {
             AudioTrack.ERROR_BAD_VALUE);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAudioFormat",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getChannelConfiguration",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSampleRate",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStreamType",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getChannelCount",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNotificationMarkerPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setNotificationMarkerPosition",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPositionNotificationPeriod",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPositionNotificationPeriod",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setState",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNativeFrameCount",
-            args = {}
-        )
-    })
     public void testAudioTrackProperties() throws Exception {
         // constants for test
         final String TEST_NAME = "testAudioTrackProperties";
@@ -2495,23 +1229,6 @@ public class AudioTrackTest extends AndroidTestCase {
         assertTrue(TEST_NAME, track.getNativeFrameCount() >= frameCount);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "reloadStaticData",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "play",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "stop",
-            args = {}
-        )
-    })
     public void testReloadStaticData() throws Exception {
         // constants for test
         final String TEST_NAME = "testReloadStaticData";
@@ -2562,11 +1279,6 @@ public class AudioTrackTest extends AndroidTestCase {
         return vai;
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "write",
-        args = {short[].class, int.class, int.class}
-    )
     public void testPlayStreamData() throws Exception {
         // constants for test
         final String TEST_NAME = "testPlayStreamData";
@@ -2603,6 +1315,29 @@ public class AudioTrackTest extends AndroidTestCase {
         // -------- tear down --------------
         track.release();
     }
+
+/* Do not run in JB-MR1. will be re-opened in the next platform release.
+    public void testResourceLeakage() throws Exception {
+        final int BUFFER_SIZE = 600 * 1024;
+        ByteBuffer data = ByteBuffer.allocate(BUFFER_SIZE);
+        for (int i = 0; i < 10; i++) {
+            Log.i(TAG, "testResourceLeakage round " + i);
+            data.rewind();
+            AudioTrack track = new AudioTrack(AudioManager.STREAM_VOICE_CALL,
+                                              44100,
+                                              AudioFormat.CHANNEL_OUT_STEREO,
+                                              AudioFormat.ENCODING_PCM_16BIT,
+                                              data.capacity(),
+                                              AudioTrack.MODE_STREAM);
+            assertTrue(track != null);
+            track.write(data.array(), 0, data.capacity());
+            track.play();
+            Thread.sleep(100);
+            track.stop();
+            track.release();
+        }
+    }
+*/
 
     private class MockAudioTrack extends AudioTrack {
 

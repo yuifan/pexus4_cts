@@ -18,13 +18,9 @@ package android.graphics.drawable.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
 import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.IOException;
 
 import android.R.attr;
 import android.content.res.Resources;
@@ -37,29 +33,18 @@ import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.Drawable.ConstantState;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RotateDrawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.StateListDrawable;
-import android.graphics.drawable.Drawable.Callback;
-import android.graphics.drawable.Drawable.ConstantState;
 import android.test.AndroidTestCase;
 import android.util.AttributeSet;
 import android.util.StateSet;
 import android.view.View;
 
-import java.io.IOException;
-
-@TestTargetClass(android.graphics.drawable.LayerDrawable.class)
 public class LayerDrawableTest extends AndroidTestCase {
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "LayerDrawable",
-        args = {android.graphics.drawable.Drawable[].class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for constructor is incomplete." +
-            "1. not clear what is supposed to happen if layers is null.")
     @SuppressWarnings("deprecation")
     public void testConstructor() {
         Drawable bitmapDrawable = new BitmapDrawable();
@@ -81,14 +66,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "inflate",
-        args = {android.content.res.Resources.class, org.xmlpull.v1.XmlPullParser.class,
-                android.util.AttributeSet.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for inflate is incomplete." +
-            "1. not clear what is supposed to happen if any parameter is null.")
     public void testInflate() throws XmlPullParserException, IOException {
         Drawable[] array = new Drawable[0];
         LayerDrawable layerDrawable = new LayerDrawable(array);
@@ -143,11 +120,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "findDrawableByLayerId",
-        args = {int.class}
-    )
     @SuppressWarnings("deprecation")
     public void testFindDrawableByLayerId() {
         Drawable bitmapDrawable = new BitmapDrawable();
@@ -172,20 +144,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertNull(layerDrawable.findDrawableByLayerId(30));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setId",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {int.class}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for setId and getId are incomplete." +
-            "1. not clear what is supposed to happen if index is exceptional.")
     @SuppressWarnings("deprecation")
     public void testAccessId() {
         Drawable[] array = new Drawable[] { new BitmapDrawable(), new ColorDrawable(Color.BLUE) };
@@ -226,11 +184,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNumberOfLayers",
-        args = {}
-    )
     @SuppressWarnings("deprecation")
     public void testGetNumberOfLayers() {
         Drawable[] array = new Drawable[] { new BitmapDrawable(), new ColorDrawable(Color.BLUE) };
@@ -249,20 +202,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertEquals(0, layerDrawable.getNumberOfLayers());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDrawable",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDrawableByLayerId",
-            args = {int.class, android.graphics.drawable.Drawable.class}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for getDrawable is incomplete." +
-            "1. not clear what is supposed to happen if index is exceptional.")
     @SuppressWarnings("deprecation")
     public void testAccessDrawable() {
         Drawable bitmapDrawable = new BitmapDrawable();
@@ -283,9 +222,6 @@ public class LayerDrawableTest extends AndroidTestCase {
 
         assertFalse(layerDrawable.setDrawableByLayerId(30, d1));
 
-        layerDrawable.setDrawableByLayerId(20, null);
-        assertEquals(null, layerDrawable.getDrawable(1));
-
         try {
             layerDrawable.getDrawable(layerDrawable.getNumberOfLayers());
             fail("Should throw IndexOutOfBoundsException");
@@ -299,13 +235,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setLayerInset",
-        args = {int.class, int.class, int.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "the javadoc for setLayerInset is incomplete." +
-            "1. not clear what is supposed to happen if index is exceptional.")
     @SuppressWarnings("deprecation")
     public void testSetLayerInset() {
         Drawable[] array = new Drawable[] { new BitmapDrawable(), new ColorDrawable(Color.BLUE) };
@@ -340,11 +269,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "invalidateDrawable",
-        args = {android.graphics.drawable.Drawable.class}
-    )
     @SuppressWarnings("deprecation")
     public void testInvalidateDrawable() {
         Drawable[] array = new Drawable[0];
@@ -365,11 +289,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertFalse(cb.hasCalledInvalidate());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "scheduleDrawable",
-        args = {android.graphics.drawable.Drawable.class, java.lang.Runnable.class, long.class}
-    )
     @SuppressWarnings("deprecation")
     public void testScheduleDrawable() {
         Drawable[] array = new Drawable[0];
@@ -393,11 +312,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertFalse(cb.hasCalledSchedule());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "unscheduleDrawable",
-        args = {android.graphics.drawable.Drawable.class, java.lang.Runnable.class}
-    )
     @SuppressWarnings("deprecation")
     public void testUnscheduleDrawable() {
         Drawable[] array = new Drawable[0];
@@ -421,7 +335,7 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertFalse(cb.hasCalledUnschedule());
     }
 
-    private static class MockCallback implements Callback {
+    private static class MockCallback implements Drawable.Callback {
         private boolean mCalledInvalidate;
         private boolean mCalledSchedule;
         private boolean mCalledUnschedule;
@@ -450,6 +364,10 @@ public class LayerDrawableTest extends AndroidTestCase {
             return mCalledUnschedule;
         }
 
+        public int getResolvedLayoutDirection(Drawable who) {
+            return 0;
+        }
+
         public void reset() {
             mCalledInvalidate = false;
             mCalledSchedule = false;
@@ -457,11 +375,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "draw",
-        args = {android.graphics.Canvas.class}
-    )
     public void testDraw() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -480,11 +393,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable2.hasCalledDraw());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getChangingConfigurations",
-        args = {}
-    )
     @SuppressWarnings("deprecation")
     public void testGetChangingConfigurations() {
         final int superConfig = 1;
@@ -505,11 +413,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertEquals(superConfig | childConfig, layerDrawable.getChangingConfigurations());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getPadding",
-        args = {android.graphics.Rect.class}
-    )
     public void testGetPadding() {
         Drawable[] array = new Drawable[] { new ShapeDrawable(), new ShapeDrawable() };
         LayerDrawable layerDrawable = new LayerDrawable(array);
@@ -538,11 +441,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertEquals(padding0.bottom + padding1.bottom, rc.bottom);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setVisible",
-        args = {boolean.class, boolean.class}
-    )
     @SuppressWarnings("deprecation")
     public void testSetVisible() {
         Drawable[] array = new Drawable[] { new BitmapDrawable(), new ColorDrawable(Color.BLUE) };
@@ -561,11 +459,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(layerDrawable.getDrawable(1).isVisible());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setDither",
-        args = {boolean.class}
-    )
     public void testSetDither() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -583,11 +476,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable2.hasCalledSetDither());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setAlpha",
-        args = {int.class}
-    )
     public void testSetAlpha() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -605,11 +493,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable2.hasCalledSetAlpha());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setColorFilter",
-        args = {android.graphics.ColorFilter.class}
-    )
     public void testSetColorFilter() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -627,11 +510,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(mockDrawable2.hasCalledColorFilter());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getOpacity",
-        args = {}
-    )
     public void testGetOpacity() {
         Drawable[] array = new Drawable[0];
         LayerDrawable layerDrawable = new LayerDrawable(array);
@@ -658,11 +536,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertEquals(PixelFormat.UNKNOWN, layerDrawable.getOpacity());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isStateful",
-        args = {}
-    )
     @SuppressWarnings("deprecation")
     public void testIsStateful() {
         Drawable[] array = new Drawable[0];
@@ -678,11 +551,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(layerDrawable.isStateful());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onStateChange",
-        args = {int[].class}
-    )
     public void testOnStateChange() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -712,11 +580,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(layerDrawable.hasCalledOnBoundsChange());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onLevelChange",
-        args = {int.class}
-    )
     public void testOnLevelChange() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -747,11 +610,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         assertTrue(layerDrawable.hasCalledOnBoundsChange());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onBoundsChange",
-        args = {android.graphics.Rect.class}
-    )
     public void testOnBoundsChange() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -794,11 +652,6 @@ public class LayerDrawableTest extends AndroidTestCase {
                 mockDrawable2.getBounds().bottom);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getIntrinsicWidth",
-        args = {}
-    )
     public void testGetIntrinsicWidth() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -826,11 +679,6 @@ public class LayerDrawableTest extends AndroidTestCase {
                 layerDrawable.getIntrinsicWidth());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getIntrinsicHeight",
-        args = {}
-    )
     public void testGetIntrinsicHeight() {
         MockDrawable mockDrawable1 = new MockDrawable();
         MockDrawable mockDrawable2 = new MockDrawable();
@@ -858,11 +706,6 @@ public class LayerDrawableTest extends AndroidTestCase {
                 layerDrawable.getIntrinsicHeight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getConstantState",
-        args = {}
-    )
     @SuppressWarnings("deprecation")
     public void testGetConstantState() {
         Drawable[] array = new Drawable[] { new BitmapDrawable(), new ColorDrawable(Color.BLUE) };
@@ -1039,11 +882,6 @@ public class LayerDrawableTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "mutate",
-        args = {}
-    )
     public void testMutate() {
         Resources resources = mContext.getResources();
         LayerDrawable d1 = (LayerDrawable) resources.getDrawable(R.drawable.layerdrawable);

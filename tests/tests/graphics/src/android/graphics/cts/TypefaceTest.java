@@ -16,15 +16,21 @@
 
 package android.graphics.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.graphics.Typeface;
+import android.content.res.AssetFileDescriptor;
+import android.content.res.AssetManager;
+import android.content.res.Resources;
+import android.graphics.Typeface;
+import android.os.ParcelFileDescriptor;
 import android.test.AndroidTestCase;
 
-@TestTargetClass(android.graphics.Typeface.class)
+import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 public class TypefaceTest extends AndroidTestCase {
 
     // generic family name for monospaced fonts
@@ -52,23 +58,6 @@ public class TypefaceTest extends AndroidTestCase {
     }
 
 
-    @TestTargets ({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isBold",
-            args = {}
-        ),
-        @TestTargetNew(
-                level = TestLevel.COMPLETE,
-                method = "isItalic",
-                args = {}
-        ),
-        @TestTargetNew(
-                level = TestLevel.COMPLETE,
-                method = "getStyle",
-                args = {}
-        )
-    })
     public void testIsBold() {
         Typeface typeface = createTypeface(Typeface.BOLD);
         if (typeface != null) {
@@ -99,18 +88,6 @@ public class TypefaceTest extends AndroidTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "create",
-            args = {java.lang.String.class, int.class}
-        ),
-        @TestTargetNew(
-                level = TestLevel.COMPLETE,
-                method = "create",
-                args = {android.graphics.Typeface.class, int.class}
-        )
-    })
     public void testCreate() {
         Typeface typeface = Typeface.create(DEFAULT, Typeface.NORMAL);
         assertNotNull(typeface);
@@ -125,11 +102,6 @@ public class TypefaceTest extends AndroidTestCase {
         assertNotNull(typeface);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "defaultFromStyle",
-        args = {int.class}
-    )
     public void testDefaultFromStyle() {
         Typeface typeface = Typeface.defaultFromStyle(Typeface.NORMAL);
         assertNotNull(typeface);
@@ -149,11 +121,6 @@ public class TypefaceTest extends AndroidTestCase {
         assertNotNull(Typeface.SERIF);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "createFromAsset",
-        args = {android.content.res.AssetManager.class, java.lang.String.class}
-    )
     public void testCreateFromAsset() {
         // input abnormal params.
         try {
@@ -165,5 +132,52 @@ public class TypefaceTest extends AndroidTestCase {
 
         Typeface typeface = Typeface.createFromAsset(getContext().getAssets(), "samplefont.ttf");
         assertNotNull(typeface);
+    }
+
+    public void testCreateFromFile1() throws IOException {
+        // input abnormal params.
+        try {
+            Typeface.createFromFile((File)null);
+            fail("Should throw a NullPointerException.");
+        } catch (NullPointerException e) {
+            // except here
+        }
+        File file = new File(obtainPath());
+        Typeface typeface = Typeface.createFromFile(file);
+        assertNotNull(typeface);
+    }
+
+    public void testCreateFromFile2() throws IOException {
+        // input abnormal params.
+        try {
+            Typeface.createFromFile((String)null);
+            fail("Should throw a NullPointerException.");
+        } catch (NullPointerException e) {
+            // except here
+        }
+
+        Typeface typeface = Typeface.createFromFile(obtainPath());
+        assertNotNull(typeface);
+    }
+
+    private String obtainPath() throws IOException {
+        File dir = getContext().getFilesDir();
+        dir.mkdirs();
+        File file = new File(dir, "test.jpg");
+        if (!file.createNewFile()) {
+            if (!file.exists()) {
+                fail("Failed to create new File!");
+            }
+        }
+        InputStream is = getContext().getAssets().open("samplefont.ttf");
+        FileOutputStream fOutput = new FileOutputStream(file);
+        byte[] dataBuffer = new byte[1024];
+        int readLength = 0;
+        while ((readLength = is.read(dataBuffer)) != -1) {
+            fOutput.write(dataBuffer, 0, readLength);
+        }
+        is.close();
+        fOutput.close();
+        return (file.getPath());
     }
 }

@@ -16,30 +16,23 @@
 
 package android.webkit.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
+import android.cts.util.PollingCheck;
 import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
-import android.webkit.WebChromeClient;
 import android.webkit.WebView;
+
 
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@TestTargetClass(android.webkit.CookieManager.class)
 public class CookieManagerTest extends
         ActivityInstrumentationTestCase2<CookieSyncManagerStubActivity> {
 
-    private static final int TEST_DELAY = 5000;
+    private static final int TEST_TIMEOUT = 5000;
 
-    private WebView mWebView;
+    private WebViewOnUiThread mOnUiThread;
     private CookieManager mCookieManager;
 
     public CookieManagerTest() {
@@ -49,81 +42,42 @@ public class CookieManagerTest extends
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        mWebView = getActivity().getWebView();
-
-        // Set a web chrome client in order to receive progress updates.
-        mWebView.setWebChromeClient(new WebChromeClient());
+        mOnUiThread = new WebViewOnUiThread(this, getActivity().getWebView());
 
         mCookieManager = CookieManager.getInstance();
         assertNotNull(mCookieManager);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getInstance",
-        args = {}
-    )
     public void testGetInstance() {
+        mOnUiThread.cleanUp();
         CookieManager c1 = CookieManager.getInstance();
         CookieManager c2 = CookieManager.getInstance();
 
         assertSame(c1, c2);
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_FEASIBLE,
-        method = "clone",
-        notes = "clone() is protected and CookieManager cannot be subclassed",
-        args = {}
-    )
     public void testClone() {
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setAcceptCookie",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "acceptCookie",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setCookie",
-            args = {String.class, String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCookie",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeAllCookie",
-            args = {}
-        )
-    })
     public void testAcceptCookie() throws Exception {
+        mCookieManager.removeAllCookie();
         mCookieManager.setAcceptCookie(false);
         assertFalse(mCookieManager.acceptCookie());
         assertFalse(mCookieManager.hasCookies());
 
         CtsTestServer server = new CtsTestServer(getActivity(), false);
         String url = server.getCookieUrl("conquest.html");
-        loadUrl(url);
-        assertEquals(null, mWebView.getTitle()); // no cookies passed
-        Thread.sleep(TEST_DELAY);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(null, mOnUiThread.getTitle()); // no cookies passed
+        Thread.sleep(500);
         assertNull(mCookieManager.getCookie(url));
 
         mCookieManager.setAcceptCookie(true);
         assertTrue(mCookieManager.acceptCookie());
 
         url = server.getCookieUrl("war.html");
-        loadUrl(url);
-        assertEquals(null, mWebView.getTitle()); // no cookies passed
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals(null, mOnUiThread.getTitle()); // no cookies passed
         waitForCookie(url);
         String cookie = mCookieManager.getCookie(url);
         assertNotNull(cookie);
@@ -134,8 +88,8 @@ public class CookieManagerTest extends
         assertEquals("0", m.group(1));
 
         url = server.getCookieUrl("famine.html");
-        loadUrl(url);
-        assertEquals("count=0", mWebView.getTitle()); // outgoing cookie
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals("count=0", mOnUiThread.getTitle()); // outgoing cookie
         waitForCookie(url);
         cookie = mCookieManager.getCookie(url);
         assertNotNull(cookie);
@@ -145,8 +99,8 @@ public class CookieManagerTest extends
 
         url = server.getCookieUrl("death.html");
         mCookieManager.setCookie(url, "count=41");
-        loadUrl(url);
-        assertEquals("count=41", mWebView.getTitle()); // outgoing cookie
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals("count=41", mOnUiThread.getTitle()); // outgoing cookie
         waitForCookie(url);
         cookie = mCookieManager.getCookie(url);
         assertNotNull(cookie);
@@ -158,19 +112,6 @@ public class CookieManagerTest extends
         mCookieManager.removeAllCookie();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "hasCookies",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeAllCookie",
-            args = {}
-        )
-    })
-    @ToBeFixed(explanation = "CookieManager.hasCookies() should also count cookies in RAM cache")
     public void testCookieManager() {
         // enable cookie
         mCookieManager.setAcceptCookie(true);
@@ -186,7 +127,7 @@ public class CookieManagerTest extends
 
         // sync cookie from RAM to FLASH, because hasCookies() only counts FLASH cookies
         CookieSyncManager.getInstance().sync();
-        new DelayedCheck(TEST_DELAY) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return mCookieManager.hasCookies();
@@ -195,7 +136,7 @@ public class CookieManagerTest extends
 
         // clean up all cookies
         mCookieManager.removeAllCookie();
-        new DelayedCheck(TEST_DELAY) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return !mCookieManager.hasCookies();
@@ -203,18 +144,6 @@ public class CookieManagerTest extends
         }.run();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeSessionCookie",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "removeExpiredCookie",
-            args = {}
-        )
-    })
     @SuppressWarnings("deprecation")
     public void testRemoveCookies() throws InterruptedException {
         // enable cookie
@@ -246,7 +175,8 @@ public class CookieManagerTest extends
         assertTrue(allCookies.contains(cookie3));
 
         mCookieManager.removeSessionCookie();
-        new DelayedCheck(TEST_DELAY) {
+        new PollingCheck(TEST_TIMEOUT) {
+            @Override
             protected boolean check() {
                 String c = mCookieManager.getCookie(url);
                 return !c.contains(cookie1) && c.contains(cookie2) && c.contains(cookie3);
@@ -255,7 +185,8 @@ public class CookieManagerTest extends
 
         Thread.sleep(expiration + 1000); // wait for cookie to expire
         mCookieManager.removeExpiredCookie();
-        new DelayedCheck(TEST_DELAY) {
+        new PollingCheck(TEST_TIMEOUT) {
+            @Override
             protected boolean check() {
                 String c = mCookieManager.getCookie(url);
                 return !c.contains(cookie1) && c.contains(cookie2) && !c.contains(cookie3);
@@ -263,27 +194,30 @@ public class CookieManagerTest extends
         }.run();
 
         mCookieManager.removeAllCookie();
-        new DelayedCheck(TEST_DELAY) {
+        new PollingCheck(TEST_TIMEOUT) {
+            @Override
             protected boolean check() {
                 return mCookieManager.getCookie(url) == null;
             }
         }.run();
     }
 
-    private void loadUrl(String url) {
-        mWebView.loadUrl(url);
-        new DelayedCheck(TEST_DELAY) {
-            protected boolean check() {
-                return mWebView.getProgress() == 100;
-            }
-        }.run();
-    }
-
     private void waitForCookie(final String url) {
-        new DelayedCheck(TEST_DELAY) {
+        new PollingCheck(TEST_TIMEOUT) {
+            @Override
             protected boolean check() {
                 return mCookieManager.getCookie(url) != null;
             }
         }.run();
+    }
+
+    public void testb3167208() throws Exception {
+        String uri = "http://host.android.com/path/";
+        // note the space after the domain=
+        String problemCookie = "foo=bar; domain= .android.com; path=/";
+        mCookieManager.setCookie(uri, problemCookie);
+        String cookie = mCookieManager.getCookie(uri);
+        assertNotNull(cookie);
+        assertTrue(cookie.contains("foo=bar"));
     }
 }

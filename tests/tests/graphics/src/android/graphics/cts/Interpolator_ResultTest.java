@@ -18,31 +18,22 @@ package android.graphics.cts;
 
 import junit.framework.TestCase;
 import android.graphics.Interpolator.Result;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
+import android.graphics.Shader.TileMode;
 
-@TestTargetClass(Result.class)
+
 public class Interpolator_ResultTest extends TestCase {
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "valueOf",
-        args = {java.lang.String.class}
-    )
     public void testValueOf() {
-        // this enum type is tested in
-        // android.graphics.InterpolatorTest#testTimeToValues1()
+        assertEquals(Result.FREEZE_START, Result.valueOf("FREEZE_START"));
+        assertEquals(Result.FREEZE_END, Result.valueOf("FREEZE_END"));
+        assertEquals(Result.NORMAL, Result.valueOf("NORMAL"));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "values",
-        args = {}
-    )
     public void testValues() {
-        // this enum type is tested in
-        // android.graphics.InterpolatorTest#testTimeToValues1()
+        Result[] result = Result.values();
+        assertEquals(3, result.length);
+        assertEquals(Result.NORMAL, result[0]);
+        assertEquals(Result.FREEZE_START, result[1]);
+        assertEquals(Result.FREEZE_END, result[2]);
     }
-
 }

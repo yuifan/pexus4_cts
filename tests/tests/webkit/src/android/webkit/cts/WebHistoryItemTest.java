@@ -16,25 +16,16 @@
 
 package android.webkit.cts;
 
-import dalvik.annotation.BrokenTest;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
 import android.graphics.Bitmap;
 import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
 import android.webkit.WebBackForwardList;
-import android.webkit.WebChromeClient;
 import android.webkit.WebHistoryItem;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
 
-@TestTargetClass(android.webkit.WebHistoryItem.class)
+
 public class WebHistoryItemTest extends ActivityInstrumentationTestCase2<WebViewStubActivity> {
+    private final static long TEST_TIMEOUT = 10000;
     private CtsTestServer mWebServer;
+    private WebViewOnUiThread mOnUiThread;
 
     public WebHistoryItemTest() {
         super("com.android.cts.stub", WebViewStubActivity.class);
@@ -44,74 +35,41 @@ public class WebHistoryItemTest extends ActivityInstrumentationTestCase2<WebView
     protected void setUp() throws Exception {
         super.setUp();
         mWebServer = new CtsTestServer(getActivity());
+        mOnUiThread = new WebViewOnUiThread(this, getActivity().getWebView());
     }
 
     @Override
     protected void tearDown() throws Exception {
+        mOnUiThread.cleanUp();
         mWebServer.shutdown();
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTitle",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getUrl",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getFavicon",
-            args = {}
-        )
-    })
     public void testWebHistoryItem() {
-        final WebView view = getActivity().getWebView();
-        view.setWebChromeClient(new WebChromeClient());
-        WebBackForwardList list = view.copyBackForwardList();
+        WebBackForwardList list = mOnUiThread.copyBackForwardList();
         assertEquals(0, list.getSize());
 
         String url = mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
-        assertLoadUrlSuccessfully(view, url);
-        list = view.copyBackForwardList();
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        list = mOnUiThread.copyBackForwardList();
         assertEquals(1, list.getSize());
         WebHistoryItem item = list.getCurrentItem();
         assertNotNull(item);
         int firstId = item.getId();
         assertEquals(url, item.getUrl());
-        assertNull(item.getOriginalUrl());
+        assertEquals(url, item.getOriginalUrl());
         assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, item.getTitle());
-        Bitmap icon = view.getFavicon();
+        Bitmap icon = mOnUiThread.getFavicon();
         assertEquals(icon, item.getFavicon());
 
         url = mWebServer.getAssetUrl(TestHtmlConstants.BR_TAG_URL);
-        assertLoadUrlSuccessfully(view, url);
-        list = view.copyBackForwardList();
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        list = mOnUiThread.copyBackForwardList();
         assertEquals(2, list.getSize());
         item = list.getCurrentItem();
         assertNotNull(item);
         assertEquals(TestHtmlConstants.BR_TAG_TITLE, item.getTitle());
         int secondId = item.getId();
         assertTrue(firstId != secondId);
-    }
-
-    private void assertLoadUrlSuccessfully(final WebView view, String url) {
-        view.loadUrl(url);
-        // wait for the page load to complete
-        new DelayedCheck(10000) {
-            @Override
-            protected boolean check() {
-                return view.getProgress() == 100;
-            }
-        }.run();
     }
 }

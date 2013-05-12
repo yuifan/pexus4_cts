@@ -16,21 +16,12 @@
 
 package android.net.cts;
 
+
 import android.net.NetworkInfo.DetailedState;
 import android.test.AndroidTestCase;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
 
-@TestTargetClass(DetailedState.class)
 public class NetworkInfo_DetailedStateTest extends AndroidTestCase {
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test valueOf(String name).",
-        method = "valueOf",
-        args = {java.lang.String.class}
-    )
     public void testValueOf() {
         assertEquals(DetailedState.AUTHENTICATING, DetailedState.valueOf("AUTHENTICATING"));
         assertEquals(DetailedState.CONNECTED, DetailedState.valueOf("CONNECTED"));
@@ -44,15 +35,9 @@ public class NetworkInfo_DetailedStateTest extends AndroidTestCase {
         assertEquals(DetailedState.SUSPENDED, DetailedState.valueOf("SUSPENDED"));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test values().",
-        method = "values",
-        args = {}
-    )
     public void testValues() {
         DetailedState[] expected = DetailedState.values();
-        assertEquals(10, expected.length);
+        assertEquals(13, expected.length);
         assertEquals(DetailedState.IDLE, expected[0]);
         assertEquals(DetailedState.SCANNING, expected[1]);
         assertEquals(DetailedState.CONNECTING, expected[2]);
@@ -63,6 +48,9 @@ public class NetworkInfo_DetailedStateTest extends AndroidTestCase {
         assertEquals(DetailedState.DISCONNECTING, expected[7]);
         assertEquals(DetailedState.DISCONNECTED, expected[8]);
         assertEquals(DetailedState.FAILED, expected[9]);
+        assertEquals(DetailedState.BLOCKED, expected[10]);
+        assertEquals(DetailedState.VERIFYING_POOR_LINK, expected[11]);
+        assertEquals(DetailedState.CAPTIVE_PORTAL_CHECK, expected[12]);
     }
 
 }

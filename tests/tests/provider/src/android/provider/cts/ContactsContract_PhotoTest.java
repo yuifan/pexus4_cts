@@ -16,32 +16,38 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-
+import android.content.ContentProviderClient;
 import android.content.ContentResolver;
-import android.content.IContentProvider;
+import android.content.Context;
+import android.os.cts.FileUtils;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Photo;
+import android.provider.ContactsContract.Contacts;
+import android.provider.cts.ContactsContract_TestDataBuilder.TestContact;
 import android.provider.cts.ContactsContract_TestDataBuilder.TestData;
 import android.provider.cts.ContactsContract_TestDataBuilder.TestRawContact;
 import android.test.InstrumentationTestCase;
 
-@TestTargetClass(Photo.class)
+import java.io.IOException;
+import java.io.InputStream;
+
 public class ContactsContract_PhotoTest extends InstrumentationTestCase {
     private ContactsContract_TestDataBuilder mBuilder;
 
-    private static final byte[] TEST_PHOTO_DATA = "ABCDEFG".getBytes();
     private static final byte[] EMPTY_TEST_PHOTO_DATA = "".getBytes();
+
+    private Context mContext;
+
+    private ContentResolver mResolver;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        ContentResolver contentResolver =
-                getInstrumentation().getTargetContext().getContentResolver();
-        IContentProvider provider = contentResolver.acquireProvider(ContactsContract.AUTHORITY);
+
+        mContext= getInstrumentation().getTargetContext();
+        mResolver = mContext.getContentResolver();
+        ContentProviderClient provider =
+                mResolver.acquireContentProviderClient(ContactsContract.AUTHORITY);
         mBuilder = new ContactsContract_TestDataBuilder(provider);
     }
 
@@ -51,40 +57,55 @@ public class ContactsContract_PhotoTest extends InstrumentationTestCase {
         mBuilder.cleanup();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            notes = "Tests INSERT operation for photo"
-        )
-    })
-
     public void testAddPhoto() throws Exception {
-        TestRawContact rawContact = mBuilder.newRawContact().insert();
+        TestRawContact rawContact = mBuilder.newRawContact().insert().load();
+        TestContact contact = rawContact.getContact().load();
+
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri()));
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), true));
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), false));
+
         TestData photoData = rawContact.newDataRow(Photo.CONTENT_ITEM_TYPE)
-                .with(Photo.PHOTO, TEST_PHOTO_DATA)
+                .with(Photo.PHOTO, PhotoUtil.getTestPhotoData(mContext))
                 .insert();
 
         photoData.load();
         photoData.assertColumn(Photo.RAW_CONTACT_ID, rawContact.getId());
-        photoData.assertColumn(Photo.PHOTO, TEST_PHOTO_DATA);
+        photoData.assertBlobColumnNotNull(Photo.PHOTO);
+
+        assertPhotoStream(Contacts.openContactPhotoInputStream(mResolver, contact.getUri()));
+        assertPhotoStream(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), true));
+        assertPhotoStream(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), false));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            notes = "Tests INSERT operation for empty photo"
-        )
-    })
-
     public void testAddEmptyPhoto() throws Exception {
-        TestRawContact rawContact = mBuilder.newRawContact().insert();
+        TestRawContact rawContact = mBuilder.newRawContact().insert().load();
+        TestContact contact = rawContact.getContact().load();
+
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri()));
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), true));
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), false));
+
         TestData photoData = rawContact.newDataRow(Photo.CONTENT_ITEM_TYPE)
                 .with(Photo.PHOTO, EMPTY_TEST_PHOTO_DATA)
                 .insert();
+        assertNotNull(photoData.load());
 
-        photoData.load();
-        photoData.assertColumn(Photo.RAW_CONTACT_ID, rawContact.getId());
-        photoData.assertColumn(Photo.PHOTO, EMPTY_TEST_PHOTO_DATA);
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri()));
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), true));
+        assertNull(Contacts.openContactPhotoInputStream(mResolver, contact.getUri(), false));
+    }
+
+    private void assertPhotoStream(InputStream photoStream) throws IOException {
+        try {
+            assertNotNull(photoStream);
+            byte[] actualBytes = FileUtils.readInputStreamFully(photoStream);
+            assertTrue(actualBytes.length > 0);
+        } finally {
+            if (photoStream != null) {
+                photoStream.close();
+            }
+        }
     }
 }
 

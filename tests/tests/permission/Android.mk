@@ -19,7 +19,9 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE_TAGS := tests
 
-LOCAL_JAVA_LIBRARIES := android.test.runner
+LOCAL_JAVA_LIBRARIES := android.test.runner telephony-common
+
+LOCAL_STATIC_JAVA_LIBRARIES := ctstestrunner
 
 LOCAL_JNI_SHARED_LIBRARIES := libctspermission_jni
 
@@ -30,6 +32,6 @@ LOCAL_PACKAGE_NAME := CtsPermissionTestCases
 # uncomment when dalvik test annotations are removed or part of SDK
 #LOCAL_SDK_VERSION := current
 
-include $(BUILD_PACKAGE)
+include $(BUILD_CTS_PACKAGE)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))

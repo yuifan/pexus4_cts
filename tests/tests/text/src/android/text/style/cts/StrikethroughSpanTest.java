@@ -16,11 +16,6 @@
 
 package android.text.style.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.os.Parcel;
 import android.text.TextPaint;
@@ -28,35 +23,20 @@ import android.text.style.StrikethroughSpan;
 
 import junit.framework.TestCase;
 
-@TestTargetClass(StrikethroughSpan.class)
 public class StrikethroughSpanTest extends TestCase {
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "StrikethroughSpan",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "StrikethroughSpan",
-            args = {android.os.Parcel.class}
-        )
-    })
     public void testConstructor() {
         StrikethroughSpan strikethroughSpan = new StrikethroughSpan();
 
         Parcel p = Parcel.obtain();
-        strikethroughSpan.writeToParcel(p, 0);
-        p.setDataPosition(0);
-        new StrikethroughSpan(p);
+        try {
+            strikethroughSpan.writeToParcel(p, 0);
+            p.setDataPosition(0);
+            new StrikethroughSpan(p);
+        } finally {
+            p.recycle();
+        }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "updateDrawState",
-        args = {android.text.TextPaint.class}
-    )
-    @ToBeFixed(bug="1695243", explanation="miss javadoc")
     public void testUpdateDrawState() {
         StrikethroughSpan strikethroughSpan = new StrikethroughSpan();
 
@@ -75,37 +55,25 @@ public class StrikethroughSpanTest extends TestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "describeContents",
-        args = {}
-    )
     public void testDescribeContents() {
         StrikethroughSpan strikethroughSpan = new StrikethroughSpan();
         strikethroughSpan.describeContents();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSpanTypeId",
-        args = {}
-    )
     public void testGetSpanTypeId() {
         StrikethroughSpan strikethroughSpan = new StrikethroughSpan();
         strikethroughSpan.getSpanTypeId();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {Parcel.class, int.class}
-    )
     public void testWriteToParcel() {
         Parcel p = Parcel.obtain();
-        StrikethroughSpan strikethroughSpan = new StrikethroughSpan();
-        strikethroughSpan.writeToParcel(p, 0);
-        p.setDataPosition(0);
-        new StrikethroughSpan(p);
-        p.recycle();
+        try {
+            StrikethroughSpan strikethroughSpan = new StrikethroughSpan();
+            strikethroughSpan.writeToParcel(p, 0);
+            p.setDataPosition(0);
+            new StrikethroughSpan(p);
+        } finally {
+            p.recycle();
+        }
     }
 }

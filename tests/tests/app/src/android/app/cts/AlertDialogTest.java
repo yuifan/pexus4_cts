@@ -16,6 +16,7 @@
 
 package android.app.cts;
 
+
 import android.app.AlertDialog;
 import android.app.Instrumentation;
 import android.content.Context;
@@ -29,15 +30,10 @@ import android.test.ActivityInstrumentationTestCase2;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 /*
  * Test AlertDialog
  */
-@TestTargetClass(AlertDialog.class)
 public class AlertDialogTest extends ActivityInstrumentationTestCase2<DialogStubActivity> {
     private static final String ALERTDIALOG_CUSTOM_TITLE = "Hello, World!";
 
@@ -55,73 +51,18 @@ public class AlertDialogTest extends ActivityInstrumentationTestCase2<DialogStub
     protected void setUp() throws Exception {
         super.setUp();
         mInstrumentation = getInstrumentation();
-        mActivity = getActivity();
     }
 
-    protected void popDialog(int index) {
-        while (index != 0) {
-            sendKeys(KeyEvent.KEYCODE_DPAD_DOWN);
-            index--;
-        }
-        sendKeys(KeyEvent.KEYCODE_DPAD_CENTER);
+    protected void startDialogActivity(int dialogNumber) {
+        mActivity = DialogStubActivity.startDialogActivity(this, dialogNumber);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "getButton",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "onCreate",
-            args = {Bundle.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton",
-            args = {int.class, CharSequence.class, OnClickListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setIcon",
-            args = {Drawable.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setIcon",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setMessage",
-            args = {CharSequence.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setTitle",
-            args = {CharSequence.class}
-        )
-    })
     public void testAlertDialog() throws Throwable {
         doTestAlertDialog(DialogStubActivity.TEST_ALERTDIALOG);
     }
 
     private void doTestAlertDialog(int index) throws Throwable {
-        popDialog(index);
+        startDialogActivity(index);
         assertTrue(mActivity.getDialog().isShowing());
 
         mPositiveButton = ((AlertDialog) (mActivity.getDialog())).getButton(
@@ -153,148 +94,12 @@ public class AlertDialogTest extends ActivityInstrumentationTestCase2<DialogStub
         assertTrue(mActivity.isNeutralButtonClicked);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "getButton",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "getListView",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton",
-            args = {CharSequence.class, OnClickListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton",
-            args = {int.class, CharSequence.class, Message.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton2",
-            args = {CharSequence.class, OnClickListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test setButton3",
-            method = "setButton3",
-            args = {CharSequence.class, OnClickListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setIcon",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setInverseBackgroundForced",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setMessage",
-            args = {CharSequence.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setTitle",
-            args = {CharSequence.class}
-        )
-    })
     public void testAlertDialogDeprecatedAPI() throws Throwable {
         doTestAlertDialog(DialogStubActivity.TEST_ALERTDIALOG_DEPRECATED);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "getButton",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "getListView",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton",
-            args = {CharSequence.class, Message.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton",
-            args = {int.class, CharSequence.class, Message.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton2",
-            args = {CharSequence.class, Message.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setButton3",
-            args = {CharSequence.class, Message.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setIcon",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setInverseBackgroundForced",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setMessage",
-            args = {CharSequence.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setTitle",
-            args = {CharSequence.class}
-        )
-    })
     public void testAlertDialogDeprecatedAPIWithMessage() throws Throwable {
-        popDialog(DialogStubActivity.TEST_ALERTDIALOG_DEPRECATED_WITH_MESSAGE);
+        startDialogActivity(DialogStubActivity.TEST_ALERTDIALOG_DEPRECATED_WITH_MESSAGE);
         assertTrue(mActivity.getDialog().isShowing());
 
         mPositiveButton = ((AlertDialog) (mActivity.getDialog())).getButton(
@@ -335,109 +140,19 @@ public class AlertDialogTest extends ActivityInstrumentationTestCase2<DialogStub
         mInstrumentation.waitForIdleSync();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class, boolean.class, OnCancelListener.class}
-         ),
-        @TestTargetNew(
-           level = TestLevel.COMPLETE,
-           notes = "",
-           method = "setCustomTitle",
-           args = {View.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setMessage",
-            args = {CharSequence.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setView",
-            args = {View.class}
-        )
-    })
     public void testCustomAlertDialog() {
-        popDialog(DialogStubActivity.TEST_CUSTOM_ALERTDIALOG);
+        startDialogActivity(DialogStubActivity.TEST_CUSTOM_ALERTDIALOG);
         assertTrue(mActivity.getDialog().isShowing());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class, boolean.class, OnCancelListener.class}
-         ),
-        @TestTargetNew(
-           level = TestLevel.COMPLETE,
-           notes = "",
-           method = "setCustomTitle",
-           args = {View.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setMessage",
-            args = {CharSequence.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "setView",
-            args = {View.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testCustomAlertDialogView() {
-        popDialog(DialogStubActivity.TEST_CUSTOM_ALERTDIALOG_VIEW);
+        startDialogActivity(DialogStubActivity.TEST_CUSTOM_ALERTDIALOG_VIEW);
         assertTrue(mActivity.getDialog().isShowing());
     }
 
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "AlertDialog",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "onKeyDown",
-            args = {int.class, KeyEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "onKeyUp",
-            args = {int.class, KeyEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "",
-            method = "onCreate",
-            args = {Bundle.class}
-        )
-    })
     public void testCallback() {
-        popDialog(DialogStubActivity.TEST_ALERTDIALOG_CALLBACK);
+        startDialogActivity(DialogStubActivity.TEST_ALERTDIALOG_CALLBACK);
         assertTrue(mActivity.onCreateCalled);
 
         mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_0);
@@ -446,25 +161,13 @@ public class AlertDialogTest extends ActivityInstrumentationTestCase2<DialogStub
         assertTrue(mActivity.onKeyUpCalled);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "",
-        method = "AlertDialog",
-        args = {Context.class, int.class}
-    )
     public void testAlertDialogTheme() throws Exception {
-        popDialog(DialogStubActivity.TEST_ALERTDIALOG_THEME);
+        startDialogActivity(DialogStubActivity.TEST_ALERTDIALOG_THEME);
         assertTrue(mActivity.getDialog().isShowing());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "",
-        method = "AlertDialog",
-        args = {Context.class, boolean.class, OnCancelListener.class}
-    )
     public void testAlertDialogCancelable() throws Exception {
-        popDialog(DialogStubActivity.TEST_ALERTDIALOG_CANCELABLE);
+        startDialogActivity(DialogStubActivity.TEST_ALERTDIALOG_CANCELABLE);
         assertTrue(mActivity.getDialog().isShowing());
         assertFalse(mActivity.onCancelCalled);
         mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
@@ -472,14 +175,8 @@ public class AlertDialogTest extends ActivityInstrumentationTestCase2<DialogStub
         assertTrue(mActivity.onCancelCalled);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "",
-        method = "AlertDialog",
-        args = {Context.class, boolean.class, OnCancelListener.class}
-    )
     public void testAlertDialogNotCancelable() throws Exception {
-        popDialog(DialogStubActivity.TEST_ALERTDIALOG_NOT_CANCELABLE);
+        startDialogActivity(DialogStubActivity.TEST_ALERTDIALOG_NOT_CANCELABLE);
         assertTrue(mActivity.getDialog().isShowing());
         assertFalse(mActivity.onCancelCalled);
         mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);

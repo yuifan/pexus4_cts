@@ -17,27 +17,20 @@
 package android.widget.cts;
 
 import com.android.cts.stub.R;
-import com.android.common.ArrayListCursor;
 
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargetClass;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.test.InstrumentationTestCase;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ResourceCursorTreeAdapter;
 
-import java.util.ArrayList;
-
 /**
  * Test {@link ResourceCursorTreeAdapter}.
  */
-@TestTargetClass(ResourceCursorTreeAdapter.class)
 public class ResourceCursorTreeAdapterTest extends InstrumentationTestCase {
     private ResourceCursorTreeAdapter mResourceCursorTreeAdapter;
 
@@ -78,28 +71,6 @@ public class ResourceCursorTreeAdapterTest extends InstrumentationTestCase {
         mParent = (ViewGroup) layoutInflater.inflate(R.layout.cursoradapter_host, null);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructors",
-            method = "ResourceCursorTreeAdapter",
-            args = {android.content.Context.class, android.database.Cursor.class, int.class, 
-                    int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructors",
-            method = "ResourceCursorTreeAdapter",
-            args = {android.content.Context.class, android.database.Cursor.class, int.class, 
-                    int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "ResourceCursorTreeAdapter",
-            args = {android.content.Context.class, android.database.Cursor.class, int.class, 
-                    int.class, int.class, int.class}
-        )
-    })
     public void testConstructor() {
         mResourceCursorTreeAdapter = new MockResourceCursorTreeAdapter(mContext, null,
                 mGroupLayout, mChildLayout);
@@ -123,12 +94,6 @@ public class ResourceCursorTreeAdapterTest extends InstrumentationTestCase {
         new MockResourceCursorTreeAdapter(mContext, null, -1, -1, -1, -1);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "newChildView",
-        args = {android.content.Context.class, android.database.Cursor.class, boolean.class, 
-                android.view.ViewGroup.class}
-    )
     // The parameters Context and Cursor are never readin the method
     public void testNewChildView() {
         mResourceCursorTreeAdapter = new MockResourceCursorTreeAdapter(mContext, null,
@@ -150,12 +115,6 @@ public class ResourceCursorTreeAdapterTest extends InstrumentationTestCase {
         assertEquals(mNormalChildId, result.getId());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "newGroupView",
-        args = {android.content.Context.class, android.database.Cursor.class, boolean.class, 
-                android.view.ViewGroup.class}
-    )
     // The parameters Context and Cursor are never readin the method
     public void testNewGroupView() {
         mResourceCursorTreeAdapter = new MockResourceCursorTreeAdapter(mContext, null,
@@ -186,21 +145,22 @@ public class ResourceCursorTreeAdapterTest extends InstrumentationTestCase {
      */
     @SuppressWarnings("unchecked")
     private Cursor createTestCursor(int colCount, int rowCount) {
-        ArrayList<ArrayList> list = new ArrayList<ArrayList>();
-        String[] columns = new String[colCount];
+        String[] columns = new String[colCount + 1];
         for (int i = 0; i < colCount; i++) {
             columns[i] = "column" + i;
         }
+        columns[colCount] = "_id";
 
+        MatrixCursor cursor = new MatrixCursor(columns, rowCount);
+        Object[] row = new Object[colCount + 1];
         for (int i = 0; i < rowCount; i++) {
-            ArrayList<String> row = new ArrayList<String>();
             for (int j = 0; j < colCount; j++) {
-                row.add("" + rowCount + "" + colCount);
+                row[j] = "" + rowCount + "" + colCount;
             }
-            list.add(row);
+            row[colCount] = i;
+            cursor.addRow(row);
         }
-
-        return new ArrayListCursor(columns, list);
+        return cursor;
     }
 
     private class MockResourceCursorTreeAdapter extends ResourceCursorTreeAdapter {

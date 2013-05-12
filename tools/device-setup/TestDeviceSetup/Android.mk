@@ -21,6 +21,8 @@ LOCAL_SRC_FILES := $(call all-subdir-java-files)
 LOCAL_MODULE_TAGS := optional
 # and when built explicitly put it in the data partition
 LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_APPS)
+# and because it is in data, do not strip classes.dex
+LOCAL_DEX_PREOPT := false
 
 LOCAL_JAVA_LIBRARIES := android.test.runner
 
@@ -30,3 +32,14 @@ LOCAL_PACKAGE_NAME := TestDeviceSetup
 
 include $(BUILD_PACKAGE)
 
+# ======================================================
+# also build a static host library for the device info constants
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := src/android/tests/getinfo/DeviceInfoConstants.java
+
+LOCAL_MODULE_TAGS := optional
+
+LOCAL_MODULE := ctsdeviceinfolib
+
+include $(BUILD_HOST_JAVA_LIBRARY)

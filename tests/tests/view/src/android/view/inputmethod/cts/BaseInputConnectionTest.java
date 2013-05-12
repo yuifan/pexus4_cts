@@ -18,13 +18,10 @@ package android.view.inputmethod.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.app.Instrumentation;
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.os.Bundle;
 import android.test.ActivityInstrumentationTestCase2;
 import android.text.Editable;
@@ -35,14 +32,12 @@ import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
-import android.view.animation.cts.DelayedCheck;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
-@TestTargetClass(BaseInputConnection.class)
 public class BaseInputConnectionTest extends
         ActivityInstrumentationTestCase2<InputMethodStubActivity> {
 
@@ -66,43 +61,6 @@ public class BaseInputConnectionTest extends
         mConnection = new BaseInputConnection(mView, true);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "beginBatchEdit",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "commitCompletion",
-            args = {CompletionInfo.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "endBatchEdit",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getExtractedText",
-            args = {ExtractedTextRequest.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "performContextMenuAction",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "performEditorAction",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "performPrivateCommand",
-            args = {String.class, Bundle.class}
-        )
-    })
     public void testDefaultMethods() {
         // These methods are default to return fixed result.
 
@@ -126,28 +84,6 @@ public class BaseInputConnectionTest extends
         assertFalse(mConnection.performPrivateCommand(action, new Bundle()));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "getComposingSpanEnd",
-            args = {Spannable.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "getComposingSpanStart",
-            args = {Spannable.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "removeComposingSpans",
-            args = {Spannable.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "setComposingSpans",
-            args = {Spannable.class}
-        )
-    })
     public void testOpComposingSpans() {
         Spannable text = new SpannableString("Test ComposingSpans");
         BaseInputConnection.setComposingSpans(text);
@@ -178,54 +114,7 @@ public class BaseInputConnectionTest extends
      *                          around the current selection position of the editable text.
      * setSelection: changes the selection position in the current editable text.
      */
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "BaseInputConnection",
-            args = {View.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "clearMetaKeyStates",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "commitText",
-            args = {CharSequence.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "deleteSurroundingText",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCursorCapsMode",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEditable",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setSelection",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTextAfterCursor",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTextBeforeCursor",
-            args = {int.class, int.class}
-        )
-    })
-    public void testOpTextMethods() {
+    public void testOpTextMethods() throws Throwable {
         // return is an default Editable instance with empty source
         final Editable text = mConnection.getEditable();
         assertNotNull(text);
@@ -250,10 +139,17 @@ public class BaseInputConnectionTest extends
         assertEquals(expected.toString(), mConnection.getTextAfterCursor(offLength,
                 BaseInputConnection.GET_TEXT_WITH_STYLES).toString());
 
+        runTestOnUiThread(new Runnable() {
+            public void run() {
+                assertTrue(mView.requestFocus());
+                assertTrue(mView.isFocused());
+            }
+        });
+
         // dummy mode
         BaseInputConnection dummyConnection = new BaseInputConnection(mView, false);
         dummyConnection.commitText(inputText, inputText.length());
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return text2.toString().equals(mView.getText().toString());
@@ -280,19 +176,7 @@ public class BaseInputConnectionTest extends
      * setComposingText: The default implementation places the given text into the editable,
      *                  replacing any existing composing text
      */
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "finishComposingText",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setComposingText",
-            args = {CharSequence.class, int.class}
-        )
-    })
-    public void testFinishComposingText() {
+    public void testFinishComposingText() throws Throwable {
         CharSequence str = "TestFinish";
         Editable inputText = Editable.Factory.getInstance().newEditable(str);
         mConnection.commitText(inputText, inputText.length());
@@ -304,11 +188,19 @@ public class BaseInputConnectionTest extends
         mConnection.finishComposingText();
         assertTrue(BaseInputConnection.getComposingSpanStart(text) == -1);
         assertTrue(BaseInputConnection.getComposingSpanEnd(text) == -1);
+
+        runTestOnUiThread(new Runnable() {
+            public void run() {
+                assertTrue(mView.requestFocus());
+                assertTrue(mView.isFocused());
+            }
+        });
+
         // dummy mode
         BaseInputConnection dummyConnection = new BaseInputConnection(mView, false);
         dummyConnection.setComposingText(str, str.length());
         dummyConnection.finishComposingText();
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return text.toString().equals(mView.getText().toString());
@@ -320,24 +212,26 @@ public class BaseInputConnectionTest extends
      * Provides standard implementation for sending a key event to the window
      * attached to the input connection's view
      */
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "sendKeyEvent",
-        args = {KeyEvent.class}
-    )
-    public void testSendKeyEvent() {
+    public void testSendKeyEvent() throws Throwable {
+        runTestOnUiThread(new Runnable() {
+            public void run() {
+                assertTrue(mView.requestFocus());
+                assertTrue(mView.isFocused());
+            }
+        });
+
         // 12-key support
-        KeyCharacterMap keymap
-                = KeyCharacterMap.load(KeyCharacterMap.BUILT_IN_KEYBOARD);
+        KeyCharacterMap keymap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
         if (keymap.getKeyboardType() == KeyCharacterMap.NUMERIC) {
             // 'Q' in case of 12-key(NUMERIC) keyboard
             mConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_7));
             mConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_7));
         }
         else {
-            mConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Q));
+            mInstrumentation.sendStringSync("q");
+            mInstrumentation.waitForIdleSync();
         }
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return "q".equals(mView.getText().toString());
@@ -348,11 +242,6 @@ public class BaseInputConnectionTest extends
     /**
      * Updates InputMethodManager with the current fullscreen mode.
      */
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "reportFullscreenMode",
-        args = {boolean.class}
-    )
     public void testReportFullscreenMode() {
         InputMethodManager imManager = (InputMethodManager) mInstrumentation.getTargetContext()
                 .getSystemService(Context.INPUT_METHOD_SERVICE);

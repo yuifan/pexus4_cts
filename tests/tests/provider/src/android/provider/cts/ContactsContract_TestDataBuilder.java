@@ -19,9 +19,9 @@ package android.provider.cts;
 import com.google.android.collect.Lists;
 import com.google.android.collect.Sets;
 
+import android.content.ContentProviderClient;
 import android.content.ContentUris;
 import android.content.ContentValues;
-import android.content.IContentProvider;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
@@ -33,11 +33,10 @@ import android.provider.ContactsContract.RawContacts;
 import android.text.TextUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import java.util.Arrays;
 
 import junit.framework.Assert;
 import junit.framework.ComparisonFailure;
@@ -46,7 +45,7 @@ import junit.framework.ComparisonFailure;
  * A test data builder for ContactsContract tests.
  */
 public class ContactsContract_TestDataBuilder {
-    private IContentProvider mProvider;
+    private ContentProviderClient mProvider;
     private ArrayList<Builder<?>> mCreatedRows = Lists.newArrayList();
     private HashSet<Builder<?>> mLoadedRows = Sets.newHashSet();
 
@@ -73,7 +72,7 @@ public class ContactsContract_TestDataBuilder {
 
             assertNotNull("Row has not be inserted or loaded yet", mUri);
 
-            Cursor cursor = mProvider.query(mUri, IdQuery.COLUMNS, null, null, null);
+            Cursor cursor = mProvider.query(mUri, IdQuery.COLUMNS, null, null, null, null);
             if (cursor != null) {
                 try {
                     cursor.moveToFirst();
@@ -153,11 +152,12 @@ public class ContactsContract_TestDataBuilder {
             close();
             mLoadedRows.add(this);
 
-            mCursor = mProvider.query(getUri(), null, null, null, null);
+            mCursor = mProvider.query(getUri(), null, null, null, null, null);
             if (mCursor == null || !mCursor.moveToFirst()) {
-                fail("No data rows for URI: " + getUri());
+                return null;
+            } else {
+                return (T) this;
             }
-            return (T)this;
         }
 
         @SuppressWarnings("unchecked")
@@ -186,7 +186,7 @@ public class ContactsContract_TestDataBuilder {
             }
             mCursor = mProvider.query(getContentUri(), null,
                     selection.toString(),
-                    selectionArgs.toArray(new String[0]), null);
+                    selectionArgs.toArray(new String[0]), null, null);
             if (mCursor == null || !mCursor.moveToFirst()) {
                 fail("No data rows for " + getContentUri() + "[" + mValues.toString() + "]");
             }
@@ -196,6 +196,10 @@ public class ContactsContract_TestDataBuilder {
 
         public long getLong(String columnName) {
             return mCursor.getLong(mCursor.getColumnIndex(columnName));
+        }
+
+        public String getString(String columnName) {
+            return mCursor.getString(mCursor.getColumnIndex(columnName));
         }
 
         public void assertColumn(String columnName, long value) {
@@ -208,6 +212,14 @@ public class ContactsContract_TestDataBuilder {
 
         public void assertColumn(String columnName, byte[] value) {
             assertEquals(value, mCursor.getBlob(getColumnIndex(columnName)));
+        }
+
+        public void assertBlobColumnNotNull(String columnName) {
+            assertNotNull(mCursor.getBlob(getColumnIndex(columnName)));
+        }
+
+        public void assertBlobColumnNull(String columnName) {
+            assertNull(mCursor.getBlob(getColumnIndex(columnName)));
         }
 
         public void assertEquals(byte[] expected, byte[] actual) {
@@ -327,7 +339,7 @@ public class ContactsContract_TestDataBuilder {
         }
     }
 
-    public ContactsContract_TestDataBuilder(IContentProvider provider) {
+    public ContactsContract_TestDataBuilder(ContentProviderClient provider) {
         this.mProvider = provider;
     }
 

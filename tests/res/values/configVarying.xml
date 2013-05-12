@@ -23,4 +23,8 @@
     <item type="configVarying" name="normal">default</item>
     <item type="configVarying" name="large">default</item>
     <item type="configVarying" name="xlarge">default</item>
+    <item type="configVarying" name="sw">default</item>
+    <item type="configVarying" name="w">default</item>
+    <item type="configVarying" name="h">default</item>
+    <item type="configVarying" name="wh">default</item>
 </resources>

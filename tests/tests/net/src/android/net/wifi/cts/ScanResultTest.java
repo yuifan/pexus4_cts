@@ -26,11 +26,8 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.WifiLock;
 import android.test.AndroidTestCase;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
+import android.util.Log;
 
-@TestTargetClass(ScanResult.class)
 public class ScanResultTest extends AndroidTestCase {
     private static class MySync {
         int expectedState = STATE_NULL;
@@ -43,11 +40,14 @@ public class ScanResultTest extends AndroidTestCase {
     private static final int STATE_NULL = 0;
     private static final int STATE_WIFI_CHANGING = 1;
     private static final int STATE_WIFI_CHANGED = 2;
+    private static final int STATE_START_SCAN = 3;
+    private static final int STATE_SCAN_RESULTS_AVAILABLE = 4;
 
     private static final String TAG = "WifiInfoTest";
     private static final int TIMEOUT_MSEC = 6000;
     private static final int WAIT_MSEC = 60;
-    private static final int DURATION = 10000;
+    private static final int ENABLE_WAIT_MSEC = 10000;
+    private static final int SCAN_WAIT_MSEC = 10000;
     private IntentFilter mIntentFilter;
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -58,6 +58,11 @@ public class ScanResultTest extends AndroidTestCase {
                     mMySync.expectedState = STATE_WIFI_CHANGED;
                     mMySync.notify();
                 }
+            } else if (action.equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
+                synchronized (mMySync) {
+                    mMySync.expectedState = STATE_SCAN_RESULTS_AVAILABLE;
+                    mMySync.notify();
+                }
             }
         }
     };
@@ -65,6 +70,10 @@ public class ScanResultTest extends AndroidTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         mMySync = new MySync();
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
@@ -83,18 +92,23 @@ public class ScanResultTest extends AndroidTestCase {
         mWifiLock.acquire();
         if (!mWifiManager.isWifiEnabled())
             setWifiEnabled(true);
-        Thread.sleep(DURATION);
+        Thread.sleep(ENABLE_WAIT_MSEC);
         assertTrue(mWifiManager.isWifiEnabled());
         mMySync.expectedState = STATE_NULL;
     }
 
     @Override
     protected void tearDown() throws Exception {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            super.tearDown();
+            return;
+        }
         mWifiLock.release();
         mContext.unregisterReceiver(mReceiver);
         if (!mWifiManager.isWifiEnabled())
             setWifiEnabled(true);
-        Thread.sleep(DURATION);
+        Thread.sleep(ENABLE_WAIT_MSEC);
         super.tearDown();
     }
 
@@ -102,25 +116,73 @@ public class ScanResultTest extends AndroidTestCase {
         synchronized (mMySync) {
             mMySync.expectedState = STATE_WIFI_CHANGING;
             assertTrue(mWifiManager.setWifiEnabled(enable));
-            long timeout = System.currentTimeMillis() + TIMEOUT_MSEC;
-            while (System.currentTimeMillis() < timeout
-                    && mMySync.expectedState == STATE_WIFI_CHANGING)
-                mMySync.wait(WAIT_MSEC);
-        }
+            waitForBroadcast(TIMEOUT_MSEC, STATE_WIFI_CHANGED);
+       }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "toString",
-        args = {}
-    )
+    private void waitForBroadcast(long timeout, int expectedState) throws Exception {
+        long waitTime = System.currentTimeMillis() + timeout;
+        while (System.currentTimeMillis() < waitTime
+                && mMySync.expectedState != expectedState)
+            mMySync.wait(WAIT_MSEC);
+    }
+
     public void testScanResultProperties() {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
         List<ScanResult> scanResults = mWifiManager.getScanResults();
         // this test case should in Wifi environment
         for (int i = 0; i < scanResults.size(); i++) {
             ScanResult mScanResult = scanResults.get(i);
             assertNotNull(mScanResult.toString());
         }
+    }
+
+    private void scanAndWait() throws Exception {
+        synchronized (mMySync) {
+            mMySync.expectedState = STATE_START_SCAN;
+            mWifiManager.startScan();
+            waitForBroadcast(SCAN_WAIT_MSEC, STATE_SCAN_RESULTS_AVAILABLE);
+        }
+   }
+
+    public void testScanResultTimeStamp() throws Exception {
+        if (!WifiFeature.isWifiSupported(getContext())) {
+            // skip the test if WiFi is not supported
+            return;
+        }
+
+        long timestamp = 0;
+        String BSSID = null;
+
+        /* Multiple scans to ensure bssid is updated */
+        scanAndWait();
+        scanAndWait();
+        scanAndWait();
+
+        List<ScanResult> scanResults = mWifiManager.getScanResults();
+        for (ScanResult result : scanResults) {
+            BSSID = result.BSSID;
+            timestamp = result.timestamp;
+            assertTrue(timestamp != 0);
+            break;
+        }
+
+        scanAndWait();
+        scanAndWait();
+        scanAndWait();
+
+        scanResults = mWifiManager.getScanResults();
+        for (ScanResult result : scanResults) {
+            if (result.BSSID.equals(BSSID)) {
+                long timeDiff = (result.timestamp - timestamp) / 1000;
+                assertTrue (timeDiff > 0);
+                assertTrue (timeDiff < 6 * SCAN_WAIT_MSEC);
+            }
+        }
+
     }
 
 }

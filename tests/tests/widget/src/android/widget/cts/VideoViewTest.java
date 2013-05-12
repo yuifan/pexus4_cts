@@ -18,21 +18,17 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.test.ActivityInstrumentationTestCase2;
 import android.view.View.MeasureSpec;
-import android.view.animation.cts.DelayedCheck;
 import android.widget.MediaController;
 import android.widget.VideoView;
 
@@ -43,10 +39,9 @@ import java.io.OutputStream;
 /**
  * Test {@link VideoView}.
  */
-@TestTargetClass(VideoView.class)
 public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStubActivity> {
     /** The maximum time to wait for an operation. */
-    private static final long   TIME_OUT = 10000L;
+    private static final long   TIME_OUT = 15000L;
     /** The interval time to wait for completing an operation. */
     private static final long   OPERATION_INTERVAL  = 1500L;
     /** The duration of R.raw.testvideo. */
@@ -161,23 +156,6 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         mVideoView.setMediaController(mMediaController);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "VideoView",
-            args = {android.content.Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "VideoView",
-            args = {android.content.Context.class, android.util.AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "VideoView",
-            args = {android.content.Context.class, android.util.AttributeSet.class, int.class}
-        )
-    })
     public void testConstructor() {
         new VideoView(mActivity);
 
@@ -186,23 +164,6 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         new VideoView(mActivity, null, 0);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setVideoPath",
-            args = {java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setOnPreparedListener",
-            args = {android.media.MediaPlayer.OnPreparedListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setOnCompletionListener",
-            args = {android.media.MediaPlayer.OnCompletionListener.class}
-        )
-    })
     public void testPlayVideo1() throws Throwable {
         final MockOnPreparedListener preparedListener = new MockOnPreparedListener();
         mVideoView.setOnPreparedListener(preparedListener);
@@ -214,7 +175,7 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
                 mVideoView.setVideoPath(mVideoPath);
             }
         });
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return preparedListener.isTriggered();
@@ -228,7 +189,7 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
             }
         });
         // wait time is longer than duration in case system is sluggish
-        new DelayedCheck(mVideoView.getDuration() + TIME_OUT) {
+        new PollingCheck(mVideoView.getDuration() + TIME_OUT) {
             @Override
             protected boolean check() {
                 return completionListener.isTriggered();
@@ -236,11 +197,6 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         }.run();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setOnErrorListener",
-        args = {android.media.MediaPlayer.OnErrorListener.class}
-    )
     public void testSetOnErrorListener() throws Throwable {
         final MockOnErrorListener listener = new MockOnErrorListener();
         mVideoView.setOnErrorListener(listener);
@@ -254,7 +210,7 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         });
         mInstrumentation.waitForIdleSync();
 
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return listener.isTriggered();
@@ -262,11 +218,6 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         }.run();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getBufferPercentage",
-        args = {}
-    )
     public void testGetBufferPercentage() throws Throwable {
         final MockOnPreparedListener prepareListener = new MockOnPreparedListener();
         mVideoView.setOnPreparedListener(prepareListener);
@@ -278,7 +229,7 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         });
         mInstrumentation.waitForIdleSync();
 
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return prepareListener.isTriggered();
@@ -288,11 +239,6 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         assertTrue(percent >= 0 && percent <= 100);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "resolveAdjustedSize",
-        args = {int.class, int.class}
-    )
     public void testResolveAdjustedSize() {
         mVideoView = new VideoView(mActivity);
 
@@ -308,11 +254,6 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         assertEquals(specSize, resolvedSize);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getDuration",
-        args = {}
-    )
     public void testGetDuration() throws Throwable {
         runTestOnUiThread(new Runnable() {
             public void run() {
@@ -323,11 +264,6 @@ public class VideoViewTest extends ActivityInstrumentationTestCase2<VideoViewStu
         assertTrue(Math.abs(mVideoView.getDuration() - TEST_VIDEO_DURATION) < DURATION_DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setMediaController",
-        args = {android.widget.MediaController.class}
-    )
     public void testSetMediaController() {
         final MediaController ctlr = new MediaController(mActivity);
         mVideoView.setMediaController(ctlr);

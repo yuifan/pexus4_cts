@@ -16,16 +16,12 @@
 
 package android.widget.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
 
+import android.cts.util.PollingCheck;
 import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
 import android.widget.Filter;
 import android.widget.Filter.FilterListener;
 
-@TestTargetClass(Filter.class)
 public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
     private static final long TIME_OUT = 10000;
     private static final String TEST_CONSTRAINT = "filter test";
@@ -35,20 +31,10 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
         super("com.android.cts.stub", StubActivity.class);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "Filter",
-        args = {}
-    )
     public void testConstructor() {
         new MockFilter();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "convertResultToString",
-        args = {java.lang.Object.class}
-    )
     public void testConvertResultToString() {
         final MockFilter filter = new MockFilter();
         assertEquals("", filter.convertResultToString(null));
@@ -57,11 +43,6 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertEquals(testStr, filter.convertResultToString(testStr));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "filter",
-        args = {java.lang.CharSequence.class}
-    )
     public void testFilter1() {
         getActivity().runOnUiThread(new Runnable() {
             public void run() {
@@ -69,8 +50,9 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
                 mMockFilter.filter(TEST_CONSTRAINT);
             }
         });
+        getInstrumentation().waitForIdleSync();
 
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return mMockFilter.hadPerformedFiltering();
@@ -78,7 +60,7 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
         }.run();
         assertEquals(TEST_CONSTRAINT, mMockFilter.getPerformFilteringConstraint());
 
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return mMockFilter.hadPublishedResults();
@@ -88,11 +70,6 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertSame(mMockFilter.getExpectResults(), mMockFilter.getResults());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "filter",
-        args = {java.lang.CharSequence.class, android.widget.Filter.FilterListener.class}
-    )
     public void testFilter2() {
         final MockFilterListener mockFilterListener = new MockFilterListener();
         getActivity().runOnUiThread(new Runnable() {
@@ -101,8 +78,9 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
                 mMockFilter.filter(TEST_CONSTRAINT, mockFilterListener);
             }
         });
+        getInstrumentation().waitForIdleSync();
 
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return mMockFilter.hadPerformedFiltering();
@@ -110,7 +88,7 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
         }.run();
         assertEquals(TEST_CONSTRAINT, mMockFilter.getPerformFilteringConstraint());
 
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return mMockFilter.hadPublishedResults();
@@ -119,7 +97,7 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertEquals(TEST_CONSTRAINT, mMockFilter.getPublishResultsConstraint());
         assertSame(mMockFilter.getExpectResults(), mMockFilter.getResults());
 
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return mockFilterListener.hasCalledOnFilterComplete();
@@ -140,41 +118,57 @@ public class FilterTest extends ActivityInstrumentationTestCase2<StubActivity> {
         }
 
         public boolean hadPublishedResults() {
-            return mHadPublishedResults;
+            synchronized (this) {
+                return mHadPublishedResults;
+            }
         }
 
         public boolean hadPerformedFiltering() {
-            return mHadPerformedFiltering;
+            synchronized (this) {
+                return mHadPerformedFiltering;
+            }
         }
 
         public CharSequence getPerformFilteringConstraint() {
-            return mPerformFilteringConstraint;
+            synchronized (this) {
+                return mPerformFilteringConstraint;
+            }
         }
 
         public CharSequence getPublishResultsConstraint() {
-            return mPublishResultsConstraint;
+            synchronized (this) {
+                return mPublishResultsConstraint;
+            }
         }
 
         public FilterResults getResults() {
-            return mResults;
+            synchronized (this) {
+                return mResults;
+            }
         }
 
         public FilterResults getExpectResults() {
-            return mExpectResults;
+            synchronized (this) {
+                return mExpectResults;
+            }
         }
 
         @Override
         protected FilterResults performFiltering(CharSequence constraint) {
-            mHadPerformedFiltering = true;
-            mPerformFilteringConstraint = constraint;
-            return mExpectResults;
+            synchronized (this) {
+                mHadPerformedFiltering = true;
+                mPerformFilteringConstraint = constraint;
+                return mExpectResults;
+            }
         }
 
         @Override
         protected void publishResults(CharSequence constraint, FilterResults results) {
-            mPublishResultsConstraint = constraint;
-            mResults = results;
-            mHadPublishedResults = true;
+            synchronized (this) {
+                mPublishResultsConstraint = constraint;
+                mResults = results;
+                mHadPublishedResults = true;
+            }
         }
     }
 

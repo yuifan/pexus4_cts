@@ -18,11 +18,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.android.cts.dpi">
 
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <application>
         <uses-library android:name="android.test.runner" />
+
+        <activity android:name="android.dpi.cts.OrientationActivity"
+                android:configChanges="orientation" />
     </application>
 
-    <instrumentation android:name="android.test.InstrumentationTestRunner"
+    <instrumentation android:name="android.test.InstrumentationCtsTestRunner"
                      android:targetPackage="com.android.cts.dpi"
                      android:label="CTS tests for DPI"/>
 </manifest>

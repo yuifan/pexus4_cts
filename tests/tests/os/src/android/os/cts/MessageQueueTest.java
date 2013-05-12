@@ -16,7 +16,6 @@
 
 package android.os.cts;
 
-import dalvik.annotation.TestTargetClass;
 
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -30,7 +29,6 @@ import android.test.AndroidTestCase;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-@TestTargetClass(MessageQueue.class)
 public class MessageQueueTest extends AndroidTestCase {
 
     private static final long TIMEOUT = 1000;
@@ -125,7 +123,6 @@ public class MessageQueueTest extends AndroidTestCase {
                 super.init();
                 long now = SystemClock.uptimeMillis() + 200;
                 mLastMessage = 4;
-                mCount = 0;
 
                 mHandler.sendMessageAtTime(mHandler.obtainMessage(2), now + 1);
                 mHandler.sendMessageAtTime(mHandler.obtainMessage(3), now + 2);
@@ -149,7 +146,6 @@ public class MessageQueueTest extends AndroidTestCase {
                 super.init();
                 long now = SystemClock.uptimeMillis() + 200;
                 mLastMessage = 3;
-                mCount = 0;
                 mHandler.sendMessageAtTime(mHandler.obtainMessage(3), now);
                 mHandler.sendMessageAtFrontOfQueue(mHandler.obtainMessage(2));
                 mHandler.sendMessageAtFrontOfQueue(mHandler.obtainMessage(0));
@@ -164,6 +160,69 @@ public class MessageQueueTest extends AndroidTestCase {
         };
 
         tester.doTest(1000, 50);
+    }
+
+    public void testSyncBarriers() throws Exception {
+        OrderTestHelper tester = new OrderTestHelper() {
+            private int mBarrierToken1;
+            private int mBarrierToken2;
+
+            public void init() {
+                super.init();
+                mLastMessage = 10;
+                mHandler.sendEmptyMessage(0);
+                mBarrierToken1 = Looper.myLooper().postSyncBarrier();
+                mHandler.sendEmptyMessage(5);
+                sendAsyncMessage(1);
+                sendAsyncMessage(2);
+                sendAsyncMessage(3);
+                mHandler.sendEmptyMessage(6);
+            }
+
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                if (msg.what == 3) {
+                    mHandler.sendEmptyMessage(7);
+                    mBarrierToken2 = Looper.myLooper().postSyncBarrier();
+                    sendAsyncMessage(4);
+                    sendAsyncMessage(8);
+                } else if (msg.what == 4) {
+                    Looper.myLooper().removeSyncBarrier(mBarrierToken1);
+                    sendAsyncMessage(9);
+                    mHandler.sendEmptyMessage(10);
+                } else if (msg.what == 8) {
+                    Looper.myLooper().removeSyncBarrier(mBarrierToken2);
+                }
+            }
+
+            private void sendAsyncMessage(int what) {
+                Message msg = mHandler.obtainMessage(what);
+                msg.setAsynchronous(true);
+                mHandler.sendMessage(msg);
+            }
+        };
+
+        tester.doTest(1000, 50);
+    }
+
+    public void testReleaseSyncBarrierThrowsIfTokenNotValid() throws Exception {
+        // Invalid token
+        try {
+            Looper.myLooper().removeSyncBarrier(-1);
+            fail("Should have thrown IllegalStateException");
+        } catch (IllegalStateException ex) {
+            // expected
+        }
+
+        // Token already removed.
+        int barrierToken = Looper.myLooper().postSyncBarrier();
+        Looper.myLooper().removeSyncBarrier(barrierToken);
+        try {
+            Looper.myLooper().removeSyncBarrier(barrierToken);
+            fail("Should have thrown IllegalStateException");
+        } catch (IllegalStateException ex) {
+            // expected
+        }
     }
 
     /**

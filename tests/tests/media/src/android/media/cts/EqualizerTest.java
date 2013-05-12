@@ -23,12 +23,7 @@ import android.media.audiofx.Equalizer;
 import android.os.Looper;
 import android.test.AndroidTestCase;
 import android.util.Log;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(Equalizer.class)
 public class EqualizerTest extends AndroidTestCase {
 
     private String TAG = "EqualizerTest";
@@ -38,6 +33,7 @@ public class EqualizerTest extends AndroidTestCase {
     private final static int TEST_FREQUENCY_MILLIHERTZ = 1000000; // 1kHz
     private final static int MIN_NUMBER_OF_PRESETS = 0;
     private final static float TOLERANCE = 100;                   // +/-1dB
+    private final static int MAX_LOOPER_WAIT_COUNT = 10;
 
     private Equalizer mEqualizer = null;
     private Equalizer mEqualizer2 = null;
@@ -48,7 +44,7 @@ public class EqualizerTest extends AndroidTestCase {
     private boolean mInitialized = false;
     private Looper mLooper = null;
     private final Object mLock = new Object();
-
+    private ListenerThread mEffectListenerLooper = null;
 
     //-----------------------------------------------------------------
     // EQUALIZER TESTS:
@@ -59,23 +55,6 @@ public class EqualizerTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 0.0: test constructor and release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "Equalizer",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void test0_0ConstructorAndRelease() throws Exception {
         Equalizer eq = null;
         try {
@@ -103,28 +82,6 @@ public class EqualizerTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 1.0: test setBandLevel() and getBandLevel()
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNumberOfBands",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBandLevelRange",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setBandLevel",
-            args = {short.class, short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBandLevel",
-            args = {short.class}
-        )
-    })
     public void test1_0BandLevel() throws Exception {
         getEqualizer(0);
         try {
@@ -154,23 +111,6 @@ public class EqualizerTest extends AndroidTestCase {
     }
 
     //Test case 1.1: test band frequency
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBand",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getBandFreqRange",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCenterFreq",
-            args = {short.class}
-        )
-    })
     public void test1_1BandFrequency() throws Exception {
         getEqualizer(0);
         try {
@@ -196,28 +136,6 @@ public class EqualizerTest extends AndroidTestCase {
     }
 
     //Test case 1.2: test presets
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNumberOfPresets",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "usePreset",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCurrentPreset",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPresetName",
-            args = {short.class}
-        )
-    })
     public void test1_2Presets() throws Exception {
         getEqualizer(0);
         try {
@@ -243,18 +161,6 @@ public class EqualizerTest extends AndroidTestCase {
     }
 
     //Test case 1.3: test properties
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getProperties",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setProperties",
-            args = {Equalizer.Settings.class}
-        )
-    })
     public void test1_3Properties() throws Exception {
         getEqualizer(0);
         try {
@@ -286,18 +192,6 @@ public class EqualizerTest extends AndroidTestCase {
     }
 
     //Test case 1.4: test setBandLevel() throws exception after release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setBandLevel",
-            args = {short.class, short.class}
-        )
-    })
     public void test1_4SetBandLevelAfterRelease() throws Exception {
 
         getEqualizer(0);
@@ -316,18 +210,6 @@ public class EqualizerTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 2.0: test setEnabled() and getEnabled() in valid state
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        )
-    })
     public void test2_0SetEnabledGetEnabled() throws Exception {
         getEqualizer(0);
         try {
@@ -344,18 +226,6 @@ public class EqualizerTest extends AndroidTestCase {
     }
 
     //Test case 2.1: test setEnabled() throws exception after release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        )
-    })
     public void test2_1SetEnabledAfterRelease() throws Exception {
 
         getEqualizer(0);
@@ -374,103 +244,71 @@ public class EqualizerTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 3.0: test control status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setControlStatusListener",
-            args = {AudioEffect.OnControlStatusChangeListener.class}
-        )
-    })
     public void test3_0ControlStatusListener() throws Exception {
-        mHasControl = true;
-        createListenerLooper(true, false, false);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mHasControl = true;
+            mInitialized = false;
+            createListenerLooper(true, false, false);
+            waitForLooperInitialization_l();
+
+            getEqualizer(0);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mHasControl && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        synchronized(mLock) {
-            try {
-                getEqualizer(0);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseEqualizer();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseEqualizer();
         }
         assertFalse("effect control not lost by effect1", mHasControl);
     }
 
     //Test case 3.1: test enable status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnableStatusListener",
-            args = {AudioEffect.OnEnableStatusChangeListener.class}
-        )
-    })
     public void test3_1EnableStatusListener() throws Exception {
-        createListenerLooper(false, true, false);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mInitialized = false;
+            createListenerLooper(false, true, false);
+            waitForLooperInitialization_l();
+
+            mEqualizer2.setEnabled(true);
+            mIsEnabled = true;
+            getEqualizer(0);
+            mEqualizer.setEnabled(false);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mIsEnabled && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        mEqualizer2.setEnabled(true);
-        mIsEnabled = true;
-        getEqualizer(0);
-        synchronized(mLock) {
-            try {
-                mEqualizer.setEnabled(false);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseEqualizer();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseEqualizer();
         }
         assertFalse("enable status not updated", mIsEnabled);
     }
 
     //Test case 3.2: test parameter changed listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameterListener",
-            args = {Equalizer.OnParameterChangeListener.class}
-        )
-    })
     public void test3_2ParameterChangedListener() throws Exception {
-        createListenerLooper(false, false, true);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mInitialized = false;
+            createListenerLooper(false, false, true);
+            waitForLooperInitialization_l();
+
+            getEqualizer(0);
+            mChangedParameter = -1;
+            mEqualizer.setBandLevel((short)0, (short)0);
+
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while ((mChangedParameter == -1) && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        getEqualizer(0);
-        synchronized(mLock) {
-            try {
-                mChangedParameter = -1;
-                mEqualizer.setBandLevel((short)0, (short)0);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseEqualizer();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseEqualizer();
         }
         assertEquals("parameter change not received",
                 Equalizer.PARAM_BAND_LEVEL, mChangedParameter);
@@ -505,6 +343,17 @@ public class EqualizerTest extends AndroidTestCase {
         }
     }
 
+    private void waitForLooperInitialization_l() {
+        int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+        while (!mInitialized && (looperWaitCount-- > 0)) {
+            try {
+                mLock.wait();
+            } catch(Exception e) {
+            }
+        }
+        assertTrue(mInitialized);
+    }
+
     // Initializes the equalizer listener looper
     class ListenerThread extends Thread {
         boolean mControl;
@@ -517,11 +366,18 @@ public class EqualizerTest extends AndroidTestCase {
             mEnable = enable;
             mParameter = parameter;
         }
+
+        public void cleanUp() {
+            if (mEqualizer2 != null) {
+                mEqualizer2.setControlStatusListener(null);
+                mEqualizer2.setEnableStatusListener(null);
+                mEqualizer2.setParameterListener((Equalizer.OnParameterChangeListener)null);
+            }
+        }
     }
 
     private void createListenerLooper(boolean control, boolean enable, boolean parameter) {
-        mInitialized = false;
-        new ListenerThread(control, enable, parameter) {
+        mEffectListenerLooper = new ListenerThread(control, enable, parameter) {
             @Override
             public void run() {
                 // Set up a looper
@@ -534,66 +390,74 @@ public class EqualizerTest extends AndroidTestCase {
                 mEqualizer2 = new Equalizer(0, 0);
                 assertNotNull("could not create Equalizer2", mEqualizer2);
 
-                if (mControl) {
-                    mEqualizer2.setControlStatusListener(
-                            new AudioEffect.OnControlStatusChangeListener() {
-                        public void onControlStatusChange(
-                                AudioEffect effect, boolean controlGranted) {
-                            synchronized(mLock) {
-                                if (effect == mEqualizer2) {
-                                    mHasControl = controlGranted;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mEnable) {
-                    mEqualizer2.setEnableStatusListener(
-                            new AudioEffect.OnEnableStatusChangeListener() {
-                        public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
-                            synchronized(mLock) {
-                                if (effect == mEqualizer2) {
-                                    mIsEnabled = enabled;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mParameter) {
-                    mEqualizer2.setParameterListener(new Equalizer.OnParameterChangeListener() {
-                        public void onParameterChange(Equalizer effect,
-                                int status, int param1, int param2, int value)
-                        {
-                            synchronized(mLock) {
-                                if (effect == mEqualizer2) {
-                                    mChangedParameter = param1;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-
                 synchronized(mLock) {
+                    if (mControl) {
+                        mEqualizer2.setControlStatusListener(
+                                new AudioEffect.OnControlStatusChangeListener() {
+                            public void onControlStatusChange(
+                                    AudioEffect effect, boolean controlGranted) {
+                                synchronized(mLock) {
+                                    if (effect == mEqualizer2) {
+                                        mHasControl = controlGranted;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mEnable) {
+                        mEqualizer2.setEnableStatusListener(
+                                new AudioEffect.OnEnableStatusChangeListener() {
+                            public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
+                                synchronized(mLock) {
+                                    if (effect == mEqualizer2) {
+                                        mIsEnabled = enabled;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mParameter) {
+                        mEqualizer2.setParameterListener(new Equalizer.OnParameterChangeListener() {
+                            public void onParameterChange(Equalizer effect,
+                                    int status, int param1, int param2, int value)
+                            {
+                                synchronized(mLock) {
+                                    if (effect == mEqualizer2) {
+                                        mChangedParameter = param1;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
                     mInitialized = true;
                     mLock.notify();
                 }
                 Looper.loop();  // Blocks forever until Looper.quit() is called.
             }
-        }.start();
+        };
+        mEffectListenerLooper.start();
     }
 
     // Terminates the listener looper thread.
     private void terminateListenerLooper() {
+        if (mEffectListenerLooper != null) {
+            mEffectListenerLooper.cleanUp();
+            if (mLooper != null) {
+                mLooper.quit();
+                mLooper = null;
+            }
+            try {
+                mEffectListenerLooper.join();
+            } catch(InterruptedException e) {
+            }
+            mEffectListenerLooper = null;
+        }
         if (mEqualizer2 != null) {
             mEqualizer2.release();
             mEqualizer2 = null;
-        }
-        if (mLooper != null) {
-            mLooper.quit();
-            mLooper = null;
         }
     }
 

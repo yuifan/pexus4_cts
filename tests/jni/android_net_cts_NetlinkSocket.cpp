@@ -21,6 +21,7 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <errno.h>
+#include <string.h>
 #include "JNIHelp.h"
 
 #include "android_net_cts_NetlinkSocket.h"
@@ -30,7 +31,7 @@ static void android_net_cts_NetlinkSocket_create(JNIEnv* env, jclass,
 {
     int sock = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
     if (sock == -1) {
-        LOGE("Can't create socket %s", strerror(errno));
+        ALOGE("Can't create socket %s", strerror(errno));
         jclass SocketException = env->FindClass("java/net/SocketException");
         env->ThrowNew(SocketException, "Can't create socket");
         return;

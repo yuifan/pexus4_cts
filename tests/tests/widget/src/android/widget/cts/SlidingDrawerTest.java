@@ -18,23 +18,19 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.UiThreadTest;
 import android.util.AttributeSet;
 import android.util.Xml;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.cts.DelayedCheck;
 import android.widget.ImageView;
 import android.widget.SlidingDrawer;
 import android.widget.TextView;
@@ -47,7 +43,6 @@ import java.io.IOException;
 /**
  * Test {@link SlidingDrawer}.
  */
-@TestTargetClass(SlidingDrawer.class)
 public class SlidingDrawerTest
         extends ActivityInstrumentationTestCase2<SlidingDrawerStubActivity> {
 
@@ -66,18 +61,6 @@ public class SlidingDrawerTest
         mLock = new Object();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "SlidingDrawer",
-            args = {Context.class, AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "SlidingDrawer",
-            args = {Context.class, AttributeSet.class, int.class}
-        )
-    })
     public void testConstructor() throws XmlPullParserException, IOException {
         XmlPullParser parser = mActivity.getResources().getLayout(R.layout.sliding_drawer_layout);
         AttributeSet attrs = Xml.asAttributeSet(parser);
@@ -97,11 +80,6 @@ public class SlidingDrawerTest
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHandle",
-        args = {}
-    )
     public void testGetHandle() {
         SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
         View handle = drawer.getHandle();
@@ -109,11 +87,6 @@ public class SlidingDrawerTest
         assertEquals(R.id.handle, handle.getId());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getContent",
-        args = {}
-    )
     public void testGetContent() {
         SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
         View content = drawer.getContent();
@@ -121,23 +94,6 @@ public class SlidingDrawerTest
         assertEquals(R.id.content, content.getId());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "open",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "close",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isOpened",
-            args = {}
-        )
-    })
     @UiThreadTest
     public void testOpenAndClose() {
         SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
@@ -154,28 +110,6 @@ public class SlidingDrawerTest
         assertEquals(View.GONE, content.getVisibility());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "animateOpen",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "animateClose",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isOpened",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isMoving",
-            args = {}
-        )
-    })
     public void testAnimateOpenAndClose() throws Throwable {
         final SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
         View content = drawer.getContent();
@@ -189,16 +123,16 @@ public class SlidingDrawerTest
             }
         });
         assertTrue(drawer.isMoving());
-        assertFalse(drawer.isOpened());
+        assertOpened(false, drawer);
         assertEquals(View.GONE, content.getVisibility());
 
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return !drawer.isMoving();
             }
         }.run();
-        assertTrue(drawer.isOpened());
+        assertOpened(true, drawer);
         assertEquals(View.VISIBLE, content.getVisibility());
 
         runTestOnUiThread(new Runnable() {
@@ -207,36 +141,19 @@ public class SlidingDrawerTest
             }
         });
         assertTrue(drawer.isMoving());
-        assertTrue(drawer.isOpened());
+        assertOpened(true, drawer);
         assertEquals(View.GONE, content.getVisibility());
 
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return !drawer.isMoving();
             }
         }.run();
-        assertFalse(drawer.isOpened());
+        assertOpened(false, drawer);
         assertEquals(View.GONE, content.getVisibility());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "animateToggle",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isOpened",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isMoving",
-            args = {}
-        )
-    })
     public void testAnimateToggle() throws Throwable {
         final SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
         View content = drawer.getContent();
@@ -250,16 +167,16 @@ public class SlidingDrawerTest
             }
         });
         assertTrue(drawer.isMoving());
-        assertFalse(drawer.isOpened());
+        assertOpened(false, drawer);
         assertEquals(View.GONE, content.getVisibility());
 
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return !drawer.isMoving();
             }
         }.run();
-        assertTrue(drawer.isOpened());
+        assertOpened(true, drawer);
         assertEquals(View.VISIBLE, content.getVisibility());
 
         runTestOnUiThread(new Runnable() {
@@ -268,31 +185,28 @@ public class SlidingDrawerTest
             }
         });
         assertTrue(drawer.isMoving());
-        assertTrue(drawer.isOpened());
+        assertOpened(true, drawer);
         assertEquals(View.GONE, content.getVisibility());
 
-        new DelayedCheck() {
+        new PollingCheck() {
             @Override
             protected boolean check() {
                 return !drawer.isMoving();
             }
         }.run();
-        assertFalse(drawer.isOpened());
+        assertOpened(false, drawer);
         assertEquals(View.GONE, content.getVisibility());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "toggle",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isOpened",
-            args = {}
-        )
-    })
+    private void assertOpened(final boolean opened, final SlidingDrawer drawer) {
+        new PollingCheck() {
+            @Override
+            protected boolean check() {
+                return drawer.isOpened() == opened;
+            }
+        }.run();
+    }
+
     @UiThreadTest
     public void testToggle() {
         SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
@@ -309,18 +223,6 @@ public class SlidingDrawerTest
         assertEquals(View.GONE, content.getVisibility());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "lock",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "unlock",
-            args = {}
-        )
-    })
     @UiThreadTest
     public void testLockAndUnlock() {
         SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
@@ -348,11 +250,6 @@ public class SlidingDrawerTest
         assertEquals(View.VISIBLE, content.getVisibility());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setOnDrawerOpenListener",
-        args = {android.widget.SlidingDrawer.OnDrawerOpenListener.class}
-    )
     @UiThreadTest
     public void testSetOnDrawerOpenListener() {
         SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
@@ -365,11 +262,6 @@ public class SlidingDrawerTest
         assertTrue(listener.hadOpenedDrawer());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setOnDrawerCloseListener",
-        args = {android.widget.SlidingDrawer.OnDrawerCloseListener.class}
-    )
     @UiThreadTest
     public void testSetOnDrawerCloseListener() {
         SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
@@ -385,11 +277,6 @@ public class SlidingDrawerTest
         assertTrue(listener.hadClosedDrawer());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setOnDrawerScrollListener",
-        args = {android.widget.SlidingDrawer.OnDrawerScrollListener.class}
-    )
     public void testSetOnDrawerScrollListener() throws Throwable {
         final SlidingDrawer drawer = (SlidingDrawer) mActivity.findViewById(R.id.drawer);
         MockOnDrawerScrollListener listener = new MockOnDrawerScrollListener();
@@ -418,56 +305,26 @@ public class SlidingDrawerTest
         assertTrue(listener.hadEndedScroll());
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onLayout",
-        args = {boolean.class, int.class, int.class, int.class, int.class}
-    )
     public void testOnLayout() {
         // onLayout() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onMeasure",
-        args = {int.class, int.class}
-    )
     public void testOnMeasure() {
         // onMeasure() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onFinishInflate",
-        args = {}
-    )
     public void testOnFinishInflate() {
         // onFinishInflate() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "dispatchDraw",
-        args = {android.graphics.Canvas.class}
-    )
     public void testDispatchDraw() {
         // dispatchDraw() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onInterceptTouchEvent",
-        args = {MotionEvent.class}
-    )
     public void testOnInterceptTouchEvent() {
         // onInterceptTouchEvent() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onTouchEvent",
-        args = {MotionEvent.class}
-    )
     public void testOnTouchEvent() {
         // onTouchEvent() is implementation details, do NOT test
     }

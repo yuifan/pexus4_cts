@@ -16,43 +16,23 @@
 
 package android.webkit.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
 
-@TestTargetClass(android.webkit.CookieSyncManager.class)
 public class CookieSyncManagerTest
         extends ActivityInstrumentationTestCase2<CookieSyncManagerStubActivity> {
+
+    private final static int COOKIE_MANAGER_TIMEOUT = 5000;
 
     public CookieSyncManagerTest() {
         super("com.android.cts.stub", CookieSyncManagerStubActivity.class);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "createInstance",
-            args = {Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getInstance",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "sync",
-            args = {}
-        )
-    })
-    public void testCookieSyncManager() {
+    public void testCookieSyncManager() throws Exception {
         CookieSyncManager csm1 = CookieSyncManager.createInstance(getActivity());
         assertNotNull(csm1);
 
@@ -62,21 +42,28 @@ public class CookieSyncManagerTest
         assertSame(csm1, csm2);
 
         final CookieManager cookieManager = CookieManager.getInstance();
-        assertFalse(cookieManager.hasCookies());
+
+        // Remove all cookies from the database.
+        cookieManager.removeAllCookie();
+        new PollingCheck(COOKIE_MANAGER_TIMEOUT) {
+            @Override
+            protected boolean check() {
+                return !cookieManager.hasCookies();
+            }
+        }.run();
 
         cookieManager.setAcceptCookie(true);
         assertTrue(cookieManager.acceptCookie());
 
-        String cookieValue = "a = b";
-        cookieManager.setCookie(TestHtmlConstants.HELLO_WORLD_URL, cookieValue);
-        assertEquals(cookieValue, cookieManager.getCookie(TestHtmlConstants.HELLO_WORLD_URL));
-
-        // Cookie is stored in RAM but not in the database.
-        assertFalse(cookieManager.hasCookies());
+        CtsTestServer server = new CtsTestServer(getActivity(), false);
+        String url = server.getCookieUrl("conquest.html");
+        String cookieValue = "a=b";
+        cookieManager.setCookie(url, cookieValue);
+        assertEquals(cookieValue, cookieManager.getCookie(url));
 
         // Store the cookie to the database.
         csm1.sync();
-        new DelayedCheck(10000) {
+        new PollingCheck(COOKIE_MANAGER_TIMEOUT) {
             @Override
             protected boolean check() {
                 return cookieManager.hasCookies();
@@ -85,7 +72,7 @@ public class CookieSyncManagerTest
 
         // Remove all cookies from the database.
         cookieManager.removeAllCookie();
-        new DelayedCheck(10000) {
+        new PollingCheck(COOKIE_MANAGER_TIMEOUT) {
             @Override
             protected boolean check() {
                 return !cookieManager.hasCookies();

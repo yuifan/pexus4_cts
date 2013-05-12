@@ -16,6 +16,7 @@
 
 package android.view.cts;
 
+
 import android.graphics.PixelFormat;
 import android.os.Binder;
 import android.os.IBinder;
@@ -24,12 +25,7 @@ import android.test.AndroidTestCase;
 import android.text.SpannedString;
 import android.view.Gravity;
 import android.view.WindowManager;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(WindowManager.LayoutParams.class)
 public class WindowManager_LayoutParamsTest extends AndroidTestCase {
     private static final int WINDOW_WIDTH = 320;
     private static final int WINDOW_HEIGHT = 480;
@@ -49,49 +45,6 @@ public class WindowManager_LayoutParamsTest extends AndroidTestCase {
 
     private WindowManager.LayoutParams mLayoutParams;
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test constructor(s)",
-            method = "WindowManager.LayoutParams",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "WindowManager.LayoutParams",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "WindowManager.LayoutParams",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "WindowManager.LayoutParams",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "WindowManager.LayoutParams",
-            args = {int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "WindowManager.LayoutParams",
-            args = {int.class, int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "WindowManager.LayoutParams",
-            args = {Parcel.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "WindowManager.mayUseInputMethod",
-            args = {int.class}
-        )
-    })
     public void testConstructor() {
         new WindowManager.LayoutParams();
 
@@ -134,11 +87,6 @@ public class WindowManager_LayoutParamsTest extends AndroidTestCase {
                 .mayUseInputMethod(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "copyFrom",
-        args = {WindowManager.LayoutParams.class}
-    )
     public void testCopyFrom() {
         mLayoutParams = new WindowManager.LayoutParams();
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
@@ -167,18 +115,15 @@ public class WindowManager_LayoutParamsTest extends AndroidTestCase {
         params.setTitle(PARAMS_TITLE);
         params.alpha = ALPHA - 0.5f;
         params.windowAnimations = WINDOW_ANIMATIONS;
-        params.memoryType = WindowManager.LayoutParams.MEMORY_TYPE_HARDWARE;
         params.dimAmount = DIM_AMOUNT - 1.0f;
         mLayoutParams = new WindowManager.LayoutParams();
         assertEquals(WindowManager.LayoutParams.TITLE_CHANGED
                 | WindowManager.LayoutParams.ALPHA_CHANGED
-                | WindowManager.LayoutParams.MEMORY_TYPE_CHANGED
                 | WindowManager.LayoutParams.ANIMATION_CHANGED
                 | WindowManager.LayoutParams.DIM_AMOUNT_CHANGED,
                 mLayoutParams.copyFrom(params));
         assertEquals(params.getTitle(), mLayoutParams.getTitle());
         assertEquals(params.alpha, mLayoutParams.alpha);
-        assertEquals(params.memoryType, mLayoutParams.memoryType);
         assertEquals(params.dimAmount, mLayoutParams.dimAmount);
 
         params = new WindowManager.LayoutParams();
@@ -217,29 +162,12 @@ public class WindowManager_LayoutParamsTest extends AndroidTestCase {
         assertEquals(params.verticalWeight, mLayoutParams.verticalWeight);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "describeContents",
-        args = {}
-    )
     public void testDescribeContents() {
         mLayoutParams = new WindowManager.LayoutParams();
 
         assertEquals(0, mLayoutParams.describeContents());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTitle",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTitle",
-            args = {CharSequence.class}
-        )
-    })
     public void testAccessTitle() {
         String title = "";
         mLayoutParams = new WindowManager.LayoutParams();
@@ -256,11 +184,6 @@ public class WindowManager_LayoutParamsTest extends AndroidTestCase {
         assertEquals(spannedTitle, mLayoutParams.getTitle());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "toString",
-        args = {}
-    )
     public void testToString() {
         mLayoutParams = new WindowManager.LayoutParams();
         assertNotNull(mLayoutParams.toString());
@@ -271,11 +194,6 @@ public class WindowManager_LayoutParamsTest extends AndroidTestCase {
         assertNotNull(mLayoutParams.toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {Parcel.class, int.class}
-    )
     public void testWriteToParcel() {
         IBinder binder = new Binder();
         mLayoutParams = new WindowManager.LayoutParams(WINDOW_WIDTH, WINDOW_HEIGHT, XPOS, YPOS,
@@ -305,11 +223,6 @@ public class WindowManager_LayoutParamsTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "debug",
-        args = {String.class}
-    )
     public void testDebug() {
     }
 }

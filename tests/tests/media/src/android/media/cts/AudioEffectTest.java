@@ -16,28 +16,25 @@
 
 package android.media.cts;
 
-import com.android.cts.stub.R;
+import com.android.cts.media.R;
 
 import android.content.res.AssetFileDescriptor;
 import android.media.audiofx.AudioEffect;
 import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.audiofx.PresetReverb;
 import android.media.audiofx.EnvironmentalReverb;
 import android.media.audiofx.Equalizer;
 import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 
 import android.os.Looper;
 import android.test.AndroidTestCase;
 import android.util.Log;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 import java.util.UUID;
 
-@TestTargetClass(AudioEffect.class)
 public class AudioEffectTest extends AndroidTestCase {
 
     private String TAG = "AudioEffectTest";
@@ -46,6 +43,10 @@ public class AudioEffectTest extends AndroidTestCase {
     private final static float DELAY_TOLERANCE = 1.05f;
     // allow +/- 5% tolerance between set and get ratios
     private final static float RATIO_TOLERANCE = 1.05f;
+    // AudioRecord sampling rate
+    private final static int SAMPLING_RATE = 44100;
+
+    private final static int MAX_LOOPER_WAIT_COUNT = 10;
 
     private AudioEffect mEffect = null;
     private AudioEffect mEffect2 = null;
@@ -60,6 +61,7 @@ public class AudioEffectTest extends AndroidTestCase {
 
     private final Object mLock = new Object();
 
+    private ListenerThread mEffectListenerLooper = null;
 
     //-----------------------------------------------------------------
     // AUDIOEFFECT TESTS:
@@ -71,13 +73,6 @@ public class AudioEffectTest extends AndroidTestCase {
 
     //Test case 0.0: test queryEffects() and platfrom at least provides Equalizer, Bass Boost,
     // Virtualizer, Environmental reverb and Preset reverb effects
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "queryEffects",
-            args = {}
-        )
-    })
     public void test0_0QueryEffects() throws Exception {
 
         AudioEffect.Descriptor[] desc = AudioEffect.queryEffects();
@@ -115,34 +110,45 @@ public class AudioEffectTest extends AndroidTestCase {
     // 1 - constructor
     //----------------------------------
 
+    private AudioRecord getAudioRecord() {
+        AudioRecord ar = null;
+        try {
+            ar = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
+                    SAMPLING_RATE,
+                    AudioFormat.CHANNEL_CONFIGURATION_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    AudioRecord.getMinBufferSize(SAMPLING_RATE,
+                            AudioFormat.CHANNEL_CONFIGURATION_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT) * 10);
+            assertNotNull("Could not create AudioRecord", ar);
+            assertEquals("AudioRecord not initialized",
+                    AudioRecord.STATE_INITIALIZED, ar.getState());
+        } catch (IllegalArgumentException e) {
+            fail("AudioRecord invalid parameter");
+        }
+        return ar;
+    }
+
     //Test case 1.0: test constructor from effect type and get effect ID
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioEffect",
-            args = {UUID.class, UUID.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void test1_0ConstructorFromType() throws Exception {
         AudioEffect.Descriptor[] desc = AudioEffect.queryEffects();
         assertTrue("no effects found", (desc.length != 0));
         for (int i = 0; i < desc.length; i++) {
             if (!desc[i].type.equals(AudioEffect.EFFECT_TYPE_NULL)) {
                 try {
+                    int sessionId;
+                    AudioRecord ar = null;
+                    if (AudioEffect.EFFECT_PRE_PROCESSING.equals(desc[i].connectMode)) {
+                        ar = getAudioRecord();
+                        sessionId = ar.getAudioSessionId();
+                    } else {
+                        sessionId = 0;
+                    }
                     AudioEffect effect = new AudioEffect(desc[i].type,
                             AudioEffect.EFFECT_TYPE_NULL,
                             0,
-                            0);
+                            sessionId);
+
                     assertNotNull("could not create AudioEffect", effect);
                     try {
                         assertTrue("invalid effect ID", (effect.getId() != 0));
@@ -150,6 +156,9 @@ public class AudioEffectTest extends AndroidTestCase {
                         fail("AudioEffect not initialized");
                     } finally {
                         effect.release();
+                        if (ar != null) {
+                            ar.release();
+                        }
                     }
                 } catch (IllegalArgumentException e) {
                     fail("Effect not found: "+desc[i].name);
@@ -161,32 +170,23 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 1.1: test constructor from effect uuid
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioEffect",
-            args = {UUID.class, UUID.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void test1_1ConstructorFromUuid() throws Exception {
         AudioEffect.Descriptor[] desc = AudioEffect.queryEffects();
         assertTrue("no effects found", (desc.length != 0));
         for (int i = 0; i < desc.length; i++) {
             try {
+                int sessionId;
+                AudioRecord ar = null;
+                if (AudioEffect.EFFECT_PRE_PROCESSING.equals(desc[i].connectMode)) {
+                    ar =  getAudioRecord();
+                    sessionId = ar.getAudioSessionId();
+                } else {
+                    sessionId = 0;
+                }
                 AudioEffect effect = new AudioEffect(AudioEffect.EFFECT_TYPE_NULL,
                         desc[i].uuid,
                         0,
-                        0);
+                        sessionId);
                 assertNotNull("could not create AudioEffect", effect);
                 try {
                     assertTrue("invalid effect ID", (effect.getId() != 0));
@@ -194,6 +194,9 @@ public class AudioEffectTest extends AndroidTestCase {
                     fail("AudioEffect not initialized");
                 } finally {
                     effect.release();
+                    if (ar != null) {
+                        ar.release();
+                    }
                 }
             } catch (IllegalArgumentException e) {
                 fail("Effect not found: "+desc[i].name);
@@ -204,18 +207,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 1.2: test constructor failure from unknown type
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioEffect",
-            args = {UUID.class, UUID.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void test1_2ConstructorUnknownType() throws Exception {
 
         try {
@@ -235,23 +226,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 1.3: test getEnabled() failure when called on released effect
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioEffect",
-            args = {UUID.class, UUID.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void test1_3GetEnabledAfterRelease() throws Exception {
 
         try {
@@ -275,18 +249,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 1.4: test contructor on mediaPlayer audio session
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "MediaPlayer.getAudioSessionId",
-            args = {}
-        )
-    })
     public void test1_4InsertOnMediaPlayer() throws Exception {
         MediaPlayer mp = new MediaPlayer();
         assertNotNull("could not create mediaplayer", mp);
@@ -306,128 +268,69 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 1.5: test auxiliary effect attachement on MediaPlayer
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "MediaPlayer.attachAuxEffect",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "MediaPlayer.setAuxEffectSendLevel",
-            args = {}
-        )
-    })
     public void test1_5AuxiliaryOnMediaPlayer() throws Exception {
-        createMediaPlayerLooper();
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("Looper creation: wait was interrupted.");
-            }
-        }
-        assertTrue(mInitialized);  // mMediaPlayer has been initialized?
-        mError = 0;
+            mInitialized = false;
+            createMediaPlayerLooper();
+            waitForLooperInitialization_l();
 
-        AssetFileDescriptor afd = mContext.getResources().openRawResourceFd(R.raw.testmp3);
-        mMediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-        afd.close();
-        getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
-        try {
-            synchronized(mLock) {
+            mError = 0;
+            AssetFileDescriptor afd = mContext.getResources().openRawResourceFd(R.raw.testmp3);
+            mMediaPlayer.setDataSource(afd.getFileDescriptor(),
+                                       afd.getStartOffset(),
+                                       afd.getLength());
+            afd.close();
+            getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
+            try {
                 try {
                     mMediaPlayer.attachAuxEffect(mEffect.getId());
                     mMediaPlayer.setAuxEffectSendLevel(1.0f);
-                    mLock.wait(200);
-                } catch(Exception e) {
-                    fail("Attach effect: wait was interrupted.");
-                }
-            }
-            assertTrue("error on attachAuxEffect", mError == 0);
-
-        } catch (IllegalStateException e) {
-            fail("attach aux effect failed");
-        } finally {
-            terminateMediaPlayerLooper();
-            releaseEffect();
-        }
-    }
-
-    //Test case 1.6: test auxiliary effect attachement failure before setDatasource
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "MediaPlayer.attachAuxEffect",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "MediaPlayer.setAuxEffectSendLevel",
-            args = {}
-        )
-    })
-    public void test1_6AuxiliaryOnMediaPlayerFailure() throws Exception {
-        createMediaPlayerLooper();
-        synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("Looper creation: wait was interrupted.");
-            }
-        }
-        assertTrue(mInitialized);  // mMediaPlayer has been initialized?
-        mError = 0;
-
-        getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
-        try {
-            synchronized(mLock) {
-                try {
-                    mMediaPlayer.attachAuxEffect(mEffect.getId());
                     mLock.wait(1000);
                 } catch(Exception e) {
                     fail("Attach effect: wait was interrupted.");
                 }
+                assertTrue("error on attachAuxEffect", mError == 0);
+            } catch (IllegalStateException e) {
+                fail("attach aux effect failed");
+            } finally {
+                terminateMediaPlayerLooper();
+                releaseEffect();
+            }
+        }
+    }
+
+    //Test case 1.6: test auxiliary effect attachement failure before setDatasource
+    public void test1_6AuxiliaryOnMediaPlayerFailure() throws Exception {
+        synchronized(mLock) {
+            mInitialized = false;
+            createMediaPlayerLooper();
+            waitForLooperInitialization_l();
+
+            getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
+
+            mError = 0;
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mError == 0 && (looperWaitCount-- > 0)) {
+                try {
+                    try {
+                        mMediaPlayer.attachAuxEffect(mEffect.getId());
+                    } catch (IllegalStateException e) {
+                        terminateMediaPlayerLooper();
+                        releaseEffect();
+                        fail("attach aux effect failed");
+                    }
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
             assertTrue("no error on attachAuxEffect", mError != 0);
-
-        } catch (IllegalStateException e) {
-            fail("attach aux effect failed");
-        } finally {
-            terminateMediaPlayerLooper();
-            releaseEffect();
         }
+        terminateMediaPlayerLooper();
+        releaseEffect();
     }
 
 
     //Test case 1.7: test auxiliary effect attachement on AudioTrack
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack.attachAuxEffect",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioTrack.setAuxEffectSendLevel",
-            args = {}
-        )
-    })
     public void test1_7AuxiliaryOnAudioTrack() throws Exception {
         AudioTrack track = null;
         getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
@@ -469,18 +372,6 @@ public class AudioEffectTest extends AndroidTestCase {
 
 
     //Test case 2.0: test setEnabled() and getEnabled() in valid state
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        )
-    })
     public void test2_0SetEnabledGetEnabled() throws Exception {
 
         try {
@@ -509,18 +400,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 2.1: test setEnabled() throws exception after release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        )
-    })
     public void test2_1SetEnabledAfterRelease() throws Exception {
 
         try {
@@ -548,25 +427,13 @@ public class AudioEffectTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 3.0: test setParameter(byte[], byte[]) / getParameter(byte[], byte[])
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {byte[].class, byte[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {byte[].class, byte[].class}
-        )
-    })
     public void test3_0SetParameterByteArrayByteArray() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
         try {
             byte[] param = mEffect.intToByteArray(PresetReverb.PARAM_PRESET);
             byte[] value = new byte[2];
             int status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 1 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 1 failed", AudioEffect.isError(status));
             short preset = PresetReverb.PRESET_SMALLROOM;
             if (mEffect.byteArrayToShort(value) == preset) {
                 preset = PresetReverb.PRESET_MEDIUMROOM;
@@ -575,7 +442,7 @@ public class AudioEffectTest extends AndroidTestCase {
             status = mEffect.setParameter(param, value);
             assertEquals("setParameter failed", AudioEffect.SUCCESS, status);
             status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 2 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 2 failed", AudioEffect.isError(status));
             assertEquals("get/set Parameter failed", preset,
                     mEffect.byteArrayToShort(value));
 
@@ -591,25 +458,13 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.1: test setParameter(int, int) / getParameter(int, int[])
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {int.class, int[].class}
-        )
-    })
     public void test3_1SetParameterIntInt() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_ENV_REVERB, 0);
         try {
             int param = EnvironmentalReverb.PARAM_DECAY_TIME;
             int[] value = new int[1];
             int status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 1 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 1 failed", AudioEffect.isError(status));
             int time = 500;
             if (value[0] == time) {
                 time = 1000;
@@ -617,7 +472,7 @@ public class AudioEffectTest extends AndroidTestCase {
             status = mEffect.setParameter(param, time);
             assertEquals("setParameter failed", AudioEffect.SUCCESS, status);
             status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 2 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 2 failed", AudioEffect.isError(status));
             assertTrue("got incorrect decay time",
                     ((float)value[0] > (float)(time / DELAY_TOLERANCE)) &&
                     ((float)value[0] < (float)(time * DELAY_TOLERANCE)));
@@ -634,25 +489,13 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.2: test setParameter(int, short) / getParameter(int, short[])
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int.class, short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {int.class, short[].class}
-        )
-    })
     public void test3_2SetParameterIntShort() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
         try {
             int param = PresetReverb.PARAM_PRESET;
             short[] value = new short[1];
             int status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 1 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 1 failed", AudioEffect.isError(status));
             short preset = PresetReverb.PRESET_SMALLROOM;
             if (value[0] == preset) {
                 preset = PresetReverb.PRESET_MEDIUMROOM;
@@ -660,7 +503,7 @@ public class AudioEffectTest extends AndroidTestCase {
             status = mEffect.setParameter(param, preset);
             assertEquals("setParameter failed", AudioEffect.SUCCESS, status);
             status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 2 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 2 failed", AudioEffect.isError(status));
             assertEquals("get/set Parameter failed", preset, value[0]);
 
         } catch (IllegalArgumentException e) {
@@ -675,25 +518,13 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.3: test setParameter(int, byte[]) / getParameter(int, byte[])
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int.class, byte[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {int.class, byte[].class}
-        )
-    })
     public void test3_3SetParameterIntByteArray() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_ENV_REVERB, 0);
         try {
             int param = EnvironmentalReverb.PARAM_DECAY_TIME;
             byte[] value = new byte[4];
             int status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 1 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 1 failed", AudioEffect.isError(status));
             int time = 500;
             if (mEffect.byteArrayToInt(value) == time) {
                 time = 1000;
@@ -702,7 +533,7 @@ public class AudioEffectTest extends AndroidTestCase {
             status = mEffect.setParameter(param, value);
             assertEquals("setParameter failed", AudioEffect.SUCCESS, status);
             status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 2 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 2 failed", AudioEffect.isError(status));
             int time2 = mEffect.byteArrayToInt(value);
             assertTrue("got incorrect decay time",
                     ((float)time2 > (float)(time / DELAY_TOLERANCE)) &&
@@ -720,18 +551,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.4: test setParameter(int[], int[]) / getParameter(int[], int[])
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int[].class, int[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {int[].class, int[].class}
-        )
-    })
     public void test3_4SetParameterIntArrayIntArray() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_ENV_REVERB, 0);
         try {
@@ -739,7 +558,7 @@ public class AudioEffectTest extends AndroidTestCase {
             int[] value = new int[1];
             param[0] = EnvironmentalReverb.PARAM_DECAY_TIME;
             int status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 1 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 1 failed", AudioEffect.isError(status));
             int[] time = new int[1];
             time[0] = 500;
             if (value[0] == time[0]) {
@@ -748,7 +567,7 @@ public class AudioEffectTest extends AndroidTestCase {
             status = mEffect.setParameter(param, time);
             assertEquals("setParameter failed", AudioEffect.SUCCESS, status);
             status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 2 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 2 failed", AudioEffect.isError(status));
             assertTrue("got incorrect decay time",
                     ((float)value[0] > (float)(time[0] / DELAY_TOLERANCE)) &&
                     ((float)value[0] < (float)(time[0] * DELAY_TOLERANCE)));
@@ -765,18 +584,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.5: test setParameter(int[], short[]) / getParameter(int[], short[])
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int[].class, short[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {int[].class, short[].class}
-        )
-    })
 
     public void test3_5SetParameterIntArrayShortArray() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
@@ -785,7 +592,7 @@ public class AudioEffectTest extends AndroidTestCase {
             param[0] = PresetReverb.PARAM_PRESET;
             short[] value = new short[1];
             int status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 1 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 1 failed", AudioEffect.isError(status));
             short[] preset = new short[1];
             preset[0] = PresetReverb.PRESET_SMALLROOM;
             if (value[0] == preset[0]) {
@@ -794,7 +601,7 @@ public class AudioEffectTest extends AndroidTestCase {
             status = mEffect.setParameter(param, preset);
             assertEquals("setParameter failed", AudioEffect.SUCCESS, status);
             status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 2 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 2 failed", AudioEffect.isError(status));
             assertEquals("get/set Parameter failed", preset[0], value[0]);
 
         } catch (IllegalArgumentException e) {
@@ -809,18 +616,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.6: test setParameter(int[], byte[]) / getParameter(int[], byte[])
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int[].class, byte[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {int[].class, byte[].class}
-        )
-    })
     public void test3_6SetParameterIntArrayByteArray() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_ENV_REVERB, 0);
         try {
@@ -828,7 +623,7 @@ public class AudioEffectTest extends AndroidTestCase {
             param[0] = EnvironmentalReverb.PARAM_DECAY_TIME;
             byte[] value = new byte[4];
             int status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 1 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 1 failed", AudioEffect.isError(status));
             int time = 500;
             if (mEffect.byteArrayToInt(value) == time) {
                 time = 1000;
@@ -837,7 +632,7 @@ public class AudioEffectTest extends AndroidTestCase {
             status = mEffect.setParameter(param, mEffect.intToByteArray(time));
             assertEquals("setParameter failed", AudioEffect.SUCCESS, status);
             status = mEffect.getParameter(param, value);
-            assertEquals("getParameter 2 failed", AudioEffect.SUCCESS, status);
+            assertFalse("getParameter 2 failed", AudioEffect.isError(status));
             int time2 = mEffect.byteArrayToInt(value);
             assertTrue("got incorrect decay time",
                     ((float)time2 > (float)(time / DELAY_TOLERANCE)) &&
@@ -855,13 +650,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.7: test setParameter() throws exception after release()
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int.class, short.class}
-        )
-    })
     public void test3_7SetParameterAfterRelease() throws Exception {
         AudioEffect effect = null;
         try {
@@ -887,13 +675,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 3.8: test getParameter() throws exception after release()
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int.class, short[].class}
-        )
-    })
     public void test3_8GetParameterAfterRelease() throws Exception {
         AudioEffect effect = null;
         try {
@@ -924,23 +705,6 @@ public class AudioEffectTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 4.0: test control passed to higher priority client
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "hasControl",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        )
-    })
     public void test4_0setEnabledLowerPriority() throws Exception {
         AudioEffect effect1 = null;
         AudioEffect effect2 = null;
@@ -978,18 +742,6 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 4.1: test control passed to higher priority client
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int.class, short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getParameter",
-            args = {int.class, short[].class}
-        )
-    })
     public void test4_1setParameterLowerPriority() throws Exception {
         AudioEffect effect1 = null;
         AudioEffect effect2 = null;
@@ -1018,8 +770,8 @@ public class AudioEffectTest extends AndroidTestCase {
 
             short[] value = new short[1];
             status = effect2.getParameter(PresetReverb.PARAM_PRESET, value);
-            assertEquals("Effect2 getParameter failed",
-                    AudioEffect.SUCCESS, status);
+            assertFalse("Effect2 getParameter failed",
+                    AudioEffect.isError(status));
             assertEquals("Effect1 changed parameter", PresetReverb.PRESET_SMALLROOM
                     , value[0]);
 
@@ -1039,128 +791,78 @@ public class AudioEffectTest extends AndroidTestCase {
     }
 
     //Test case 4.2: test control status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setControlStatusListener",
-            args = {AudioEffect.OnControlStatusChangeListener.class}
-        )
-    })
     public void test4_2ControlStatusListener() throws Exception {
 
-        mHasControl = true;
-        createListenerLooper(true, false, false);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("Looper creation: wait was interrupted.");
+            mHasControl = true;
+            mInitialized = false;
+            createListenerLooper(true, false, false);
+            waitForLooperInitialization_l();
+
+            getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mHasControl && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        synchronized(mLock) {
-            try {
-                getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("Create second effect: wait was interrupted.");
-            } finally {
-                releaseEffect();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseEffect();
         }
         assertFalse("effect control not lost by effect1", mHasControl);
     }
 
     //Test case 4.3: test enable status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnableStatusListener",
-            args = {AudioEffect.OnEnableStatusChangeListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        )
-    })
     public void test4_3EnableStatusListener() throws Exception {
 
-        createListenerLooper(false, true, false);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("Looper creation: wait was interrupted.");
-            }
-        }
-        assertTrue(mInitialized);
-        mEffect2.setEnabled(true);
-        mIsEnabled = true;
+            mInitialized = false;
+            createListenerLooper(false, true, false);
+            waitForLooperInitialization_l();
 
-        getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
-        assertTrue("effect not enabled", mEffect.getEnabled());
-        synchronized(mLock) {
-            try {
-                mEffect.setEnabled(false);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("Second effect setEnabled: wait was interrupted.");
-            } finally {
-                releaseEffect();
-                terminateListenerLooper();
+            mEffect2.setEnabled(true);
+            mIsEnabled = true;
+
+            getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
+            assertTrue("effect not enabled", mEffect.getEnabled());
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mIsEnabled && (looperWaitCount-- > 0)) {
+                try {
+                    mEffect.setEnabled(false);
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
+            terminateListenerLooper();
+            releaseEffect();
         }
         assertFalse("enable status not updated", mIsEnabled);
     }
 
     //Test case 4.4: test parameter changed listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameterListener",
-            args = {AudioEffect.OnParameterChangeListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameter",
-            args = {int.class, short.class}
-        )
-    })
     public void test4_4ParameterChangedListener() throws Exception {
-
-        createListenerLooper(false, false, true);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("Looper creation: wait was interrupted.");
+            mInitialized = false;
+            createListenerLooper(false, false, true);
+            waitForLooperInitialization_l();
+            int status = mEffect2.setParameter(PresetReverb.PARAM_PRESET,
+                    PresetReverb.PRESET_SMALLROOM);
+            assertEquals("mEffect2 setParameter failed",
+                    AudioEffect.SUCCESS, status);
+            getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
+            mChangedParameter = -1;
+            mEffect.setParameter(PresetReverb.PARAM_PRESET,
+                    PresetReverb.PRESET_MEDIUMROOM);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mChangedParameter == -1 && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        int status = mEffect2.setParameter(PresetReverb.PARAM_PRESET,
-                PresetReverb.PRESET_SMALLROOM);
-        assertEquals("mEffect2 setParameter failed",
-                AudioEffect.SUCCESS, status);
-        getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
-        synchronized(mLock) {
-            try {
-                mChangedParameter = -1;
-                mEffect.setParameter(PresetReverb.PARAM_PRESET,
-                        PresetReverb.PRESET_MEDIUMROOM);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                fail("set Parameter: wait was interrupted.");
-            } finally {
-                releaseEffect();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseEffect();
         }
         assertEquals("parameter change not received",
                 PresetReverb.PARAM_PRESET, mChangedParameter);
@@ -1172,13 +874,6 @@ public class AudioEffectTest extends AndroidTestCase {
 
 
     //Test case 5.0: test command method
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "command",
-            args = {int.class, byte[].class, byte[].class}
-        )
-    })
     public void test5_0Command() throws Exception {
         getEffect(AudioEffect.EFFECT_TYPE_PRESET_REVERB, 0);
         try {
@@ -1186,7 +881,7 @@ public class AudioEffectTest extends AndroidTestCase {
             byte[] reply = new byte[4];
             // command 3 is ENABLE
             int status = mEffect.command(3, cmd, reply);
-            assertEquals("command failed", AudioEffect.SUCCESS, status);
+            assertFalse("command failed", AudioEffect.isError(status));
             assertTrue("effect not enabled", mEffect.getEnabled());
 
         } catch (IllegalStateException e) {
@@ -1229,6 +924,17 @@ public class AudioEffectTest extends AndroidTestCase {
         }
     }
 
+    private void waitForLooperInitialization_l() {
+        int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+        while (!mInitialized && (looperWaitCount-- > 0)) {
+            try {
+                mLock.wait();
+            } catch(Exception e) {
+            }
+        }
+        assertTrue(mInitialized);
+    }
+
     // Initializes the equalizer listener looper
     class ListenerThread extends Thread {
         boolean mControl;
@@ -1241,11 +947,18 @@ public class AudioEffectTest extends AndroidTestCase {
             mEnable = enable;
             mParameter = parameter;
         }
+
+        public void cleanUp() {
+            if (mEffect2 != null) {
+                mEffect2.setControlStatusListener(null);
+                mEffect2.setEnableStatusListener(null);
+                mEffect2.setParameterListener(null);
+            }
+        }
     }
 
     private void createListenerLooper(boolean control, boolean enable, boolean parameter) {
-        mInitialized = false;
-        new ListenerThread(control, enable, parameter) {
+        mEffectListenerLooper = new ListenerThread(control, enable, parameter) {
             @Override
             public void run() {
                 // Set up a looper
@@ -1261,66 +974,74 @@ public class AudioEffectTest extends AndroidTestCase {
                         0);
                 assertNotNull("could not create Equalizer2", mEffect2);
 
-                if (mControl) {
-                    mEffect2.setControlStatusListener(
-                            new AudioEffect.OnControlStatusChangeListener() {
-                        public void onControlStatusChange(
-                                AudioEffect effect, boolean controlGranted) {
-                            synchronized(mLock) {
-                                if (effect == mEffect2) {
-                                    mHasControl = controlGranted;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mEnable) {
-                    mEffect2.setEnableStatusListener(
-                            new AudioEffect.OnEnableStatusChangeListener() {
-                        public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
-                            synchronized(mLock) {
-                                if (effect == mEffect2) {
-                                    mIsEnabled = enabled;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mParameter) {
-                    mEffect2.setParameterListener(new AudioEffect.OnParameterChangeListener() {
-                        public void onParameterChange(AudioEffect effect, int status, byte[] param,
-                                byte[] value)
-                        {
-                            synchronized(mLock) {
-                                if (effect == mEffect2) {
-                                    mChangedParameter = mEffect2.byteArrayToInt(param);
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-
                 synchronized(mLock) {
+                    if (mControl) {
+                        mEffect2.setControlStatusListener(
+                                new AudioEffect.OnControlStatusChangeListener() {
+                            public void onControlStatusChange(
+                                    AudioEffect effect, boolean controlGranted) {
+                                synchronized(mLock) {
+                                    if (effect == mEffect2) {
+                                        mHasControl = controlGranted;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mEnable) {
+                        mEffect2.setEnableStatusListener(
+                                new AudioEffect.OnEnableStatusChangeListener() {
+                            public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
+                                synchronized(mLock) {
+                                    if (effect == mEffect2) {
+                                        mIsEnabled = enabled;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mParameter) {
+                        mEffect2.setParameterListener(new AudioEffect.OnParameterChangeListener() {
+                            public void onParameterChange(AudioEffect effect, int status, byte[] param,
+                                    byte[] value)
+                            {
+                                synchronized(mLock) {
+                                    if (effect == mEffect2) {
+                                        mChangedParameter = mEffect2.byteArrayToInt(param);
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
                     mInitialized = true;
                     mLock.notify();
                 }
                 Looper.loop();  // Blocks forever until Looper.quit() is called.
             }
-        }.start();
+        };
+        mEffectListenerLooper.start();
     }
 
     // Terminates the listener looper thread.
     private void terminateListenerLooper() {
+        if (mEffectListenerLooper != null) {
+            mEffectListenerLooper.cleanUp();
+            if (mLooper != null) {
+                mLooper.quit();
+                mLooper = null;
+            }
+            try {
+                mEffectListenerLooper.join();
+            } catch(InterruptedException e) {
+            }
+            mEffectListenerLooper = null;
+        }
         if (mEffect2 != null) {
             mEffect2.release();
             mEffect2 = null;
-        }
-        if (mLooper != null) {
-            mLooper.quit();
-            mLooper = null;
         }
     }
 
@@ -1329,7 +1050,6 @@ public class AudioEffectTest extends AndroidTestCase {
      * receive the callback messages.
      */
     private void createMediaPlayerLooper() {
-        mInitialized = false;
         new Thread() {
             @Override
             public void run() {
@@ -1341,23 +1061,24 @@ public class AudioEffectTest extends AndroidTestCase {
                 mLooper = Looper.myLooper();
 
                 mMediaPlayer = new MediaPlayer();
-                mMediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-                    public boolean onError(MediaPlayer player, int what, int extra) {
-                        synchronized(mLock) {
-                            mError = what;
-                            mLock.notify();
-                        }
-                        return true;
-                    }
-                });
-                mMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    public void onCompletion(MediaPlayer player) {
-                        synchronized(mLock) {
-                            mLock.notify();
-                        }
-                    }
-                });
+
                 synchronized(mLock) {
+                    mMediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                        public boolean onError(MediaPlayer player, int what, int extra) {
+                            synchronized(mLock) {
+                                mError = what;
+                                mLock.notify();
+                            }
+                            return true;
+                        }
+                    });
+                    mMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        public void onCompletion(MediaPlayer player) {
+                            synchronized(mLock) {
+                                mLock.notify();
+                            }
+                        }
+                    });
                     mInitialized = true;
                     mLock.notify();
                 }

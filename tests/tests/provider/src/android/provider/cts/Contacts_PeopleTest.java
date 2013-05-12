@@ -16,16 +16,12 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
+import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.IContentProvider;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -40,11 +36,11 @@ import android.test.InstrumentationTestCase;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.List;
 
-@TestTargetClass(android.provider.Contacts.People.class)
 public class Contacts_PeopleTest extends InstrumentationTestCase {
     private ContentResolver mContentResolver;
-    private IContentProvider mProvider;
+    private ContentProviderClient mProvider;
 
     private ArrayList<Uri> mPeopleRowsAdded;
     private ArrayList<Uri> mGroupRowsAdded;
@@ -71,7 +67,7 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
     protected void setUp() throws Exception {
         super.setUp();
         mContentResolver = getInstrumentation().getTargetContext().getContentResolver();
-        mProvider = mContentResolver.acquireProvider(Contacts.AUTHORITY);
+        mProvider = mContentResolver.acquireContentProviderClient(Contacts.AUTHORITY);
 
         mPeopleRowsAdded = new ArrayList<Uri>();
         mGroupRowsAdded = new ArrayList<Uri>();
@@ -114,38 +110,6 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods which add person to a group",
-            method = "addToMyContactsGroup",
-            args = {android.content.ContentResolver.class, long.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods which add person to a group",
-            method = "addToGroup",
-            args = {android.content.ContentResolver.class, long.class, long.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods which add person to a group",
-            method = "addToGroup",
-            args = {android.content.ContentResolver.class, long.class, java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods which add person to a group",
-            method = "queryGroups",
-            args = {android.content.ContentResolver.class, long.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods which add person to a group",
-            method = "createPersonInMyContactsGroup",
-            args = {android.content.ContentResolver.class, android.content.ContentValues.class}
-        )
-    })
     public void testAddToGroup() {
         Cursor cursor;
         try {
@@ -156,13 +120,13 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
 
             // People: test_people_0, Group: Groups.GROUP_MY_CONTACTS
             cursor = mProvider.query(mPeopleRowsAdded.get(0), PEOPLE_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             cursor.moveToFirst();
             int personId = cursor.getInt(PEOPLE_ID_INDEX);
             cursor.close();
             mRowsAdded.add(People.addToMyContactsGroup(mContentResolver, personId));
             cursor = mProvider.query(Groups.CONTENT_URI, GROUPS_PROJECTION,
-                    Groups.SYSTEM_ID + "='" + Groups.GROUP_MY_CONTACTS + "'", null, null);
+                    Groups.SYSTEM_ID + "='" + Groups.GROUP_MY_CONTACTS + "'", null, null, null);
             cursor.moveToFirst();
             int groupId = cursor.getInt(GROUPS_ID_INDEX);
             cursor.close();
@@ -179,14 +143,14 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
             values.put(People.LAST_TIME_CONTACTED, 0);
             mRowsAdded.add(People.createPersonInMyContactsGroup(mContentResolver, values));
             cursor = mProvider.query(People.CONTENT_URI, PEOPLE_PROJECTION,
-                    People.NAME + " = 'test_people_create'", null, null);
+                    People.NAME + " = 'test_people_create'", null, null, null);
 
             cursor.moveToFirst();
             personId = cursor.getInt(PEOPLE_ID_INDEX);
             mRowsAdded.add(ContentUris.withAppendedId(People.CONTENT_URI, personId));
             cursor.close();
             cursor = mProvider.query(Groups.CONTENT_URI, GROUPS_PROJECTION,
-                    Groups.SYSTEM_ID + "='" + Groups.GROUP_MY_CONTACTS + "'", null, null);
+                    Groups.SYSTEM_ID + "='" + Groups.GROUP_MY_CONTACTS + "'", null, null, null);
             cursor.moveToFirst();
             groupId = cursor.getInt(GROUPS_ID_INDEX);
             cursor.close();
@@ -198,63 +162,74 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
 
             // People: test_people_1, Group: test_group_0
             cursor = mProvider.query(mPeopleRowsAdded.get(1), PEOPLE_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             cursor.moveToFirst();
             personId = cursor.getInt(PEOPLE_ID_INDEX);
             cursor.close();
             cursor = mProvider.query(mGroupRowsAdded.get(0), GROUPS_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             cursor.moveToFirst();
             groupId = cursor.getInt(GROUPS_ID_INDEX);
             cursor.close();
             mRowsAdded.add(People.addToGroup(mContentResolver, personId, groupId));
             cursor = People.queryGroups(mContentResolver, personId);
-            cursor.moveToFirst();
-            assertEquals(personId, cursor.getInt(MEMBERSHIP_PERSON_ID_INDEX));
-            assertEquals(groupId, cursor.getInt(MEMBERSHIP_GROUP_ID_INDEX));
+            boolean found = false;
+            while (cursor.moveToNext()) {
+                assertEquals(personId, cursor.getInt(MEMBERSHIP_PERSON_ID_INDEX));
+                if (cursor.getInt(MEMBERSHIP_GROUP_ID_INDEX) == groupId) {
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue(found);
+
             cursor.close();
 
             // People: test_people_2, Group: test_group_1
             cursor = mProvider.query(mPeopleRowsAdded.get(2), PEOPLE_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             cursor.moveToFirst();
             personId = cursor.getInt(PEOPLE_ID_INDEX);
             cursor.close();
             String groupName = "test_group_1";
             mRowsAdded.add(People.addToGroup(mContentResolver, personId, groupName));
             cursor = People.queryGroups(mContentResolver, personId);
-            cursor.moveToFirst();
-            assertEquals(personId, cursor.getInt(MEMBERSHIP_PERSON_ID_INDEX));
-            groupId = cursor.getInt(MEMBERSHIP_GROUP_ID_INDEX);
+            List<Integer> groupIds = new ArrayList<Integer>();
+            while (cursor.moveToNext()) {
+                assertEquals(personId, cursor.getInt(MEMBERSHIP_PERSON_ID_INDEX));
+                groupIds.add(cursor.getInt(MEMBERSHIP_GROUP_ID_INDEX));
+            }
             cursor.close();
-            cursor = mProvider.query(Groups.CONTENT_URI, GROUPS_PROJECTION,
-                    Groups._ID + "=" + groupId, null, null);
-            cursor.moveToFirst();
-            assertEquals(groupName, cursor.getString(GROUPS_NAME_INDEX));
+
+            found = false;
+            for (int id : groupIds) {
+                cursor = mProvider.query(Groups.CONTENT_URI, GROUPS_PROJECTION,
+                        Groups._ID + "=" + id, null, null, null);
+                cursor.moveToFirst();
+                if (groupName.equals(cursor.getString(GROUPS_NAME_INDEX))) {
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue(found);
             cursor.close();
         } catch (RemoteException e) {
             fail("Unexpected RemoteException");
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test markAsContacted(ContentResolver resolver, long personId)",
-        method = "markAsContacted",
-        args = {android.content.ContentResolver.class, long.class}
-    )
     public void testMarkAsContacted() {
         Cursor cursor;
         try {
             cursor = mProvider.query(mPeopleRowsAdded.get(0), PEOPLE_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             cursor.moveToFirst();
             int personId = cursor.getInt(PEOPLE_ID_INDEX);
             long oldLastContacted = cursor.getLong(PEOPLE_LAST_CONTACTED_INDEX);
             cursor.close();
             People.markAsContacted(mContentResolver, personId);
             cursor = mProvider.query(mPeopleRowsAdded.get(0), PEOPLE_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             cursor.moveToFirst();
             long lastContacted = cursor.getLong(PEOPLE_LAST_CONTACTED_INDEX);
             assertTrue(oldLastContacted < lastContacted);
@@ -263,7 +238,7 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
 
             People.markAsContacted(mContentResolver, personId);
             cursor = mProvider.query(mPeopleRowsAdded.get(0), PEOPLE_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             cursor.moveToFirst();
             lastContacted = cursor.getLong(PEOPLE_LAST_CONTACTED_INDEX);
             assertTrue(oldLastContacted < lastContacted);
@@ -273,27 +248,6 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods access the photo data of person",
-            method = "setPhotoData",
-            args = {android.content.ContentResolver.class, android.net.Uri.class, byte[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods access the photo data of person",
-            method = "loadContactPhoto",
-            args = {android.content.Context.class, android.net.Uri.class, int.class,
-                    android.graphics.BitmapFactory.Options.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods access the photo data of person",
-            method = "openContactPhotoInputStream",
-            args = {android.content.ContentResolver.class, android.net.Uri.class}
-        )
-    })
     public void testAccessPhotoData() {
         Context context = getInstrumentation().getTargetContext();
         try {
@@ -308,8 +262,8 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
                     mContentResolver, mPeopleRowsAdded.get(0));
             assertNotNull(photoStream);
             Bitmap bitmap = BitmapFactory.decodeStream(photoStream, null, null);
-            assertEquals(212, bitmap.getWidth());
-            assertEquals(142, bitmap.getHeight());
+            assertEquals(96, bitmap.getWidth());
+            assertEquals(64, bitmap.getHeight());
 
             photoStream = People.openContactPhotoInputStream(mContentResolver,
                     mPeopleRowsAdded.get(1));
@@ -317,8 +271,8 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
 
             bitmap = People.loadContactPhoto(context, mPeopleRowsAdded.get(0),
                     com.android.cts.stub.R.drawable.size_48x48, null);
-            assertEquals(212, bitmap.getWidth());
-            assertEquals(142, bitmap.getHeight());
+            assertEquals(96, bitmap.getWidth());
+            assertEquals(64, bitmap.getHeight());
 
             bitmap = People.loadContactPhoto(context, null,
                     com.android.cts.stub.R.drawable.size_48x48, null);
@@ -328,4 +282,3 @@ public class Contacts_PeopleTest extends InstrumentationTestCase {
         }
     }
 }
-

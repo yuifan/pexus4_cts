@@ -18,26 +18,21 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.app.Activity;
 import android.app.Instrumentation;
+import android.cts.util.PollingCheck;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.UiThreadTest;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
-import android.view.animation.cts.DelayedCheck;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-@TestTargetClass(android.widget.Toast.class)
 public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
     private static final String TEST_TOAST_TEXT = "test toast";
     private static final long TIME_FOR_UI_OPERATION  = 1000L;
@@ -45,6 +40,8 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
     private Toast mToast;
     private Activity mActivity;
     private Instrumentation mInstrumentation;
+    private boolean mLayoutDone;
+    private ViewTreeObserver.OnGlobalLayoutListener mLayoutListener;
 
     public ToastTest() {
         super("com.android.cts.stub", StubActivity.class);
@@ -57,15 +54,14 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         mActivity = getActivity();
         mInstrumentation = getInstrumentation();
         mToast = new Toast(mActivity);
+        mLayoutDone = false;
+        mLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
+            public void onGlobalLayout() {
+                mLayoutDone = true;
+            }
+        };
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "Toast",
-        args = {android.content.Context.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "should add @throws clause into javadoc of " +
-            "Toast constructor when the input Context is null")
     public void testConstructor() {
         new Toast(mActivity);
 
@@ -78,7 +74,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
     }
 
     private void assertShowToast(final View view) {
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return null != view.getParent();
@@ -88,7 +84,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
 
     private void assertShowAndHide(final View view) {
         assertShowToast(view);
-        new DelayedCheck(TIME_OUT) {
+        new PollingCheck(TIME_OUT) {
             @Override
             protected boolean check() {
                 return null == view.getParent();
@@ -102,11 +98,21 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertNull(view.getParent());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "show",
-        args = {}
-    )
+    private void registerLayoutListener(final View view) {
+        mLayoutDone = false;
+        view.getViewTreeObserver().addOnGlobalLayoutListener(mLayoutListener);
+    }
+
+    private void assertLayoutDone(final View view) {
+        new PollingCheck(TIME_OUT) {
+            @Override
+            protected boolean check() {
+                return mLayoutDone;
+            }
+        }.run();
+        view.getViewTreeObserver().removeOnGlobalLayoutListener(mLayoutListener);
+    }
+
     public void testShow() {
         mActivity.runOnUiThread(new Runnable() {
             public void run() {
@@ -133,13 +139,6 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertShowToast(view);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "show",
-        args = {}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. It can" +
-            " not be shown if did not set any view.")
     @UiThreadTest
     public void testShowFailure() {
         // do not have any views.
@@ -152,11 +151,6 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "cancel",
-        args = {}
-    )
     public void testCancel() throws InterruptedException {
         mActivity.runOnUiThread(new Runnable() {
             public void run() {
@@ -180,18 +174,6 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertNotShowToast(view);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setView",
-            args = {android.view.View.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getView",
-            args = {}
-        )
-    })
     public void testAccessView() {
         mActivity.runOnUiThread(new Runnable() {
             public void run() {
@@ -215,19 +197,6 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertSame(imageView, mToast.getView());
         assertShowAndHide(imageView);
     }
-
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setDuration",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDuration",
-            args = {}
-        )
-    })
     public void testAccessDuration() {
         long start = SystemClock.uptimeMillis();
         mActivity.runOnUiThread(new Runnable() {
@@ -260,23 +229,6 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertTrue(longDuration > shortDuration);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setMargin",
-            args = {float.class, float.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getHorizontalMargin",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getVerticalMargin",
-            args = {}
-        )
-    })
     public void testAccessMargin() {
         mActivity.runOnUiThread(new Runnable() {
             public void run() {
@@ -293,6 +245,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
             public void run() {
                 mToast.setMargin(horizontal1, vertical1);
                 mToast.show();
+                registerLayoutListener(mToast.getView());
             }
         });
         mInstrumentation.waitForIdleSync();
@@ -303,6 +256,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         WindowManager.LayoutParams params1 = (WindowManager.LayoutParams) view.getLayoutParams();
         assertEquals(horizontal1, params1.horizontalMargin);
         assertEquals(vertical1, params1.verticalMargin);
+        assertLayoutDone(view);
         int[] xy1 = new int[2];
         view.getLocationOnScreen(xy1);
         assertShowAndHide(view);
@@ -313,6 +267,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
             public void run() {
                 mToast.setMargin(horizontal2, vertical2);
                 mToast.show();
+                registerLayoutListener(mToast.getView());
             }
         });
         mInstrumentation.waitForIdleSync();
@@ -324,6 +279,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertEquals(horizontal2, params2.horizontalMargin);
         assertEquals(vertical2, params2.verticalMargin);
 
+        assertLayoutDone(view);
         int[] xy2 = new int[2];
         view.getLocationOnScreen(xy2);
         assertShowAndHide(view);
@@ -332,36 +288,13 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertTrue(xy1[1] < xy2[1]);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setGravity",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getGravity",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getXOffset",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getYOffset",
-            args = {}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete." +
-            " It's not clear about how do xOffset and yOffset take effect.")
     public void testAccessGravity() {
         mActivity.runOnUiThread(new Runnable() {
             public void run() {
                 mToast = Toast.makeText(mActivity, TEST_TOAST_TEXT, Toast.LENGTH_SHORT);
                 mToast.setGravity(Gravity.CENTER, 0, 0);
                 mToast.show();
+                registerLayoutListener(mToast.getView());
             }
         });
         mInstrumentation.waitForIdleSync();
@@ -370,6 +303,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertEquals(Gravity.CENTER, mToast.getGravity());
         assertEquals(0, mToast.getXOffset());
         assertEquals(0, mToast.getYOffset());
+        assertLayoutDone(view);
         int[] centerXY = new int[2];
         view.getLocationOnScreen(centerXY);
         assertShowAndHide(view);
@@ -378,6 +312,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
             public void run() {
                 mToast.setGravity(Gravity.BOTTOM, 0, 0);
                 mToast.show();
+                registerLayoutListener(mToast.getView());
             }
         });
         mInstrumentation.waitForIdleSync();
@@ -386,6 +321,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertEquals(Gravity.BOTTOM, mToast.getGravity());
         assertEquals(0, mToast.getXOffset());
         assertEquals(0, mToast.getYOffset());
+        assertLayoutDone(view);
         int[] bottomXY = new int[2];
         view.getLocationOnScreen(bottomXY);
         assertShowAndHide(view);
@@ -401,6 +337,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
             public void run() {
                 mToast.setGravity(Gravity.BOTTOM, xOffset, yOffset);
                 mToast.show();
+                registerLayoutListener(mToast.getView());
             }
         });
         mInstrumentation.waitForIdleSync();
@@ -409,6 +346,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertEquals(Gravity.BOTTOM, mToast.getGravity());
         assertEquals(xOffset, mToast.getXOffset());
         assertEquals(yOffset, mToast.getYOffset());
+        assertLayoutDone(view);
         int[] bottomOffsetXY = new int[2];
         view.getLocationOnScreen(bottomOffsetXY);
         assertShowAndHide(view);
@@ -417,15 +355,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         assertEquals(bottomXY[1] - yOffset, bottomOffsetXY[1]);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "makeText",
-        args = {android.content.Context.class, java.lang.CharSequence.class, int.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "1. should add @throws clause into javadoc of " +
-            "Toast#makeText(Context, CharSequence, int) when context is null. 2. javadoc " +
-            "declares it just contains a text view, but actually it's a LinearLayout")
     public void testMakeText1() {
         mToast = Toast.makeText(mActivity, "android", Toast.LENGTH_SHORT);
         assertNotNull(mToast);
@@ -453,15 +383,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "makeText",
-        args = {android.content.Context.class, int.class, int.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "1. should add @throws clause into javadoc of " +
-            "Toast#makeText(Context, CharSequence, int) when context is null. 2. javadoc " +
-            "declares it just contains a text view, but actually it's a LinearLayout")
     public void testMakeText2() {
         mToast = Toast.makeText(mActivity, R.string.hello_world, Toast.LENGTH_LONG);
 
@@ -484,14 +406,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setText",
-        args = {int.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "should add @throws clause into javadoc of " +
-            "Toast#setText(int) when set a negative resouce id")
     public void testSetText1() {
         mToast = Toast.makeText(mActivity, R.string.text, Toast.LENGTH_LONG);
 
@@ -509,14 +424,7 @@ public class ToastTest extends ActivityInstrumentationTestCase2<StubActivity> {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setText",
-        args = {java.lang.CharSequence.class}
-    )
     @UiThreadTest
-    @ToBeFixed(bug = "1695243", explanation = "should add @throws clause into javadoc of " +
-            "Toast#setText(CharSequence) when view is null")
     public void testSetText2() {
         mToast = Toast.makeText(mActivity, R.string.text, Toast.LENGTH_LONG);
 

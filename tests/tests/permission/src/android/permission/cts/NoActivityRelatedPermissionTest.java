@@ -16,18 +16,20 @@
 
 package android.permission.cts;
 
-import dalvik.annotation.TestTargetClass;
 
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.suitebuilder.annotation.MediumTest;
+import android.test.suitebuilder.annotation.Suppress;
+import android.view.WindowManager;
+import android.view.WindowManager.BadTokenException;
 
 /**
  * Verify the Activity related operations require specific permissions.
  */
-@TestTargetClass(Activity.class)
 public class NoActivityRelatedPermissionTest
         extends ActivityInstrumentationTestCase2<PermissionStubActivity> {
 

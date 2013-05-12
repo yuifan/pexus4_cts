@@ -18,9 +18,6 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -43,7 +40,6 @@ import android.widget.TabHost.TabSpec;
 /**
  * Test {@link TabSpec}.
  */
-@TestTargetClass(TabSpec.class)
 public class TabHost_TabSpecTest extends ActivityInstrumentationTestCase2<TabHostStubActivity> {
     private static final String TAG_TAB2 = "tab 2";
 
@@ -61,11 +57,6 @@ public class TabHost_TabSpecTest extends ActivityInstrumentationTestCase2<TabHos
         mTabHost = mActivity.getTabHost();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setIndicator",
-        args = {java.lang.CharSequence.class}
-    )
     @UiThreadTest
     public void testSetIndicator1() {
         TabSpec tabSpec = mTabHost.newTabSpec(TAG_TAB2);
@@ -89,18 +80,13 @@ public class TabHost_TabSpecTest extends ActivityInstrumentationTestCase2<TabHos
         assertEquals("", tvTitle.getText().toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setIndicator",
-        args = {java.lang.CharSequence.class, android.graphics.drawable.Drawable.class}
-    )
     @UiThreadTest
     public void testSetIndicator2() {
         TabSpec tabSpec = mTabHost.newTabSpec(TAG_TAB2);
 
         // normal value
         Drawable d = new ColorDrawable(Color.GRAY);
-        tabSpec.setIndicator(TAG_TAB2, d);
+        tabSpec.setIndicator("", d);
         tabSpec.setContent(new MockTabContentFactoryText());
         mTabHost.addTab(tabSpec);
         mTabHost.setCurrentTab(1);
@@ -109,7 +95,7 @@ public class TabHost_TabSpecTest extends ActivityInstrumentationTestCase2<TabHos
         int idIcon = com.android.internal.R.id.icon;
         TextView tvTitle = (TextView) currentTabView.findViewById(idTitle);
         ImageView ivIcon = ((ImageView) currentTabView.findViewById(idIcon));
-        assertEquals(TAG_TAB2, tvTitle.getText().toString());
+        assertEquals("", tvTitle.getText().toString());
         assertSame(d, ivIcon.getDrawable());
 
         // exceptional
@@ -134,13 +120,19 @@ public class TabHost_TabSpecTest extends ActivityInstrumentationTestCase2<TabHos
         ivIcon = ((ImageView) currentTabView.findViewById(idIcon));
         assertEquals("", tvTitle.getText().toString());
         assertNull(ivIcon.getDrawable());
+
+        tabSpec = mTabHost.newTabSpec("tab 5");
+        tabSpec.setIndicator("half cube", d);
+        tabSpec.setContent(new MockTabContentFactoryList());
+        mTabHost.addTab(tabSpec);
+        mTabHost.setCurrentTab(4);
+        currentTabView = mTabHost.getCurrentTabView();
+        tvTitle = (TextView) currentTabView.findViewById(idTitle);
+        ivIcon = ((ImageView) currentTabView.findViewById(idIcon));
+        assertEquals("half cube", tvTitle.getText().toString());
+        assertNull(ivIcon.getDrawable());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setContent",
-        args = {int.class}
-    )
     @UiThreadTest
     public void testSetContent1() {
         TabSpec tabSpec2 = mTabHost.newTabSpec("tab spec 2");
@@ -162,11 +154,6 @@ public class TabHost_TabSpecTest extends ActivityInstrumentationTestCase2<TabHos
         assertTrue(mTabHost.getCurrentView() instanceof ListView);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setContent",
-        args = {android.widget.TabHost.TabContentFactory.class}
-    )
     @UiThreadTest
     public void testSetContent2() {
         TabSpec tabSpec2 = mTabHost.newTabSpec("tab spec 2");
@@ -187,11 +174,6 @@ public class TabHost_TabSpecTest extends ActivityInstrumentationTestCase2<TabHos
         assertTrue(mTabHost.getCurrentView() instanceof ListView);
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL,
-        method = "setContent",
-        args = {android.content.Intent.class}
-    )
     public void testSetContent3() {
         // The scheme of uri string must be "ctstest" to launch MockURLSpanTestActivity
         Uri uri = Uri.parse("ctstest://tabhost_tabspec/test");

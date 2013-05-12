@@ -18,29 +18,25 @@ package android.provider.cts;
 
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningTaskInfo;
+import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.IContentProvider;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.RemoteException;
 import android.provider.Browser;
 import android.provider.Browser.BookmarkColumns;
 import android.provider.Browser.SearchColumns;
+import android.provider.BrowserContract;
+import android.provider.BrowserContract.Bookmarks;
+import android.provider.BrowserContract.History;
 import android.test.ActivityInstrumentationTestCase2;
-import android.webkit.WebIconDatabase;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.ToBeFixed;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-@TestTargetClass(android.provider.Browser.class)
 public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubActivity> {
     public BrowserTest() {
         super("com.android.cts.stub", BrowserStubActivity.class);
@@ -48,8 +44,9 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
 
     private Context mContext;
     private ContentResolver mContentResolver;
-    private IContentProvider mProvider;
+    private ContentProviderClient mProvider;
     private BrowserStubActivity mActivity;
+    private boolean mMasterSyncEnabled;
 
     // the backup for the 2 tables which we will modify in test cases
     private ArrayList<ContentValues> mBookmarksBackup;
@@ -66,24 +63,44 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
 
         mContext = getInstrumentation().getTargetContext();
         mContentResolver = mContext.getContentResolver();
-        mProvider = mContentResolver.acquireProvider(Browser.BOOKMARKS_URI.getAuthority());
+        mProvider = mContentResolver.acquireContentProviderClient(
+                Browser.BOOKMARKS_URI.getAuthority());
         mBookmarksBackup = new ArrayList<ContentValues>();
         mSearchesBackup = new ArrayList<ContentValues>();
 
+        // Disable sync
+        mMasterSyncEnabled = ContentResolver.getMasterSyncAutomatically();
+        ContentResolver.setMasterSyncAutomatically(false);
+
         // backup the current contents in database
-        Cursor cursor = mProvider.query(Browser.BOOKMARKS_URI, null, null, null, null);
+        Cursor cursor = mProvider.query(Bookmarks.CONTENT_URI, null, null, null, null, null);
         if (cursor.moveToFirst()) {
+            String[] colNames = cursor.getColumnNames();
             while (!cursor.isAfterLast()) {
                 ContentValues value = new ContentValues();
 
-                value.put(BookmarkColumns._ID, cursor.getInt(0));
-                value.put(BookmarkColumns.TITLE, cursor.getString(1));
-                value.put(BookmarkColumns.URL, cursor.getString(2));
-                value.put(BookmarkColumns.VISITS, cursor.getInt(3));
-                value.put(BookmarkColumns.DATE, cursor.getLong(4));
-                value.put(BookmarkColumns.CREATED, cursor.getLong(5));
-                value.put(BookmarkColumns.BOOKMARK, cursor.getInt(7));
-                value.put(BookmarkColumns.FAVICON, cursor.getBlob(8));
+                for (int i = 0; i < colNames.length; i++) {
+                    if (Bookmarks.PARENT_SOURCE_ID.equals(colNames[i])
+                            || Bookmarks.INSERT_AFTER_SOURCE_ID.equals(colNames[i])
+                            || Bookmarks.TYPE.equals(colNames[i])) {
+                        // These aren't actual columns, so skip them in the backup
+                        continue;
+                    }
+                    switch (cursor.getType(i)) {
+                    case Cursor.FIELD_TYPE_BLOB:
+                        value.put(colNames[i], cursor.getBlob(i));
+                        break;
+                    case Cursor.FIELD_TYPE_FLOAT:
+                        value.put(colNames[i], cursor.getFloat(i));
+                        break;
+                    case Cursor.FIELD_TYPE_INTEGER:
+                        value.put(colNames[i], cursor.getLong(i));
+                        break;
+                    case Cursor.FIELD_TYPE_STRING:
+                        value.put(colNames[i], cursor.getString(i));
+                        break;
+                    }
+                }
                 mBookmarksBackup.add(value);
 
                 cursor.moveToNext();
@@ -91,7 +108,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         }
         cursor.close();
 
-        cursor = mProvider.query(Browser.SEARCHES_URI, null, null, null, null);
+        cursor = mProvider.query(Browser.SEARCHES_URI, null, null, null, null, null);
         if (cursor.moveToFirst()) {
             while (!cursor.isAfterLast()) {
                 ContentValues value = new ContentValues();
@@ -106,44 +123,43 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         }
         cursor.close();
 
-        mProvider.delete(Browser.BOOKMARKS_URI, null, null);
+        Uri uri = Bookmarks.CONTENT_URI.buildUpon()
+                .appendQueryParameter(BrowserContract.CALLER_IS_SYNCADAPTER, "true")
+                .build();
+        mProvider.delete(uri, null, null);
         mProvider.delete(Browser.SEARCHES_URI, null, null);
+        mProvider.delete(History.CONTENT_URI, null, null);
 
         mActivity = getActivity();
     }
 
     @Override
     protected void tearDown() throws Exception {
-        // clear all new contents added in test cases.
-        mProvider.delete(Browser.BOOKMARKS_URI, null, null);
-        mProvider.delete(Browser.SEARCHES_URI, null, null);
+        try {
 
-        // recover the old backup contents
-        for (ContentValues value : mBookmarksBackup) {
-            mProvider.insert(Browser.BOOKMARKS_URI, value);
+            // clear all new contents added in test cases.
+            Uri uri = Bookmarks.CONTENT_URI.buildUpon()
+                .appendQueryParameter(BrowserContract.CALLER_IS_SYNCADAPTER, "true")
+                .build();
+            mProvider.delete(uri, null, null);
+            mProvider.delete(Browser.SEARCHES_URI, null, null);
+
+            // recover the old backup contents
+            for (ContentValues value : mBookmarksBackup) {
+                mProvider.insert(uri, value);
+            }
+
+            for (ContentValues value : mSearchesBackup) {
+                mProvider.insert(Browser.SEARCHES_URI, value);
+            }
+
+            // Re-enable sync
+            ContentResolver.setMasterSyncAutomatically(mMasterSyncEnabled);
+        } finally {
+            super.tearDown();
         }
-
-        for (ContentValues value : mSearchesBackup) {
-            mProvider.insert(Browser.SEARCHES_URI, value);
-        }
-
-        super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods to access the search string in the searches database",
-            method = "addSearchUrl",
-            args = {android.content.ContentResolver.class, java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test methods to access the search string in the searches database",
-            method = "clearSearches",
-            args = {android.content.ContentResolver.class}
-        )
-    })
     public void testAccessSearches() {
         final String searchString = "search string";
         final String searchStringAnother = "another search string";
@@ -154,7 +170,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             cursor = mProvider.query(
                     Browser.SEARCHES_URI,
                     Browser.SEARCHES_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(1, cursor.getCount());
             cursor.moveToFirst();
             assertEquals(searchString,
@@ -165,7 +181,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             Browser.addSearchUrl(mContentResolver, searchString);
             cursor = mProvider.query(Browser.SEARCHES_URI,
                     Browser.SEARCHES_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(1, cursor.getCount());
             cursor.moveToFirst();
             long date = cursor.getLong(Browser.SEARCHES_PROJECTION_DATE_INDEX);
@@ -177,7 +193,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             Browser.addSearchUrl(mContentResolver, searchStringAnother);
             cursor = mProvider.query(Browser.SEARCHES_URI,
                     Browser.SEARCHES_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(2, cursor.getCount());
             cursor.moveToFirst();
             assertEquals(searchString,
@@ -191,19 +207,13 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             cursor = mProvider.query(
                     Browser.SEARCHES_URI,
                     Browser.SEARCHES_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(0, cursor.getCount());
         } catch (RemoteException e) {
             fail("Unexpected RemoteException");
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "test getAllBookmarks(ContentResolver cr)",
-        method = "getAllBookmarks",
-        args = {android.content.ContentResolver.class}
-    )
     public void testGetAllBookmarks() {
         Cursor cursor;
         final String bookmarkUrl1 = "www.bookmark1.com";
@@ -236,12 +246,6 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "test getAllVisitedUrls(ContentResolver cr)",
-        method = "getAllVisitedUrls",
-        args = {android.content.ContentResolver.class}
-    )
     public void testGetAllVisitedUrls() {
         Cursor cursor;
         final String visitedUrl1 = "www.visited1.com";
@@ -279,12 +283,6 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "test updateVisitedHistory(ContentResolver cr, String url, boolean real)",
-        method = "updateVisitedHistory",
-        args = {android.content.ContentResolver.class, java.lang.String.class, boolean.class}
-    )
     public void testUpdateVisitedHistory() {
         Cursor cursor;
         final String visitedHistoryUrl = "www.visited-history.com";
@@ -294,18 +292,18 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(0, cursor.getCount());
             cursor.close();
             Browser.updateVisitedHistory(mContentResolver, visitedHistoryUrl, true);
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(1, cursor.getCount());
             cursor.moveToFirst();
             assertEquals(visitedHistoryUrl, cursor.getString(Browser.HISTORY_PROJECTION_URL_INDEX));
-            assertEquals(visitedHistoryUrl, 
+            assertEquals(visitedHistoryUrl,
                     cursor.getString(Browser.HISTORY_PROJECTION_TITLE_INDEX));
             assertEquals(0, cursor.getInt(Browser.HISTORY_PROJECTION_BOOKMARK_INDEX));
             assertEquals(1, cursor.getInt(Browser.HISTORY_PROJECTION_VISITS_INDEX));
@@ -316,11 +314,11 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(1, cursor.getCount());
             cursor.moveToFirst();
             assertEquals(visitedHistoryUrl, cursor.getString(Browser.HISTORY_PROJECTION_URL_INDEX));
-            assertEquals(visitedHistoryUrl, 
+            assertEquals(visitedHistoryUrl,
                     cursor.getString(Browser.HISTORY_PROJECTION_TITLE_INDEX));
             assertEquals(0, cursor.getInt(Browser.HISTORY_PROJECTION_BOOKMARK_INDEX));
             assertEquals(2, cursor.getInt(Browser.HISTORY_PROJECTION_VISITS_INDEX));
@@ -331,38 +329,6 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test methods which help user to access the history table",
-            method = "truncateHistory",
-            args = {android.content.ContentResolver.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test methods which help user to access the history table",
-            method = "clearHistory",
-            args = {android.content.ContentResolver.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test methods which help user to access the history table",
-            method = "canClearHistory",
-            args = {android.content.ContentResolver.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test methods which help user to access the history table",
-            method = "deleteFromHistory",
-            args = {android.content.ContentResolver.class, java.lang.String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "test methods which help user to access the history table",
-            method = "deleteHistoryTimeFrame",
-            args = {android.content.ContentResolver.class, long.class, long.class}
-        )
-    })
     public void testAccessHistory() {
         Cursor cursor;
         // NOTE: this value must keep same with the Browser.MAX_HISTORY_COUNT.
@@ -370,8 +336,8 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         final String bookmarkUrl = "www.visited-bookmark.com";
         final String historyUrlPrefix = "www.visited-history";
         final String historyUrlPostfix = ".com";
-
-        try {
+        final long TIME_BASE = new Date().getTime() - 1000;
+            try {
             assertFalse(Browser.canClearHistory(mContentResolver));
             Browser.clearHistory(mContentResolver);
             assertFalse(Browser.canClearHistory(mContentResolver));
@@ -383,7 +349,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             for (int i = 1; i <= MAX_HISTORY_COUNT - 1; i++) {
                 value.put(BookmarkColumns.URL, historyUrlPrefix + i + historyUrlPostfix);
                 value.put(BookmarkColumns.BOOKMARK, 0);
-                value.put(BookmarkColumns.DATE, i);
+                value.put(BookmarkColumns.DATE, i + TIME_BASE);
                 mProvider.insert(Browser.BOOKMARKS_URI, value);
             }
             value.put(BookmarkColumns.URL, bookmarkUrl);
@@ -395,14 +361,14 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(MAX_HISTORY_COUNT, cursor.getCount());
             cursor.close();
             Browser.truncateHistory(mContentResolver);
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(MAX_HISTORY_COUNT, cursor.getCount());
             cursor.close();
 
@@ -411,22 +377,22 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             value.put(BookmarkColumns.URL, historyUrlPrefix
                     + MAX_HISTORY_COUNT + historyUrlPostfix);
             value.put(BookmarkColumns.BOOKMARK, 0);
-            value.put(BookmarkColumns.DATE, MAX_HISTORY_COUNT);
+            value.put(BookmarkColumns.DATE, MAX_HISTORY_COUNT + TIME_BASE);
             mProvider.insert(Browser.BOOKMARKS_URI, value);
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(MAX_HISTORY_COUNT + 1, cursor.getCount());
             cursor.close();
             Browser.truncateHistory(mContentResolver);
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, null);
+                    null, null, null, null);
             assertEquals(MAX_HISTORY_COUNT + 1 - Browser.TRUNCATE_N_OLDEST, cursor.getCount());
             cursor.moveToFirst();
-            assertEquals(Browser.TRUNCATE_N_OLDEST + 1,
+            assertEquals(Browser.TRUNCATE_N_OLDEST + 1 + TIME_BASE,
                     cursor.getLong(Browser.HISTORY_PROJECTION_DATE_INDEX));
             cursor.close();
 
@@ -435,10 +401,11 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
                     BookmarkColumns.BOOKMARK + " = 0",
-                    null, BookmarkColumns.DATE);
+                    null, BookmarkColumns.DATE, null);
             int historyCountBeforeDelete = cursor.getCount();
             cursor.moveToLast();
-            assertEquals(MAX_HISTORY_COUNT, cursor.getLong(Browser.HISTORY_PROJECTION_DATE_INDEX));
+            assertEquals(MAX_HISTORY_COUNT + TIME_BASE,
+                    cursor.getLong(Browser.HISTORY_PROJECTION_DATE_INDEX));
             cursor.close();
             Browser.deleteFromHistory(mContentResolver,
                     historyUrlPrefix + MAX_HISTORY_COUNT + historyUrlPostfix);
@@ -446,11 +413,11 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
                     BookmarkColumns.BOOKMARK + " = 0",
-                    null, BookmarkColumns.DATE);
+                    null, BookmarkColumns.DATE, null);
             int historyCountAfterDelete = cursor.getCount();
             assertEquals(historyCountBeforeDelete - 1, historyCountAfterDelete);
             cursor.moveToLast();
-            assertEquals(MAX_HISTORY_COUNT - 1, 
+            assertEquals(MAX_HISTORY_COUNT - 1 + TIME_BASE,
                     cursor.getLong(Browser.HISTORY_PROJECTION_DATE_INDEX));
             cursor.close();
 
@@ -461,21 +428,21 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
                     BookmarkColumns.BOOKMARK + " = 0",
-                    null, BookmarkColumns.DATE);
+                    null, BookmarkColumns.DATE, null);
             historyCountAfterDelete = cursor.getCount();
             assertEquals(historyCountBeforeDelete, historyCountAfterDelete);
             cursor.close();
 
             // Specify the history in a time frame to be deleted
             historyCountBeforeDelete = historyCountAfterDelete;
-            long begin = 6;
-            long end = 20;
+            long begin = 6 + TIME_BASE;
+            long end = 20 + TIME_BASE;
             Browser.deleteHistoryTimeFrame(mContentResolver, begin, end);
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
                     BookmarkColumns.BOOKMARK + " = 0",
-                    null, BookmarkColumns.DATE);
+                    null, BookmarkColumns.DATE, null);
             historyCountAfterDelete = cursor.getCount();
             assertEquals(historyCountBeforeDelete - (end - begin), historyCountAfterDelete);
             cursor.moveToFirst();
@@ -486,13 +453,13 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             historyCountBeforeDelete = historyCountAfterDelete;
             long firstDate = end;
             begin = -1;
-            end = 34;
+            end = 34 + TIME_BASE;
             Browser.deleteHistoryTimeFrame(mContentResolver, begin, end);
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
                     BookmarkColumns.BOOKMARK + " = 0",
-                    null, BookmarkColumns.DATE);
+                    null, BookmarkColumns.DATE, null);
             historyCountAfterDelete = cursor.getCount();
             assertEquals(historyCountBeforeDelete - (end - firstDate), historyCountAfterDelete);
             cursor.moveToFirst();
@@ -503,14 +470,14 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
 
             // Specify the history in a time frame (not specify end) to be deleted.
             historyCountBeforeDelete = historyCountAfterDelete;
-            begin = MAX_HISTORY_COUNT - 10;
+            begin = MAX_HISTORY_COUNT - 10 + TIME_BASE;
             end = -1;
             Browser.deleteHistoryTimeFrame(mContentResolver, begin, end);
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
                     BookmarkColumns.BOOKMARK + " = 0",
-                    null, BookmarkColumns.DATE);
+                    null, BookmarkColumns.DATE, null);
             historyCountAfterDelete = cursor.getCount();
             assertEquals(historyCountBeforeDelete - (lastDate - begin + 1),
                     historyCountAfterDelete);
@@ -524,7 +491,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             cursor = mProvider.query(
                     Browser.BOOKMARKS_URI,
                     Browser.HISTORY_PROJECTION,
-                    null, null, BookmarkColumns.DATE);
+                    null, null, BookmarkColumns.DATE, null);
             assertEquals(1, cursor.getCount());
             cursor.moveToFirst();
             assertEquals(bookmarkUrl, cursor.getString(Browser.HISTORY_PROJECTION_URL_INDEX));
@@ -537,25 +504,10 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "test requestAllIcons(ContentResolver, String, WebIconDatabase.IconListener).",
-        method = "requestAllIcons",
-        args = {android.content.ContentResolver.class, java.lang.String.class, 
-                android.webkit.WebIconDatabase.IconListener.class}
-    )
     public void testRequestAllIcons() {
         Browser.requestAllIcons(mContentResolver, null, null);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "test saveBookmark(Context c, String title,  String url)",
-        method = "saveBookmark",
-        args = {android.content.Context.class, java.lang.String.class, java.lang.String.class}
-    )
-    @ToBeFixed( bug = "1558560", explanation = "Can not select activity item in ResolverActivity" +
-            " by getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)")
     public void testSaveBookmark() {
         // TODO: send KEYCODE_DPAD_CENTER to skip the resolve page, but no effect.
 //        assertFalse(isRunning(ADD_BOOKMARK_CLASS_NAME));
@@ -571,14 +523,6 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
         // TODO: how to finish the activity.
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "test sendString(Context c, String s)",
-        method = "sendString",
-        args = {android.content.Context.class, java.lang.String.class}
-    )
-    @ToBeFixed( bug = "1558273", explanation = "android.provider.Browser#" +
-            "sendString(Context c, String s) does not return")
     public void testSendString() {
         // assertFalse(isRunning(COMPOSE_MESSAGE_CLASS_NAME));
         // Browser.sendString(mActivity, "string to be sent");
@@ -660,7 +604,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
                     BOOKMARKS_PROJECTION,
                     BookmarkColumns.TITLE + " = ?",
                     new String[] {insertBookmarkTitle},
-                    BookmarkColumns.DATE);
+                    BookmarkColumns.DATE, null);
             assertTrue(cursor.moveToNext());
             assertEquals(insertBookmarkTitle, cursor.getString(TITLE_INDEX));
             assertEquals(insertBookmarkUrl,cursor.getString(URL_INDEX));
@@ -687,7 +631,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
                     Browser.BOOKMARKS_URI,
                     BOOKMARKS_PROJECTION,
                     BookmarkColumns._ID + " = " + Id,
-                    null, null);
+                    null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(updateBookmarkTitle, cursor.getString(TITLE_INDEX));
             assertEquals(updateBookmarkUrl,cursor.getString(URL_INDEX));
@@ -704,7 +648,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
                     Browser.BOOKMARKS_URI,
                     BOOKMARKS_PROJECTION,
                     BookmarkColumns._ID + " = " + Id,
-                    null, null);
+                    null, null, null);
             assertEquals(0, cursor.getCount());
         } catch (RemoteException e) {
             fail("Unexpected RemoteException");
@@ -731,7 +675,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             Uri insertUri = mProvider.insert(Browser.SEARCHES_URI, value);
             Cursor cursor = mProvider.query(Browser.SEARCHES_URI,
                     Browser.SEARCHES_PROJECTION, SearchColumns.SEARCH + " = ?",
-                    new String[] {insertSearch}, null);
+                    new String[] {insertSearch}, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(insertSearch,
                     cursor.getString(Browser.SEARCHES_PROJECTION_SEARCH_INDEX));
@@ -750,7 +694,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
                     SearchColumns._ID + " = " + Id, null);
             cursor = mProvider.query(Browser.SEARCHES_URI,
                     Browser.SEARCHES_PROJECTION,
-                    SearchColumns._ID + " = " + Id, null, null);
+                    SearchColumns._ID + " = " + Id, null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(updateSearch,
                     cursor.getString(Browser.SEARCHES_PROJECTION_SEARCH_INDEX));
@@ -762,7 +706,7 @@ public class BrowserTest extends ActivityInstrumentationTestCase2<BrowserStubAct
             mProvider.delete(insertUri, null, null);
             cursor = mProvider.query(Browser.SEARCHES_URI,
                     Browser.SEARCHES_PROJECTION,
-                    SearchColumns._ID + " = " + Id, null, null);
+                    SearchColumns._ID + " = " + Id, null, null, null);
             assertEquals(0, cursor.getCount());
         } catch (RemoteException e) {
             fail("Unexpected RemoteException");

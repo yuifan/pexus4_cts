@@ -84,6 +84,8 @@ public class MediaStoreAudioTestHelper {
 
         public static final int IS_MUSIC = 1;
 
+        public static final int IS_DRM = 0;
+
         public static final int YEAR = 1992;
 
         public static final int TRACK = 1;
@@ -112,7 +114,7 @@ public class MediaStoreAudioTestHelper {
         public static final String EXTERNAL_DATA = Environment.getExternalStorageDirectory() +
                 "/" + FILE_NAME;
 
-        public static final long DATE_MODIFIED = System.currentTimeMillis();
+        public static final long DATE_MODIFIED = System.currentTimeMillis() / 1000;
 
         public static final String GENRE = "POP";
         @Override
@@ -134,6 +136,7 @@ public class MediaStoreAudioTestHelper {
             values.put(Media.IS_ALARM, IS_ALARM);
             values.put(Media.IS_NOTIFICATION, IS_NOTIFICATION);
             values.put(Media.IS_RINGTONE, IS_RINGTONE);
+            values.put(Media.IS_DRM, IS_DRM);
 
             return values;
         }
@@ -156,6 +159,8 @@ public class MediaStoreAudioTestHelper {
         public static final int IS_ALARM = 0;
 
         public static final int IS_MUSIC = 0;
+
+        public static final int IS_DRM = 0;
 
         public static final int YEAR = 1992;
 
@@ -210,6 +215,7 @@ public class MediaStoreAudioTestHelper {
             values.put(Media.IS_ALARM, IS_ALARM);
             values.put(Media.IS_NOTIFICATION, IS_NOTIFICATION);
             values.put(Media.IS_RINGTONE, IS_RINGTONE);
+            values.put(Media.IS_DRM, IS_DRM);
 
             return values;
         }

@@ -16,27 +16,19 @@
 
 package android.widget.cts;
 
-import com.android.common.ArrayListCursor;
-
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.test.AndroidTestCase;
 import android.widget.AlphabetIndexer;
 
-import java.util.ArrayList;
-
-@TestTargetClass(AlphabetIndexer.class)
 public class AlphabetIndexerTest extends AndroidTestCase {
     private static final String[] COUNTRIES_LIST = new String[]
         {"Argentina", "Australia", "China", "France", "Germany", "Italy", "Japan", "United States"};
     private static final String[] NAMES_LIST = new String[]
         {"Andy", "Bergkamp", "David", "Jacky", "Kevin", "Messi", "Michael", "Steven"};
     private static final String ALPHABET = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final int SORTED_COLUMN_INDEX = 0;
+    private static final int SORTED_COLUMN_INDEX = 1;
 
     private static final int INDEX_OF_ARGENTINA = 0;
     private static final int INDEX_OF_CHINA = 2;
@@ -46,33 +38,6 @@ public class AlphabetIndexerTest extends AndroidTestCase {
     private static final int INDEX_OF_MESSI = 5;
     private static final int INDEX_OF_STEVEN = 7;
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AlphabetIndexer",
-            args = {android.database.Cursor.class, int.class, java.lang.CharSequence.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPositionForSection",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSectionForPosition",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSections",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setCursor",
-            args = {android.database.Cursor.class}
-        )
-    })
     public void testAlphabetIndexer() {
         Cursor c1 = createCursor("Country", COUNTRIES_LIST);
 
@@ -135,11 +100,6 @@ public class AlphabetIndexerTest extends AndroidTestCase {
         assertEquals(NAMES_LIST.length, indexer.getPositionForSection(index));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "compare",
-        args = {java.lang.String.class, java.lang.String.class}
-    )
     public void testCompare() {
         Cursor cursor = createCursor("Country", COUNTRIES_LIST);
 
@@ -151,16 +111,13 @@ public class AlphabetIndexerTest extends AndroidTestCase {
 
     @SuppressWarnings("unchecked")
     private Cursor createCursor(String listName, String[] listData) {
-        String[] columns = { listName };
+        String[] columns = { "_id", listName };
 
-        ArrayList<ArrayList> list = new ArrayList<ArrayList>();
-        for (String cell : listData) {
-            ArrayList<String> row = new ArrayList<String>();
-            row.add(cell);
-            list.add(row);
+        MatrixCursor cursor = new MatrixCursor(columns, listData.length);
+        for (int i = 0; i < listData.length; i++) {
+            cursor.addRow(new Object[] { i, listData[i] });
         }
-
-        return new ArrayListCursor(columns, list);
+        return cursor;
     }
 
     /**

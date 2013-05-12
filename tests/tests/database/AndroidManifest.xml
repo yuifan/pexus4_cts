@@ -18,12 +18,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.android.cts.database">
 
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <application>
         <uses-library android:name="android.test.runner" />
     </application>
 
     <instrumentation android:name="android.test.InstrumentationCtsTestRunner"
-                     android:targetPackage="com.android.cts.stub"
+                     android:targetPackage="com.android.cts.database"
                      android:label="CTS tests of android.database"/>
 
 </manifest>

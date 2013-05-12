@@ -18,18 +18,17 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_APPS)
-
 LOCAL_JAVA_LIBRARIES := android.test.runner
 
-LOCAL_SRC_FILES := $(call all-java-files-under, src)
+LOCAL_STATIC_JAVA_LIBRARIES := ctstestrunner
 
-LOCAL_SRC_FILES += \
+LOCAL_SRC_FILES := $(call all-java-files-under, src) \
   src/android/accessibilityservice/IAccessibilityServiceDelegate.aidl \
   src/android/accessibilityservice/IAccessibilityServiceDelegateConnection.aidl
 
 LOCAL_PACKAGE_NAME := CtsAccessibilityServiceTestCases
 
-LOCAL_SDK_VERSION := current
+# This test runner sets up/cleans up the device before/after running the tests.
+LOCAL_CTS_TEST_RUNNER := com.android.cts.tradefed.testtype.AccessibilityServiceTestRunner
 
-include $(BUILD_PACKAGE)
+include $(BUILD_CTS_PACKAGE)

@@ -77,6 +77,7 @@ public class NoReceiveSmsPermissionTest extends AndroidTestCase {
                 Log.w(LOG_TAG, "wait for sms interrupted");
             }
         }
+
         assertTrue("Sms not sent successfully, test environment problem?",
                 receiver.isMessageSent());
         assertFalse("Sms received without proper permissions", receiver.isSmsReceived());

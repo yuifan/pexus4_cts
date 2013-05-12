@@ -19,16 +19,30 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         package="com.android.cts.accessibilityservice">
 
-  <application>
+  <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+
+  <application android:theme="@android:style/Theme.Holo.NoActionBar" >
 
       <uses-library android:name="android.test.runner"/>
 
       <activity android:label="@string/accessibility_end_to_end_test_activity"
-                android:name="android.accessibilityservice.cts.AccessibilityEndToEndTestActivity"/>
+              android:name="android.accessibilityservice.cts.AccessibilityEndToEndActivity"/>
+
+      <activity android:label="@string/accessibility_query_window_test_activity"
+              android:name="android.accessibilityservice.cts.AccessibilityWindowQueryActivity"/>
+
+      <activity android:label="@string/accessibility_view_tree_reporting_test_activity"
+              android:name="android.accessibilityservice.cts.AccessibilityViewTreeReportingActivity"/>
+
+      <activity android:label="@string/accessibility_focus_and_input_focus_sync_test_activity"
+              android:name="android.accessibilityservice.cts.AccessibilityFocusAndInputFocusSyncActivity"/>
+
+      <activity android:label="@string/accessibility_text_traversal_test_activity"
+              android:name="android.accessibilityservice.cts.AccessibilityTextTraversalActivity"/> 
 
   </application>
 
-  <instrumentation android:name="android.test.InstrumentationTestRunner"
+  <instrumentation android:name="android.test.InstrumentationCtsTestRunner"
                    android:targetPackage="com.android.cts.accessibilityservice"
                    android:label="Tests for the accessibility APIs."/>
 

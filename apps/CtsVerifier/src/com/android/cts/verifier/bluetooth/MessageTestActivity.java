@@ -32,27 +32,26 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.view.View;
-import android.view.Window;
 import android.view.View.OnClickListener;
+import android.view.Window;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MessageTestActivity extends PassFailButtons.Activity {
-
-    static final String EXTRA_DEVICE_ADDRESS = "deviceAddress";
-    static final String EXTRA_SECURE = "secure";
+class MessageTestActivity extends PassFailButtons.Activity {
 
     /** Broadcast action that should only be fired when pairing for a secure connection. */
     private static final String ACTION_PAIRING_REQUEST =
             "android.bluetooth.device.action.PAIRING_REQUEST";
 
     private static final int ENABLE_BLUETOOTH_REQUEST = 1;
+    private static final int PICK_SERVER_DEVICE_REQUEST = 2;
 
     private static final String MESSAGE_DELIMITER = "\n";
     private static final Pattern MESSAGE_PATTERN = Pattern.compile("Message (\\d+) to .*");
@@ -73,11 +72,19 @@ public class MessageTestActivity extends PassFailButtons.Activity {
     private AlertDialog mInstructionsDialog;
 
     private String mDeviceAddress;
-    private boolean mSecure;
-    private boolean mServer;
+
+    private final boolean mSecure;
+    private final boolean mServer;
+    private final UUID mUuid;
 
     private String mRemoteDeviceName = "";
     private StringBuilder mMessageBuffer = new StringBuilder();
+
+    MessageTestActivity(boolean secure, boolean server, UUID uuid) {
+        mSecure = secure;
+        mServer = server;
+        mUuid = uuid;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,9 +93,6 @@ public class MessageTestActivity extends PassFailButtons.Activity {
         setContentView(R.layout.bt_messages);
         setPassFailButtonClickListeners();
 
-        mDeviceAddress = getIntent().getStringExtra(EXTRA_DEVICE_ADDRESS);
-        mSecure = getIntent().getBooleanExtra(EXTRA_SECURE, true);
-        mServer = mDeviceAddress == null || mDeviceAddress.isEmpty();
         if (mServer) {
             setTitle(mSecure ? R.string.bt_secure_server : R.string.bt_insecure_server);
         } else {
@@ -127,29 +131,46 @@ public class MessageTestActivity extends PassFailButtons.Activity {
         registerReceiver(mPairingActionReceiver, intentFilter);
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter.isEnabled()) {
-            startChatService();
+        if (!mServer) {
+            Intent intent = new Intent(this, DevicePickerActivity.class);
+            startActivityForResult(intent, PICK_SERVER_DEVICE_REQUEST);
         } else {
-            Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(intent, ENABLE_BLUETOOTH_REQUEST);
+            if (mBluetoothAdapter.isEnabled()) {
+                startChatService();
+            } else {
+                Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(intent, ENABLE_BLUETOOTH_REQUEST);
+            }
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == ENABLE_BLUETOOTH_REQUEST) {
-            if (resultCode == RESULT_OK) {
-                startChatService();
-            } else {
-                setResult(RESULT_CANCELED);
-                finish();
-            }
+        switch (requestCode) {
+            case ENABLE_BLUETOOTH_REQUEST:
+                if (resultCode == RESULT_OK) {
+                    startChatService();
+                } else {
+                    setResult(RESULT_CANCELED);
+                    finish();
+                }
+                break;
+
+            case PICK_SERVER_DEVICE_REQUEST:
+                if (resultCode == RESULT_OK) {
+                    mDeviceAddress = data.getStringExtra(DevicePickerActivity.EXTRA_DEVICE_ADDRESS);
+                    startChatService();
+                } else {
+                    setResult(RESULT_CANCELED);
+                    finish();
+                }
+                break;
         }
     }
 
     private void startChatService() {
-        mChatService = new BluetoothChatService(this, new ChatHandler());
+        mChatService = new BluetoothChatService(this, new ChatHandler(), mUuid);
         if (mServer) {
             mChatService.start(mSecure);
         } else {
@@ -321,7 +342,7 @@ public class MessageTestActivity extends PassFailButtons.Activity {
                     new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    TestResult.setFailedResult(MessageTestActivity.this);
+                    TestResult.setFailedResult(MessageTestActivity.this, getTestId(), null);
                     finish();
                 }
             })
@@ -332,7 +353,9 @@ public class MessageTestActivity extends PassFailButtons.Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mChatService.stop();
+        if (mChatService != null) {
+            mChatService.stop();
+        }
         unregisterReceiver(mPairingActionReceiver);
     }
 }

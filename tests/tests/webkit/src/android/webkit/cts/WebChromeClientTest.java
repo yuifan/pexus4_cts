@@ -16,29 +16,24 @@
 
 package android.webkit.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-
+import android.cts.util.PollingCheck;
 import android.graphics.Bitmap;
 import android.os.Message;
 import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
-import android.webkit.WebChromeClient;
 import android.webkit.WebIconDatabase;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.cts.WebViewOnUiThread.WaitForProgressClient;
 
-@TestTargetClass(android.webkit.WebChromeClient.class)
+
 public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebViewStubActivity> {
     private static final long TEST_TIMEOUT = 5000L;
 
-    private WebView mWebView;
     private CtsTestServer mWebServer;
     private WebIconDatabase mIconDb;
+    private WebViewOnUiThread mOnUiThread;
 
     public WebChromeClientTest() {
         super(WebViewStubActivity.class);
@@ -47,14 +42,13 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        mWebView = getActivity().getWebView();
+        mOnUiThread = new WebViewOnUiThread(this, getActivity().getWebView());
         mWebServer = new CtsTestServer(getActivity());
     }
 
     @Override
     protected void tearDown() throws Exception {
-        mWebView.clearHistory();
-        mWebView.clearCache(true);
+        mOnUiThread.cleanUp();
         if (mWebServer != null) {
             mWebServer.shutdown();
         }
@@ -65,21 +59,14 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onProgressChanged",
-            args = {WebView.class, int.class}
-        )
-    })
     public void testOnProgressChanged() {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
         assertFalse(webChromeClient.hadOnProgressChanged());
-        mWebView.loadUrl(TestHtmlConstants.HELLO_WORLD_URL);
+        mOnUiThread.loadUrlAndWaitForCompletion(TestHtmlConstants.HELLO_WORLD_URL);
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnProgressChanged();
@@ -87,22 +74,15 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         }.run();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onReceivedTitle",
-            args = {WebView.class, String.class}
-        )
-    })
     public void testOnReceivedTitle() throws Exception {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
         assertFalse(webChromeClient.hadOnReceivedTitle());
         String url = mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
-        mWebView.loadUrl(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnReceivedTitle();
@@ -112,35 +92,28 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         assertEquals(TestHtmlConstants.HELLO_WORLD_TITLE, webChromeClient.getPageTitle());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onReceivedIcon",
-            args = {WebView.class, Bitmap.class}
-        )
-    })
     public void testOnReceivedIcon() throws Throwable {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
         runTestOnUiThread(new Runnable() {
-
             @Override
             public void run() {
                 // getInstance must run on the UI thread
-                WebIconDatabase mIconDb = WebIconDatabase.getInstance();
+                mIconDb = WebIconDatabase.getInstance();
                 String dbPath = getActivity().getFilesDir().toString() + "/icons";
                 mIconDb.open(dbPath);
-                mIconDb.removeAllIcons();
             }
         });
+        getInstrumentation().waitForIdleSync();
+        Thread.sleep(100); // Wait for open to be received on the icon db thread.
 
         assertFalse(webChromeClient.hadOnReceivedIcon());
 
         String url = mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL);
-        mWebView.loadUrl(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnReceivedIcon();
@@ -148,28 +121,11 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         }.run();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onCreateWindow",
-            args = {WebView.class, boolean.class, boolean.class, Message.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onRequestFocus",
-            args = {WebView.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onCloseWindow",
-            args = {WebView.class}
-        )
-    })
     public void testWindows() throws Exception {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
-        final WebSettings settings = mWebView.getSettings();
+        final WebSettings settings = mOnUiThread.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(true);
@@ -178,16 +134,17 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
 
         // load a page that opens a child window, requests focus for the child and sets a timeout
         // after which the child will be closed
-        loadUrl(mWebServer.getAssetUrl(TestHtmlConstants.JS_WINDOW_URL));
+        mOnUiThread.loadUrlAndWaitForCompletion(mWebServer.
+                getAssetUrl(TestHtmlConstants.JS_WINDOW_URL));
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnCreateWindow();
             }
         }.run();
         assertFalse(webChromeClient.hadOnRequestFocus());
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnCloseWindow();
@@ -195,28 +152,21 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         }.run();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onJsBeforeUnload",
-            args = {WebView.class, String.class, String.class, JsResult.class}
-        )
-    })
     public void testOnJsBeforeUnload() throws Exception {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
-        final WebSettings settings = mWebView.getSettings();
+        final WebSettings settings = mOnUiThread.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
         assertFalse(webChromeClient.hadOnJsBeforeUnload());
 
-        loadUrl(mWebServer.getAssetUrl(TestHtmlConstants.JS_UNLOAD_URL));
+        mOnUiThread.loadUrlAndWaitForCompletion(mWebServer.getAssetUrl(TestHtmlConstants.JS_UNLOAD_URL));
         // unload should trigger when we try to navigate away
-        loadUrl(mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL));
+        mOnUiThread.loadUrlAndWaitForCompletion(mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL));
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnJsBeforeUnload();
@@ -225,27 +175,20 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         assertEquals(webChromeClient.getMessage(), "testOnJsBeforeUnload");
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onJsAlert",
-            args = {WebView.class, String.class, String.class, JsResult.class}
-        )
-    })
     public void testOnJsAlert() throws Exception {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
-        final WebSettings settings = mWebView.getSettings();
+        final WebSettings settings = mOnUiThread.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
         assertFalse(webChromeClient.hadOnJsAlert());
 
         String url = mWebServer.getAssetUrl(TestHtmlConstants.JS_ALERT_URL);
-        mWebView.loadUrl(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnJsAlert();
@@ -254,27 +197,20 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         assertEquals(webChromeClient.getMessage(), "testOnJsAlert");
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onJsConfirm",
-            args = {WebView.class, String.class, String.class, JsResult.class}
-        )
-    })
     public void testOnJsConfirm() throws Exception {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
-        final WebSettings settings = mWebView.getSettings();
+        final WebSettings settings = mOnUiThread.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
         assertFalse(webChromeClient.hadOnJsConfirm());
 
         String url = mWebServer.getAssetUrl(TestHtmlConstants.JS_CONFIRM_URL);
-        mWebView.loadUrl(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnJsConfirm();
@@ -283,18 +219,11 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         assertEquals(webChromeClient.getMessage(), "testOnJsConfirm");
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "onJsPrompt",
-            args = {WebView.class, String.class, String.class, String.class, JsPromptResult.class}
-        )
-    })
     public void testOnJsPrompt() throws Exception {
         final MockWebChromeClient webChromeClient = new MockWebChromeClient();
-        mWebView.setWebChromeClient(webChromeClient);
+        mOnUiThread.setWebChromeClient(webChromeClient);
 
-        final WebSettings settings = mWebView.getSettings();
+        final WebSettings settings = mOnUiThread.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
@@ -303,33 +232,25 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         final String promptResult = "CTS";
         webChromeClient.setPromptResult(promptResult);
         String url = mWebServer.getAssetUrl(TestHtmlConstants.JS_PROMPT_URL);
-        mWebView.loadUrl(url);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
 
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
             @Override
             protected boolean check() {
                 return webChromeClient.hadOnJsPrompt();
             }
         }.run();
         // the result returned by the client gets set as the page title
-        new DelayedCheck(TEST_TIMEOUT) {
+        new PollingCheck(TEST_TIMEOUT) {
+            @Override
             protected boolean check() {
-                return mWebView.getTitle().equals(promptResult);
+                return mOnUiThread.getTitle().equals(promptResult);
             }
         }.run();
         assertEquals(webChromeClient.getMessage(), "testOnJsPrompt");
     }
 
-    private void loadUrl(String url) {
-        mWebView.loadUrl(url);
-        new DelayedCheck(TEST_TIMEOUT) {
-            protected boolean check() {
-                return mWebView.getProgress() == 100;
-            }
-        }.run();
-    }
-
-    private class MockWebChromeClient extends WebChromeClient {
+    private class MockWebChromeClient extends WaitForProgressClient {
         private boolean mHadOnProgressChanged;
         private boolean mHadOnReceivedTitle;
         private String mPageTitle;
@@ -343,6 +264,10 @@ public class WebChromeClientTest extends ActivityInstrumentationTestCase2<WebVie
         private boolean mHadOnCreateWindow;
         private boolean mHadOnRequestFocus;
         private boolean mHadOnReceivedIcon;
+
+        public MockWebChromeClient() {
+            super(mOnUiThread);
+        }
 
         public void setPromptResult(String promptResult) {
             mPromptResult = promptResult;

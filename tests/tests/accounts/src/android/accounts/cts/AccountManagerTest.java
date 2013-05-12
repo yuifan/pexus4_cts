@@ -28,6 +28,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.StrictMode;
 import android.test.AndroidTestCase;
 
 import java.io.IOException;
@@ -149,17 +150,21 @@ public class AccountManagerTest extends AndroidTestCase {
     }
 
     private void validateOptions(Bundle expectedOptions, Bundle actualOptions) {
-        if (expectedOptions == null) {
-            if (actualOptions != null) {
-              assertTrue(actualOptions.isEmpty());
-            }
-        } else {
+        // In ICS AccountManager may add options to indicate the caller id.
+        // We only validate that the passed in options are present in the actual ones
+        if (expectedOptions != null) {
             assertNotNull(actualOptions);
             assertEquals(expectedOptions.get(OPTION_NAME_1), actualOptions.get(OPTION_NAME_1));
             assertEquals(expectedOptions.get(OPTION_NAME_2), actualOptions.get(OPTION_NAME_2));
         }
     }
 
+    private void validateSystemOptions(Bundle options) {
+        assertNotNull(options.getString(AccountManager.KEY_ANDROID_PACKAGE_NAME));
+        assertTrue(options.containsKey(AccountManager.KEY_CALLER_UID));
+        assertTrue(options.containsKey(AccountManager.KEY_CALLER_PID));
+    }
+    
     private void validateCredentials() {
         assertEquals(ACCOUNT, mockAuthenticator.getAccount());
     }
@@ -270,6 +275,7 @@ public class AccountManagerTest extends AndroidTestCase {
         validateAccountAndAuthTokenType();
         validateFeatures();
         validateOptions(OPTIONS_BUNDLE, mockAuthenticator.mOptionsAddAccount);
+        validateSystemOptions(mockAuthenticator.mOptionsAddAccount);
         validateOptions(null, mockAuthenticator.mOptionsUpdateCredentials);
         validateOptions(null, mockAuthenticator.mOptionsConfirmCredentials);
         validateOptions(null, mockAuthenticator.mOptionsGetAuthToken);
@@ -721,7 +727,7 @@ public class AccountManagerTest extends AndroidTestCase {
         validateOptions(null, mockAuthenticator.mOptionsUpdateCredentials);
         validateOptions(null, mockAuthenticator.mOptionsConfirmCredentials);
         validateOptions(OPTIONS_BUNDLE, mockAuthenticator.mOptionsGetAuthToken);
-
+        validateSystemOptions(mockAuthenticator.mOptionsGetAuthToken);
     }
 
     /**
@@ -1328,4 +1334,28 @@ public class AccountManagerTest extends AndroidTestCase {
                 handler);
         waitForLatch(latch);
     }
+
+    /**
+     * Tests that AccountManagerService is properly caching data.
+     */
+    public void testGetsAreCached() throws IOException, AuthenticatorException,
+            OperationCanceledException {
+
+        // Add an account,
+        assertEquals(false, isAccountPresent(am.getAccounts(), ACCOUNT));
+        addAccountExplicitly(ACCOUNT, ACCOUNT_PASSWORD, null /* userData */);
+
+        // Then verify that we don't hit disk retrieving it,
+        StrictMode.ThreadPolicy oldPolicy = StrictMode.getThreadPolicy();
+        try {
+            StrictMode.setThreadPolicy(
+                new StrictMode.ThreadPolicy.Builder().detectDiskReads().penaltyDeath().build());
+            Account[] accounts = am.getAccounts();
+            assertNotNull(accounts);
+            assertTrue(accounts.length > 0);
+        } finally {
+            StrictMode.setThreadPolicy(oldPolicy);
+        }
+    }
+
 }

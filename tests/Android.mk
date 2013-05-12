@@ -18,7 +18,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE_TAGS := tests
 
 LOCAL_SRC_FILES := $(call all-java-files-under, src)\
-              $(call all-java-files-under, core/runner/src)\
+              $(call all-renderscript-files-under, src)\
               src/android/app/cts/ISecondary.aidl\
               src/android/os/cts/IEmptyService.aidl
 
@@ -27,9 +27,16 @@ LOCAL_JAVA_LIBRARIES := android.test.runner
 LOCAL_JNI_SHARED_LIBRARIES := libcts_jni
 
 # Resource unit tests use a private locale and some densities
-LOCAL_AAPT_FLAGS = -c xx_YY -c cs -c 32dpi -c 240dpi -c 160dpi
+LOCAL_AAPT_FLAGS = -c xx_YY -c cs -c small -c normal -c large -c xlarge \
+        -c 320dpi -c 240dpi -c 160dpi -c 32dpi \
+        --preferred-configurations 320dpi --preferred-configurations 240dpi \
+        --preferred-configurations 160dpi --preferred-configurations 32dpi
 
 LOCAL_PACKAGE_NAME := CtsTestStubs
+
+LOCAL_STATIC_JAVA_LIBRARIES := ctsutil ctstestserver ctstestrunner
+
+LOCAL_DEX_PREOPT := false
 
 include $(BUILD_PACKAGE)
 

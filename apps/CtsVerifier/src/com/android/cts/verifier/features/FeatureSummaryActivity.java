@@ -40,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
     /**
@@ -74,11 +76,25 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
             this.required = required;
             this.present = false;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            } else if (o == null || !(o instanceof Feature)) {
+                return false;
+            } else {
+                Feature feature = (Feature) o;
+                return name.equals(feature.name);
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            return name.hashCode();
+        }
     }
 
-    /**
-     * A list of all features added in Eclair (API=7).
-     */
     public static final Feature[] ALL_ECLAIR_FEATURES = {
             new Feature(PackageManager.FEATURE_CAMERA, true),
             new Feature(PackageManager.FEATURE_CAMERA_AUTOFOCUS, false),
@@ -91,15 +107,6 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
             new Feature(PackageManager.FEATURE_TELEPHONY_GSM, false),
     };
 
-    /**
-     * A list of all features added in FroYo (API=8) and Gingerbread (API=9).
-     * Because we want to run on Eclair devices,
-     * we can't use static references to constants added later
-     * than Eclair. We could use Reflection, but we'd still need a list of
-     * string literals (for constant names) anyway, and there's little point in
-     * using Reflection to to look up a constant String value for a constant
-     * String name.
-     */
     public static final Feature[] ALL_FROYO_FEATURES = {
             new Feature("android.hardware.bluetooth", true),
             new Feature("android.hardware.location", true),
@@ -115,6 +122,15 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
     };
 
     public static final Feature[] ALL_GINGERBREAD_FEATURES = {
+            // Required features in prior releases that became optional in GB
+            new Feature("android.hardware.bluetooth", false),
+            new Feature("android.hardware.camera", false),
+            new Feature("android.hardware.location.gps", false),
+            new Feature("android.hardware.microphone", false),
+            new Feature("android.hardware.sensor.accelerometer", false),
+            new Feature("android.hardware.sensor.compass", false),
+
+            // New features in GB
             new Feature("android.hardware.audio.low_latency", false),
             new Feature("android.hardware.camera.front", false),
             new Feature("android.hardware.nfc", false),
@@ -123,6 +139,41 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
             new Feature("android.hardware.touchscreen.multitouch.jazzhand", false),
             new Feature("android.software.sip", false),
             new Feature("android.software.sip.voip", false),
+    };
+
+    public static final Feature[] ALL_GINGERBREAD_MR1_FEATURES = {
+            new Feature("android.hardware.usb.accessory", false),
+    };
+
+    public static final Feature[] ALL_HONEYCOMB_FEATURES = {
+            // Required features in prior releases that became optional in HC
+            new Feature("android.hardware.touchscreen", false),
+
+            new Feature("android.hardware.faketouch", true),
+    };
+
+    public static final Feature[] ALL_HONEYCOMB_MR1_FEATURES = {
+            new Feature("android.hardware.usb.host", false),
+            new Feature("android.hardware.usb.accessory", true),
+    };
+
+    public static final Feature[] ALL_HONEYCOMB_MR2_FEATURES = {
+            new Feature("android.hardware.faketouch.multitouch.distinct", false),
+            new Feature("android.hardware.faketouch.multitouch.jazzhand", false),
+            new Feature("android.hardware.screen.landscape", false),
+            new Feature("android.hardware.screen.portrait", false),
+    };
+
+    public static final Feature[] ALL_ICE_CREAM_SANDWICH_FEATURES = {
+            new Feature(PackageManager.FEATURE_WIFI_DIRECT, false),
+    };
+
+    public static final Feature[] ALL_JELLY_BEAN_FEATURES = {
+            new Feature(PackageManager.FEATURE_TELEVISION, false),
+    };
+
+    public static final Feature[] ALL_JELLY_BEAN_MR1_FEATURES = {
+            new Feature(PackageManager.FEATURE_CAMERA_ANY, false),
     };
 
     @Override
@@ -151,16 +202,39 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
         // roll over all known features & check whether device reports them
         boolean present = false;
         int statusIcon;
-        ArrayList<Feature> features = new ArrayList<Feature>();
+        Set<Feature> features = new LinkedHashSet<Feature>();
+
+        // add features from latest to last so that the latest requirements are put in the set first
         int apiVersion = Build.VERSION.SDK_INT;
-        if (apiVersion >= Build.VERSION_CODES.ECLAIR_MR1) {
-            Collections.addAll(features, ALL_ECLAIR_FEATURES);
+        if (apiVersion >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            Collections.addAll(features, ALL_JELLY_BEAN_MR1_FEATURES);
+        }
+        if (apiVersion >= Build.VERSION_CODES.JELLY_BEAN) {
+            Collections.addAll(features, ALL_JELLY_BEAN_FEATURES);
+        }
+        if (apiVersion >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+            Collections.addAll(features, ALL_ICE_CREAM_SANDWICH_FEATURES);
+        }
+        if (apiVersion >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+            Collections.addAll(features, ALL_HONEYCOMB_MR2_FEATURES);
+        }
+        if (apiVersion >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+            Collections.addAll(features, ALL_HONEYCOMB_MR1_FEATURES);
+        }
+        if (apiVersion >= Build.VERSION_CODES.HONEYCOMB) {
+            Collections.addAll(features, ALL_HONEYCOMB_FEATURES);
+        }
+        if (apiVersion >= Build.VERSION_CODES.GINGERBREAD_MR1) {
+            Collections.addAll(features, ALL_GINGERBREAD_MR1_FEATURES);
+        }
+        if (apiVersion >= Build.VERSION_CODES.GINGERBREAD) {
+            Collections.addAll(features, ALL_GINGERBREAD_FEATURES);
         }
         if (apiVersion >= Build.VERSION_CODES.FROYO) {
             Collections.addAll(features, ALL_FROYO_FEATURES);
         }
-        if (apiVersion >= Build.VERSION_CODES.GINGERBREAD) {
-            Collections.addAll(features, ALL_GINGERBREAD_FEATURES);
+        if (apiVersion >= Build.VERSION_CODES.ECLAIR_MR1) {
+            Collections.addAll(features, ALL_ECLAIR_FEATURES);
         }
         for (Feature f : features) {
             HashMap<String, Object> row = new HashMap<String, Object>();

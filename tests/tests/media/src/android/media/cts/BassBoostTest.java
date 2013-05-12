@@ -23,18 +23,14 @@ import android.media.audiofx.BassBoost;
 import android.os.Looper;
 import android.test.AndroidTestCase;
 import android.util.Log;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(BassBoost.class)
 public class BassBoostTest extends AndroidTestCase {
 
     private String TAG = "BassBoostTest";
     private final static short TEST_STRENGTH = 500;
     private final static short TEST_STRENGTH2 = 1000;
     private final static float STRENGTH_TOLERANCE = 1.1f;  // 10%
+    private final static int MAX_LOOPER_WAIT_COUNT = 10;
 
     private BassBoost mBassBoost = null;
     private BassBoost mBassBoost2 = null;
@@ -45,6 +41,7 @@ public class BassBoostTest extends AndroidTestCase {
     private boolean mInitialized = false;
     private Looper mLooper = null;
     private final Object mLock = new Object();
+    private ListenerThread mEffectListenerLooper = null;
 
     //-----------------------------------------------------------------
     // BASS BOOST TESTS:
@@ -55,23 +52,6 @@ public class BassBoostTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 0.0: test constructor and release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "BassBoost",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        )
-    })
     public void test0_0ConstructorAndRelease() throws Exception {
         BassBoost eq = null;
         try {
@@ -100,23 +80,6 @@ public class BassBoostTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 1.0: test strength
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStrengthSupported",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStrength",
-            args = {short.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRoundedStrength",
-            args = {}
-        )
-    })
     public void test1_0Strength() throws Exception {
         getBassBoost(0);
         try {
@@ -146,18 +109,6 @@ public class BassBoostTest extends AndroidTestCase {
     }
 
     //Test case 1.1: test properties
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getProperties",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setProperties",
-            args = {BassBoost.Settings.class}
-        )
-    })
     public void test1_1Properties() throws Exception {
         getBassBoost(0);
         try {
@@ -192,18 +143,6 @@ public class BassBoostTest extends AndroidTestCase {
     }
 
     //Test case 1.2: test setStrength() throws exception after release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setStrength",
-            args = {short.class}
-        )
-    })
     public void test1_2SetStrengthAfterRelease() throws Exception {
         getBassBoost(0);
         mBassBoost.release();
@@ -222,18 +161,6 @@ public class BassBoostTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 2.0: test setEnabled() and getEnabled() in valid state
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEnabled",
-            args = {}
-        )
-    })
     public void test2_0SetEnabledGetEnabled() throws Exception {
         getBassBoost(0);
         try {
@@ -250,18 +177,6 @@ public class BassBoostTest extends AndroidTestCase {
     }
 
     //Test case 2.1: test setEnabled() throws exception after release
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnabled",
-            args = {boolean.class}
-        )
-    })
     public void test2_1SetEnabledAfterRelease() throws Exception {
         getBassBoost(0);
         mBassBoost.release();
@@ -280,103 +195,70 @@ public class BassBoostTest extends AndroidTestCase {
     //----------------------------------
 
     //Test case 3.0: test control status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setControlStatusListener",
-            args = {AudioEffect.OnControlStatusChangeListener.class}
-        )
-    })
     public void test3_0ControlStatusListener() throws Exception {
-        mHasControl = true;
-        createListenerLooper(true, false, false);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mHasControl = true;
+            mInitialized = false;
+            createListenerLooper(true, false, false);
+            waitForLooperInitialization_l();
+
+            getBassBoost(0);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mHasControl && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        synchronized(mLock) {
-            try {
-                getBassBoost(0);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseBassBoost();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseBassBoost();
         }
         assertFalse("effect control not lost by effect1", mHasControl);
     }
 
     //Test case 3.1: test enable status listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEnableStatusListener",
-            args = {AudioEffect.OnEnableStatusChangeListener.class}
-        )
-    })
     public void test3_1EnableStatusListener() throws Exception {
-        createListenerLooper(false, true, false);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mInitialized = false;
+            createListenerLooper(false, true, false);
+            waitForLooperInitialization_l();
+
+            mBassBoost2.setEnabled(true);
+            mIsEnabled = true;
+            getBassBoost(0);
+            mBassBoost.setEnabled(false);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while (mIsEnabled && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        mBassBoost2.setEnabled(true);
-        mIsEnabled = true;
-        getBassBoost(0);
-        synchronized(mLock) {
-            try {
-                mBassBoost.setEnabled(false);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseBassBoost();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseBassBoost();
         }
         assertFalse("enable status not updated", mIsEnabled);
     }
 
     //Test case 3.2: test parameter changed listener
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setParameterListener",
-            args = {BassBoost.OnParameterChangeListener.class}
-        )
-    })
     public void test3_2ParameterChangedListener() throws Exception {
-        createListenerLooper(false, false, true);
         synchronized(mLock) {
-            try {
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Looper creation: wait was interrupted.");
+            mInitialized = false;
+            createListenerLooper(false, false, true);
+            waitForLooperInitialization_l();
+
+            getBassBoost(0);
+            mChangedParameter = -1;
+            mBassBoost.setStrength(TEST_STRENGTH);
+            int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+            while ((mChangedParameter == -1) && (looperWaitCount-- > 0)) {
+                try {
+                    mLock.wait();
+                } catch(Exception e) {
+                }
             }
-        }
-        assertTrue(mInitialized);
-        getBassBoost(0);
-        synchronized(mLock) {
-            try {
-                mChangedParameter = -1;
-                mBassBoost.setStrength(TEST_STRENGTH);
-                mLock.wait(1000);
-            } catch(Exception e) {
-                Log.e(TAG, "Create second effect: wait was interrupted.");
-            } finally {
-                releaseBassBoost();
-                terminateListenerLooper();
-            }
+            terminateListenerLooper();
+            releaseBassBoost();
         }
         assertEquals("parameter change not received",
                 BassBoost.PARAM_STRENGTH, mChangedParameter);
@@ -411,6 +293,17 @@ public class BassBoostTest extends AndroidTestCase {
         }
     }
 
+    private void waitForLooperInitialization_l() {
+        int looperWaitCount = MAX_LOOPER_WAIT_COUNT;
+        while (!mInitialized && (looperWaitCount-- > 0)) {
+            try {
+                mLock.wait();
+            } catch(Exception e) {
+            }
+        }
+        assertTrue(mInitialized);
+    }
+
     // Initializes the bassboot listener looper
     class ListenerThread extends Thread {
         boolean mControl;
@@ -423,11 +316,19 @@ public class BassBoostTest extends AndroidTestCase {
             mEnable = enable;
             mParameter = parameter;
         }
+
+        public void cleanUp() {
+            if (mBassBoost2 != null) {
+                mBassBoost2.setControlStatusListener(null);
+                mBassBoost2.setEnableStatusListener(null);
+                mBassBoost2.setParameterListener(
+                        (BassBoost.OnParameterChangeListener)null);
+            }
+        }
     }
 
     private void createListenerLooper(boolean control, boolean enable, boolean parameter) {
-        mInitialized = false;
-        new ListenerThread(control, enable, parameter) {
+        mEffectListenerLooper = new ListenerThread(control, enable, parameter) {
             @Override
             public void run() {
                 // Set up a looper
@@ -440,66 +341,76 @@ public class BassBoostTest extends AndroidTestCase {
                 mBassBoost2 = new BassBoost(0, 0);
                 assertNotNull("could not create bassboot2", mBassBoost2);
 
-                if (mControl) {
-                    mBassBoost2.setControlStatusListener(
-                            new AudioEffect.OnControlStatusChangeListener() {
-                        public void onControlStatusChange(
-                                AudioEffect effect, boolean controlGranted) {
-                            synchronized(mLock) {
-                                if (effect == mBassBoost2) {
-                                    mHasControl = controlGranted;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mEnable) {
-                    mBassBoost2.setEnableStatusListener(
-                            new AudioEffect.OnEnableStatusChangeListener() {
-                        public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
-                            synchronized(mLock) {
-                                if (effect == mBassBoost2) {
-                                    mIsEnabled = enabled;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-                if (mParameter) {
-                    mBassBoost2.setParameterListener(new BassBoost.OnParameterChangeListener() {
-                        public void onParameterChange(BassBoost effect, int status,
-                                int param, short value)
-                        {
-                            synchronized(mLock) {
-                                if (effect == mBassBoost2) {
-                                    mChangedParameter = param;
-                                    mLock.notify();
-                                }
-                            }
-                        }
-                    });
-                }
-
                 synchronized(mLock) {
+                    if (mControl) {
+                        mBassBoost2.setControlStatusListener(
+                                new AudioEffect.OnControlStatusChangeListener() {
+                            public void onControlStatusChange(
+                                    AudioEffect effect, boolean controlGranted) {
+                                synchronized(mLock) {
+                                    if (effect == mBassBoost2) {
+                                        mHasControl = controlGranted;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mEnable) {
+                        mBassBoost2.setEnableStatusListener(
+                                new AudioEffect.OnEnableStatusChangeListener() {
+                            public void onEnableStatusChange(AudioEffect effect, boolean enabled) {
+                                synchronized(mLock) {
+                                    if (effect == mBassBoost2) {
+                                        mIsEnabled = enabled;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if (mParameter) {
+                        mBassBoost2.setParameterListener(new BassBoost.OnParameterChangeListener() {
+                            public void onParameterChange(BassBoost effect, int status,
+                                    int param, short value)
+                            {
+                                synchronized(mLock) {
+                                    if (effect == mBassBoost2) {
+                                        mChangedParameter = param;
+                                        mLock.notify();
+                                    }
+                                }
+                            }
+                        });
+                    }
+
                     mInitialized = true;
                     mLock.notify();
                 }
                 Looper.loop();  // Blocks forever until Looper.quit() is called.
             }
-        }.start();
+        };
+        mEffectListenerLooper.start();
     }
 
     // Terminates the listener looper thread.
     private void terminateListenerLooper() {
+        if (mEffectListenerLooper != null) {
+            mEffectListenerLooper.cleanUp();
+            if (mLooper != null) {
+                mLooper.quit();
+                mLooper = null;
+            }
+            try {
+                mEffectListenerLooper.join();
+            } catch(InterruptedException e) {
+            }
+            mEffectListenerLooper = null;
+        }
+
         if (mBassBoost2 != null) {
             mBassBoost2.release();
             mBassBoost2 = null;
-        }
-        if (mLooper != null) {
-            mLooper.quit();
-            mLooper = null;
         }
     }
 

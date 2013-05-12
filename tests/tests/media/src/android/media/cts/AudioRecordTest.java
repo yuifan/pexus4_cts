@@ -18,6 +18,7 @@ package android.media.cts;
 
 import java.nio.ByteBuffer;
 
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -26,12 +27,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.test.AndroidTestCase;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(AudioRecord.class)
 public class AudioRecordTest extends AndroidTestCase {
 
     private AudioRecord mAudioRecord;
@@ -40,10 +36,15 @@ public class AudioRecordTest extends AndroidTestCase {
     private boolean mIsOnPeriodicNotificationCalled;
     private boolean mIsHandleMessageCalled;
     private Looper mLooper;
+    private int MAX_RECORD_START_TIME_MS = 100;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+
+        if (!hasMicrophone()) {
+            return;
+        }
 
         /*
          * InstrumentationTestRunner.onStart() calls Looper.prepare(), which creates a looper
@@ -78,8 +79,10 @@ public class AudioRecordTest extends AndroidTestCase {
 
     @Override
     protected void tearDown() throws Exception {
-        mAudioRecord.release();
-        mLooper.quit();
+        if (hasMicrophone()) {
+            mAudioRecord.release();
+            mLooper.quit();
+        }
         super.tearDown();
     }
 
@@ -89,54 +92,10 @@ public class AudioRecordTest extends AndroidTestCase {
         mIsHandleMessageCalled = false;
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioRecord",
-            args = {int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAudioFormat",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAudioSource",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSampleRate",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRecordingState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMinBufferSize",
-            args = {int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getChannelCount",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getChannelConfiguration",
-            args = {}
-        )
-    })
     public void testAudioRecordProperties() throws Exception {
+        if (!hasMicrophone()) {
+            return;
+        }
         assertEquals(AudioFormat.ENCODING_PCM_16BIT, mAudioRecord.getAudioFormat());
         assertEquals(MediaRecorder.AudioSource.DEFAULT, mAudioRecord.getAudioSource());
         assertEquals(1, mAudioRecord.getChannelCount());
@@ -151,79 +110,10 @@ public class AudioRecordTest extends AndroidTestCase {
         assertTrue(bufferSize > 0);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "AudioRecord",
-            args = {int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "release",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "startRecording",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "stop",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setNotificationMarkerPosition",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPositionNotificationPeriod",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getNotificationMarkerPosition",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPositionNotificationPeriod",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "read",
-            args = {byte[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "read",
-            args = {short[].class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "read",
-            args = {ByteBuffer.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRecordingState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setRecordPositionUpdateListener",
-            args = {OnRecordPositionUpdateListener.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setRecordPositionUpdateListener",
-            args = {OnRecordPositionUpdateListener.class, Handler.class}
-        )
-    })
     public void testAudioRecordOP() throws Exception {
+        if (!hasMicrophone()) {
+            return;
+        }
         final int SLEEP_TIME = 10;
         final int RECORD_TIME = 10000;
         assertEquals(AudioRecord.STATE_INITIALIZED, mAudioRecord.getState());
@@ -320,5 +210,9 @@ public class AudioRecordTest extends AndroidTestCase {
 
         mAudioRecord.release();
         assertEquals(AudioRecord.STATE_UNINITIALIZED, mAudioRecord.getState());
+    }
+
+    private boolean hasMicrophone() {
+        return getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_MICROPHONE);
     }
 }

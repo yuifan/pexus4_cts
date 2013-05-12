@@ -16,53 +16,36 @@
 
 package android.webkit.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-
+import android.cts.util.PollingCheck;
 import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
 import android.webkit.WebBackForwardList;
 import android.webkit.WebHistoryItem;
-import android.webkit.WebView;
 
-@TestTargetClass(WebBackForwardList.class)
+
 public class WebBackForwardListTest extends ActivityInstrumentationTestCase2<WebViewStubActivity> {
 
     private static final int TEST_TIMEOUT = 10000;
 
-    private WebView mWebView;
+    private WebViewOnUiThread mOnUiThread;
 
     public WebBackForwardListTest() {
         super("com.android.cts.stub", WebViewStubActivity.class);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCurrentItem",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCurrentIndex",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getItemAtIndex",
-            args = {int.class}
-        )
-    })
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
+        mOnUiThread = new WebViewOnUiThread(this, getActivity().getWebView());
+    }
+
+    @Override
+    public void tearDown() throws Exception {
+        mOnUiThread.cleanUp();
+        super.tearDown();
+    }
+
     public void testGetCurrentItem() throws Exception {
-        mWebView = getActivity().getWebView();
-        WebBackForwardList list = mWebView.copyBackForwardList();
+        WebBackForwardList list = mOnUiThread.copyBackForwardList();
 
         assertNull(list.getCurrentItem());
         assertEquals(0, list.getSize());
@@ -76,26 +59,27 @@ public class WebBackForwardListTest extends ActivityInstrumentationTestCase2<Web
             String url2 = server.getAssetUrl(TestHtmlConstants.HTML_URL2);
             String url3 = server.getAssetUrl(TestHtmlConstants.HTML_URL3);
 
-            mWebView.loadUrl(url1);
-            checkBackForwardList(mWebView, url1);
+            mOnUiThread.loadUrlAndWaitForCompletion(url1);
+            checkBackForwardList(url1);
 
-            mWebView.loadUrl(url2);
-            checkBackForwardList(mWebView, url1, url2);
+            mOnUiThread.loadUrlAndWaitForCompletion(url2);
+            checkBackForwardList(url1, url2);
 
-            mWebView.loadUrl(url3);
-            checkBackForwardList(mWebView, url1, url2, url3);
+            mOnUiThread.loadUrlAndWaitForCompletion(url3);
+            checkBackForwardList(url1, url2, url3);
         } finally {
             server.shutdown();
         }
     }
 
-    private void checkBackForwardList(final WebView view, final String... url) {
-        new DelayedCheck(TEST_TIMEOUT) {
+    private void checkBackForwardList(final String... url) {
+        new PollingCheck(TEST_TIMEOUT) {
+            @Override
             protected boolean check() {
-                if (view.getProgress() < 100) {
+                if (mOnUiThread.getProgress() < 100) {
                     return false;
                 }
-                WebBackForwardList list = view.copyBackForwardList();
+                WebBackForwardList list = mOnUiThread.copyBackForwardList();
                 if (list.getSize() != url.length) {
                     return false;
                 }
@@ -114,12 +98,6 @@ public class WebBackForwardListTest extends ActivityInstrumentationTestCase2<Web
         }.run();
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_FEASIBLE,
-        notes = "clone() is protected and WebBackForwardList cannot be subclassed here",
-        method = "clone",
-        args = {}
-    )
     public void testClone() {
     }
 

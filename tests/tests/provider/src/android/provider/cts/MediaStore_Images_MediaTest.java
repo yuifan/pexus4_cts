@@ -18,11 +18,6 @@ package android.provider.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -31,18 +26,16 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
-import android.provider.MediaStore;
+import android.os.cts.FileUtils;
 import android.provider.MediaStore.Images.Media;
 import android.provider.MediaStore.Images.Thumbnails;
 import android.test.InstrumentationTestCase;
-import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.lang.Math;
 import java.util.ArrayList;
 
-@TestTargetClass(MediaStore.Images.Media.class)
 public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
     private static final String MIME_TYPE_JPEG = "image/jpeg";
 
@@ -87,33 +80,7 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
         mRowsAdded = new ArrayList<Uri>();
     }
 
-    @TestTargets({
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "This test will fail if there is no sdcard attached because the method "
-                    + "{@link Images#Media#insertImage(ContentResolver, String, String, String)} "
-                    + "will store images on the sdcard",
-        method = "insertImage",
-        args = {ContentResolver.class, String.class, String.class, String.class}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "query",
-        args = {ContentResolver.class, Uri.class, String[].class}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "query",
-        args = {ContentResolver.class, Uri.class, String[].class, String.class, String.class}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "query",
-        args = {ContentResolver.class, Uri.class, String[].class,  String.class, String[].class,
-                String.class}
-      )
-    })
-    public void testInsertImageWithImagePath() {
+    public void testInsertImageWithImagePath() throws Exception {
         Cursor c = Media.query(mContentResolver, Media.EXTERNAL_CONTENT_URI, null, null,
                 "_id ASC");
         int previousCount = c.getCount();
@@ -184,21 +151,7 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
         c.close();
     }
 
-    @TestTargets({
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "This test will fail if there is no sdcard attached because the method "
-                + "will store images on the sdcard",
-        method = "insertImage",
-        args = {ContentResolver.class, Bitmap.class, String.class, String.class}
-      ),
-      @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getBitmap",
-        args = {ContentResolver.class, Uri.class}
-      )
-    })
-    public void testInsertImageWithBitmap() {
+    public void testInsertImageWithBitmap() throws Exception {
         // insert the image by bitmap
         Bitmap src = BitmapFactory.decodeResource(mContext.getResources(), R.raw.scenery);
         String stringUrl = null;
@@ -215,27 +168,15 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
                 null, "_id ASC");
         c.moveToFirst();
         // get the bimap by the path
-        Bitmap result = null;
-        try {
-            result = Media.getBitmap(mContentResolver,
+        Bitmap result = Media.getBitmap(mContentResolver,
                     Uri.fromFile(new File(c.getString(c.getColumnIndex(Media.DATA)))));
-        } catch (FileNotFoundException e) {
-            fail(e.getMessage());
-        } catch (IOException e) {
-            fail(e.getMessage());
-        }
+
         // can not check the identity between the result and source bitmap because
         // source bitmap is compressed before it is saved as result bitmap
-        assertNotNull(result);
         assertEquals(src.getWidth(), result.getWidth());
         assertEquals(src.getHeight(), result.getHeight());
     }
 
-    @TestTargetNew(
-      level = TestLevel.COMPLETE,
-      method = "getContentUri",
-      args = {String.class}
-    )
     public void testGetContentUri() {
         assertNotNull(mContentResolver.query(Media.getContentUri("internal"), null, null, null,
                 null));
@@ -247,11 +188,15 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
         assertNull(mContentResolver.query(Media.getContentUri(volume), null, null, null, null));
     }
 
-    public void testStoreImagesMediaExternal() {
+    public void testStoreImagesMediaExternal() throws Exception {
         final String externalPath = Environment.getExternalStorageDirectory().getPath() +
                 "/testimage.jpg";
         final String externalPath2 = Environment.getExternalStorageDirectory().getPath() +
                 "/testimage1.jpg";
+
+        int numBytes = 1337;
+        FileUtils.createFile(new File(externalPath), numBytes);
+
         ContentValues values = new ContentValues();
         values.put(Media.ORIENTATION, 0);
         values.put(Media.PICASA_ID, 0);
@@ -265,11 +210,11 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
         values.put(Media.DATA, externalPath);
         values.put(Media.DISPLAY_NAME, "testimage");
         values.put(Media.MIME_TYPE, "image/jpeg");
-        values.put(Media.SIZE, 86853);
+        values.put(Media.SIZE, numBytes);
         values.put(Media.TITLE, "testimage");
-        long dateAdded = System.currentTimeMillis();
+        long dateAdded = System.currentTimeMillis() / 1000;
         values.put(Media.DATE_ADDED, dateAdded);
-        long dateModified = System.currentTimeMillis();
+        long dateModified = System.currentTimeMillis() / 1000;
         values.put(Media.DATE_MODIFIED, dateModified);
 
         // insert
@@ -296,10 +241,12 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
             assertEquals("testimage", c.getString(c.getColumnIndex(Media.DISPLAY_NAME)));
             assertEquals("image/jpeg", c.getString(c.getColumnIndex(Media.MIME_TYPE)));
             assertEquals("testimage", c.getString(c.getColumnIndex(Media.TITLE)));
-            assertEquals(86853, c.getInt(c.getColumnIndex(Media.SIZE)));
+            assertEquals(numBytes, c.getInt(c.getColumnIndex(Media.SIZE)));
             long realDateAdded = c.getLong(c.getColumnIndex(Media.DATE_ADDED));
-            assertTrue(realDateAdded > 0);
-            assertEquals(dateModified, c.getLong(c.getColumnIndex(Media.DATE_MODIFIED)));
+            assertTrue(realDateAdded >= dateAdded);
+            // there can be delay as time is read after creation
+            assertTrue(Math.abs(dateModified - c.getLong(c.getColumnIndex(Media.DATE_MODIFIED)))
+                       < 5);
             c.close();
 
             // update
@@ -318,7 +265,7 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
             values.put(Media.MIME_TYPE, "image/jpeg");
             values.put(Media.SIZE, 86854);
             values.put(Media.TITLE, "testimage1");
-            dateModified = System.currentTimeMillis();
+            dateModified = System.currentTimeMillis() / 1000;
             values.put(Media.DATE_MODIFIED, dateModified);
             assertEquals(1, mContentResolver.update(uri, values, null, null));
 

@@ -16,17 +16,15 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-
 import android.app.Instrumentation;
+import android.content.ContentProviderClient;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
-import android.content.IContentProvider;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.net.Uri;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.Contacts;
 import android.provider.cts.ContactsContract_TestDataBuilder.TestContact;
@@ -35,7 +33,6 @@ import android.test.InstrumentationTestCase;
 
 import java.util.List;
 
-@TestTargetClass(ContactsContract.Contacts.class)
 public class ContactsContract_ContactsTest extends InstrumentationTestCase {
     private ContentResolver mContentResolver;
     private ContactsContract_TestDataBuilder mBuilder;
@@ -44,7 +41,8 @@ public class ContactsContract_ContactsTest extends InstrumentationTestCase {
     protected void setUp() throws Exception {
         super.setUp();
         mContentResolver = getInstrumentation().getTargetContext().getContentResolver();
-        IContentProvider provider = mContentResolver.acquireProvider(ContactsContract.AUTHORITY);
+        ContentProviderClient provider =
+                mContentResolver.acquireContentProviderClient(ContactsContract.AUTHORITY);
         mBuilder = new ContactsContract_TestDataBuilder(provider);
     }
 
@@ -54,12 +52,6 @@ public class ContactsContract_ContactsTest extends InstrumentationTestCase {
         mBuilder.cleanup();
     }
 
-    @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test markAsContacted(ContentResolver resolver, long contactId)",
-            method = "markAsContacted",
-            args = {android.content.ContentResolver.class, long.class}
-    )
     public void testMarkAsContacted() throws Exception {
         TestRawContact rawContact = mBuilder.newRawContact().insert().load();
         TestContact contact = rawContact.getContact().load();
@@ -87,6 +79,25 @@ public class ContactsContract_ContactsTest extends InstrumentationTestCase {
         List<ResolveInfo> resolveInfos = packageManager.queryIntentActivities(intent, 0);
         assertFalse("Device does not support the activity intent: " + intent,
                 resolveInfos.isEmpty());
+    }
+
+    public void testLookupUri() throws Exception {
+        TestRawContact rawContact = mBuilder.newRawContact().insert().load();
+        TestContact contact = rawContact.getContact().load();
+
+        Uri contactUri = contact.getUri();
+        long contactId = contact.getId();
+        String lookupKey = contact.getString(Contacts.LOOKUP_KEY);
+
+        Uri lookupUri = Contacts.getLookupUri(contactId, lookupKey);
+        assertEquals(ContentUris.withAppendedId(Uri.withAppendedPath(Contacts.CONTENT_LOOKUP_URI,
+                lookupKey), contactId), lookupUri);
+
+        Uri lookupUri2 = Contacts.getLookupUri(mContentResolver, contactUri);
+        assertEquals(lookupUri, lookupUri2);
+
+        Uri contactUri2 = Contacts.lookupContact(mContentResolver, lookupUri);
+        assertEquals(contactUri, contactUri2);
     }
 }
 

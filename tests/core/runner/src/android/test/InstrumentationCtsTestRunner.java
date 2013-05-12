@@ -33,8 +33,15 @@ import android.util.Log;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.Authenticator;
+import java.net.CookieHandler;
+import java.net.ResponseCache;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.Test;
@@ -54,18 +61,15 @@ import junit.framework.TestListener;
  */
 public class InstrumentationCtsTestRunner extends InstrumentationTestRunner {
 
-    /**
-     * Convenience definition of our log tag.
-     */
     private static final String TAG = "InstrumentationCtsTestRunner";
-
-    private static final String REPORT_VALUE_ID = "InstrumentationCtsTestRunner";
 
     /**
      * True if (and only if) we are running in single-test mode (as opposed to
      * batch mode).
      */
     private boolean mSingleTest = false;
+
+    private TestEnvironment mEnvironment;
 
     @Override
     public void onCreate(Bundle arguments) {
@@ -80,10 +84,9 @@ public class InstrumentationCtsTestRunner extends InstrumentationTestRunner {
         System.setProperty("user.home", cacheDir.getAbsolutePath());
         System.setProperty("java.io.tmpdir", cacheDir.getAbsolutePath());
         System.setProperty("user.dir", cacheDir.getAbsolutePath());
-        System.setProperty("javax.net.ssl.trustStore",
-                "/etc/security/cacerts.bks");
 
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+
+        mEnvironment = new TestEnvironment();
 
         if (arguments != null) {
             String classArg = arguments.getString(ARGUMENT_TEST_CLASS);
@@ -116,16 +119,7 @@ public class InstrumentationCtsTestRunner extends InstrumentationTestRunner {
              */
             private Class<?> lastClass;
 
-            /**
-             * The minimum time we expect a test to take.
-             */
-            private static final int MINIMUM_TIME = 100;
-
-            /**
-             * The start time of our current test in System.currentTimeMillis().
-             */
-            private long startTime;
-
+            @Override
             public void startTest(Test test) {
                 if (test.getClass() != lastClass) {
                     lastClass = test.getClass();
@@ -135,35 +129,22 @@ public class InstrumentationCtsTestRunner extends InstrumentationTestRunner {
                 Thread.currentThread().setContextClassLoader(
                         test.getClass().getClassLoader());
 
-                startTime = System.currentTimeMillis();
+                mEnvironment.reset();
             }
 
+            @Override
             public void endTest(Test test) {
                 if (test instanceof TestCase) {
                     cleanup((TestCase)test);
-
-                    /*
-                     * Make sure all tests take at least MINIMUM_TIME to
-                     * complete. If they don't, we wait a bit. The Cupcake
-                     * Binder can't handle too many operations in a very
-                     * short time, which causes headache for the CTS.
-                     */
-                    long timeTaken = System.currentTimeMillis() - startTime;
-
-                    if (timeTaken < MINIMUM_TIME) {
-                        try {
-                            Thread.sleep(MINIMUM_TIME - timeTaken);
-                        } catch (InterruptedException ignored) {
-                            // We don't care.
-                        }
-                    }
                 }
             }
 
+            @Override
             public void addError(Test test, Throwable t) {
                 // This space intentionally left blank.
             }
 
+            @Override
             public void addFailure(Test test, AssertionFailedError t) {
                 // This space intentionally left blank.
             }
@@ -216,6 +197,34 @@ public class InstrumentationCtsTestRunner extends InstrumentationTestRunner {
         });
 
         return runner;
+    }
+
+    // http://code.google.com/p/vogar/source/browse/trunk/src/vogar/target/TestEnvironment.java
+    static class TestEnvironment {
+        private Locale mDefaultLocale;
+        private String mUserHome;
+        private String mJavaIoTmpDir;
+        private HostnameVerifier mHostnameVerifier;
+        private SSLSocketFactory mSslSocketFactory;
+
+        TestEnvironment() {
+            mDefaultLocale = Locale.getDefault();
+            mUserHome = System.getProperty("user.home");
+            mJavaIoTmpDir = System.getProperty("java.io.tmpdir");
+            mHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
+            mSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory();
+        }
+
+        void reset() {
+            Locale.setDefault(mDefaultLocale);
+            System.setProperty("user.home", mUserHome);
+            System.setProperty("java.io.tmpdir", mJavaIoTmpDir);
+            Authenticator.setDefault(null);
+            CookieHandler.setDefault(null);
+            ResponseCache.setDefault(null);
+            HttpsURLConnection.setDefaultHostnameVerifier(mHostnameVerifier);
+            HttpsURLConnection.setDefaultSSLSocketFactory(mSslSocketFactory);
+        }
     }
 
     @Override

@@ -33,27 +33,10 @@ import android.text.style.SuperscriptSpan;
 import android.text.style.TypefaceSpan;
 import android.text.style.URLSpan;
 import android.text.style.UnderlineSpan;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(Html.class)
 public class HtmlTest extends AndroidTestCase {
     private final static int SPAN_EXCLUSIVE_INCLUSIVE = Spannable.SPAN_EXCLUSIVE_INCLUSIVE;
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class, ImageGetter.class, TagHandler.class}
-        )
-    })
     public void testSingleTagOnWhileString() {
         final String source = "<b>hello</b>";
 
@@ -76,18 +59,6 @@ public class HtmlTest extends AndroidTestCase {
         assertEquals(expectEnd, spanned.getSpanEnd(spans[0]));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class, ImageGetter.class, TagHandler.class}
-        )
-    })
     public void testBadHtml() {
         final String source = "Hello <b>b<i>bi</b>i</i>";
 
@@ -106,18 +77,6 @@ public class HtmlTest extends AndroidTestCase {
         assertEquals(spansLen, spans.length);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class, ImageGetter.class, TagHandler.class}
-        )
-    })
     public void testSymbols() {
         final String source = "&copy; &gt; &lt";
         final String expected = "\u00a9 > <";
@@ -128,18 +87,6 @@ public class HtmlTest extends AndroidTestCase {
         assertEquals(expected, spanned);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL_COMPLETE,
-            method = "fromHtml",
-            args = {String.class, ImageGetter.class, TagHandler.class}
-        )
-    })
     public void testColor() throws Exception {
         final int start = 0;
 
@@ -163,128 +110,102 @@ public class HtmlTest extends AndroidTestCase {
         assertEquals(0, colors.length);
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL_COMPLETE,
-        method = "toHtml",
-        args = {Spanned.class}
-    )
     public void testParagraphs() throws Exception {
         SpannableString s = new SpannableString("Hello world");
-        assertEquals("<p>Hello world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello world\nor something");
-        assertEquals("<p>Hello world<br>\nor something</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello world<br>\nor something</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello world\n\nor something");
-        assertEquals("<p>Hello world</p>\n<p>or something</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello world</p>\n<p dir=\"ltr\">or something</p>\n",
+                Html.toHtml(s));
 
         s = new SpannableString("Hello world\n\n\nor something");
-        assertEquals("<p>Hello world<br></p>\n<p>or something</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello world<br></p>\n<p dir=\"ltr\">or something</p>\n",
+                Html.toHtml(s));
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL_COMPLETE,
-        method = "toHtml",
-        args = {Spanned.class}
-    )
     public void testBlockquote() throws Exception {
         final int start = 0;
 
         SpannableString s = new SpannableString("Hello world");
         int end = s.length();
         s.setSpan(new QuoteSpan(), start, end, Spannable.SPAN_PARAGRAPH);
-        assertEquals("<blockquote><p>Hello world</p>\n</blockquote>\n", Html.toHtml(s));
+        assertEquals("<blockquote><p dir=\"ltr\">Hello world</p>\n</blockquote>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello\n\nworld");
         end = 7;
         s.setSpan(new QuoteSpan(), start, end, Spannable.SPAN_PARAGRAPH);
-        assertEquals("<blockquote><p>Hello</p>\n</blockquote>\n<p>world</p>\n", Html.toHtml(s));
+        assertEquals("<blockquote><p dir=\"ltr\">Hello</p>\n</blockquote>\n" +
+        		"<p dir=\"ltr\">world</p>\n", Html.toHtml(s));
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL_COMPLETE,
-        method = "toHtml",
-        args = {Spanned.class}
-    )
     public void testEntities() throws Exception {
         SpannableString s = new SpannableString("Hello <&> world");
-        assertEquals("<p>Hello &lt;&amp;&gt; world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello &lt;&amp;&gt; world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello \u03D5 world");
-        assertEquals("<p>Hello &#981; world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello &#981; world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello  world");
-        assertEquals("<p>Hello&nbsp; world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello&nbsp; world</p>\n", Html.toHtml(s));
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL_COMPLETE,
-        method = "toHtml",
-        args = {Spanned.class}
-    )
     public void testMarkup() throws Exception {
         final int start = 6;
 
         SpannableString s = new SpannableString("Hello bold world");
         int end = s.length() - start;
         s.setSpan(new StyleSpan(Typeface.BOLD), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
-        assertEquals("<p>Hello <b>bold</b> world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello <b>bold</b> world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello italic world");
         end = s.length() - start;
         s.setSpan(new StyleSpan(Typeface.ITALIC), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
-        assertEquals("<p>Hello <i>italic</i> world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello <i>italic</i> world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello monospace world");
         end = s.length() - start;
         s.setSpan(new TypefaceSpan("monospace"), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
-        assertEquals("<p>Hello <tt>monospace</tt> world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello <tt>monospace</tt> world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello superscript world");
         end = s.length() - start;
         s.setSpan(new SuperscriptSpan(), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
-        assertEquals("<p>Hello <sup>superscript</sup> world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello <sup>superscript</sup> world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello subscript world");
         end = s.length() - start;
         s.setSpan(new SubscriptSpan(), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
-        assertEquals("<p>Hello <sub>subscript</sub> world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello <sub>subscript</sub> world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello underline world");
         end = s.length() - start;
         s.setSpan(new UnderlineSpan(), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
-        assertEquals("<p>Hello <u>underline</u> world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello <u>underline</u> world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello struck world");
         end = s.length() - start;
         s.setSpan(new StrikethroughSpan(), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
-        assertEquals("<p>Hello <strike>struck</strike> world</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">Hello <strike>struck</strike> world</p>\n", Html.toHtml(s));
 
         s = new SpannableString("Hello linky world");
         end = s.length() - start;
         s.setSpan(new URLSpan("http://www.google.com"), start, end, SPAN_EXCLUSIVE_INCLUSIVE);
         String ret = Html.toHtml(s);
-        assertEquals("<p>Hello <a href=\"http://www.google.com\">linky</a> world</p>\n", ret);
+        assertEquals("<p dir=\"ltr\">Hello <a href=\"http://www.google.com\">linky</a> world</p>\n",
+                ret);
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL_COMPLETE,
-        method = "toHtml",
-        args = {Spanned.class}
-    )
     public void testImg() throws Exception {
         Spanned s = Html.fromHtml("yes<img src=\"http://example.com/foo.gif\">no");
-        assertEquals("<p>yes<img src=\"http://example.com/foo.gif\">no</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">yes<img src=\"http://example.com/foo.gif\">no</p>\n",
+                Html.toHtml(s));
     }
 
-    @TestTargetNew(
-        level = TestLevel.PARTIAL_COMPLETE,
-        notes = "Test method: toHtml",
-        method = "toHtml",
-        args = {Spanned.class}
-    )
     public void testUtf8() throws Exception {
         Spanned s = Html.fromHtml("<p>\u0124\u00eb\u0142\u0142o, world!</p>");
-        assertEquals("<p>&#292;&#235;&#322;&#322;o, world!</p>\n", Html.toHtml(s));
+        assertEquals("<p dir=\"ltr\">&#292;&#235;&#322;&#322;o, world!</p>\n", Html.toHtml(s));
     }
 }

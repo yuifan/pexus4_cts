@@ -15,12 +15,6 @@
  */
 package android.graphics.cts;
 
-import dalvik.annotation.KnownFailure;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.ToBeFixed;
-
 import android.graphics.AvoidXfermode;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -30,7 +24,6 @@ import android.graphics.Bitmap.Config;
 
 import junit.framework.TestCase;
 
-@TestTargetClass(AvoidXfermode.class)
 public class AvoidXfermodeTest extends TestCase {
     /*
      * ToBeFixed: This test ought to work with a TOLERANCE of 0. See bug 2034547.
@@ -40,13 +33,6 @@ public class AvoidXfermodeTest extends TestCase {
     private static final int BITMAP_HEIGHT = BASE_SIZE * 2;
     private static final int BITMAP_WIDTH = BASE_SIZE * 2;
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "AvoidXfermode",
-        args = {int.class, int.class, android.graphics.AvoidXfermode.Mode.class}
-    )
-    @ToBeFixed(bug = "2034547",
-               explanation = "AvoidXfermode does not work as expected with tolerance 0.")
     public void testAvoidXfermode() {
         Paint greenPaint;
         Paint redAvoidingGreenPaint;
@@ -76,7 +62,7 @@ public class AvoidXfermodeTest extends TestCase {
 
         assertEquals(Color.GREEN, b.getPixel(BASE_SIZE / 2, BASE_SIZE / 2));
         assertEquals(Color.RED, b.getPixel(BASE_SIZE + BASE_SIZE / 2, BASE_SIZE / 2));
-        assertEquals(Color.BLUE, b.getPixel(BASE_SIZE / 2, BASE_SIZE + BASE_SIZE / 2));
+        assertEquals(Color.CYAN, b.getPixel(BASE_SIZE / 2, BASE_SIZE + BASE_SIZE / 2));
         assertEquals(Color.BLACK, b.getPixel(BASE_SIZE + BASE_SIZE / 2, BASE_SIZE + BASE_SIZE / 2));
     }
 }

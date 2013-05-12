@@ -16,31 +16,27 @@
 
 package android.webkit.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
+import android.cts.util.PollingCheck;
+import android.test.ActivityInstrumentationTestCase2;
+import android.webkit.CacheManager;
+import android.webkit.CacheManager.CacheResult;
+import android.webkit.WebView;
+
 
 import org.apache.http.HttpStatus;
 import org.apache.http.impl.cookie.DateUtils;
 
-import android.test.ActivityInstrumentationTestCase2;
-import android.view.animation.cts.DelayedCheck;
-import android.webkit.CacheManager;
-import android.webkit.WebChromeClient;
-import android.webkit.WebView;
-import android.webkit.CacheManager.CacheResult;
-
 import java.io.File;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
-@TestTargetClass(android.webkit.CacheManager.CacheResult.class)
 public class CacheManager_CacheResultTest
         extends ActivityInstrumentationTestCase2<WebViewStubActivity> {
-    private static final long NETWORK_OPERATION_DELAY = 10000l;
+    private static final long NETWORK_OPERATION_TIMEOUT = 10000L;
 
-    private WebView mWebView;
     private CtsTestServer mWebServer;
+    private WebViewOnUiThread mOnUiThread;
 
     public CacheManager_CacheResultTest() {
         super("com.android.cts.stub", WebViewStubActivity.class);
@@ -49,87 +45,20 @@ public class CacheManager_CacheResultTest
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        mWebView = getActivity().getWebView();
-        mWebView.setWebChromeClient(new WebChromeClient());
+        mOnUiThread = new WebViewOnUiThread(this, getActivity().getWebView());
     }
 
     @Override
     protected void tearDown() throws Exception {
+        mOnUiThread.cleanUp();
         if (mWebServer != null) {
             mWebServer.shutdown();
         }
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getInputStream",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getContentLength",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getETag",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLastModified",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLocalPath",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getLocation",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMimeType",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getOutputStream",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getExpires",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getHttpStatusCode",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEncoding",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEncoding",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setInputStream",
-            args = {InputStream.class}
-        )
-    })
     public void testCacheResult() throws Exception {
-        final long validity = 5 * 50 * 1000; // 5 min
+        final long validity = 5 * 60 * 1000; // 5 min
         final long age = 30 * 60 * 1000; // 30 min
         final long tolerance = 5 * 1000; // 5s
 
@@ -138,8 +67,8 @@ public class CacheManager_CacheResultTest
         mWebServer.setDocumentAge(age);
         mWebServer.setDocumentValidity(validity);
 
-        mWebView.clearCache(true);
-        new DelayedCheck(NETWORK_OPERATION_DELAY) {
+        mOnUiThread.clearCache(true);
+        new PollingCheck(NETWORK_OPERATION_TIMEOUT) {
             @Override
             protected boolean check() {
                 CacheResult result =
@@ -148,20 +77,26 @@ public class CacheManager_CacheResultTest
             }
         }.run();
         final long time = System.currentTimeMillis();
-        loadUrl(url);
-        CacheResult result = CacheManager.getCacheFile(url, null);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+
+        Map<String, String> headers = new HashMap<String, String>();
+        CacheResult result = CacheManager.getCacheFile(url, headers);
+        assertTrue(headers.isEmpty());
+
         assertNotNull(result);
         assertNotNull(result.getInputStream());
         assertTrue(result.getContentLength() > 0);
         assertNull(result.getETag());
-        assertEquals(time - age,
-                DateUtils.parseDate(result.getLastModified()).getTime(), tolerance);
+        assertEquals((double)(time - age),
+                (double)DateUtils.parseDate(result.getLastModified()).getTime(),
+                (double)tolerance);
         File file = new File(CacheManager.getCacheFileBaseDir().getPath(), result.getLocalPath());
         assertTrue(file.exists());
         assertNull(result.getLocation());
         assertEquals("text/html", result.getMimeType());
         assertNull(result.getOutputStream());
-        assertEquals(time + validity, result.getExpires(), tolerance);
+        assertEquals((double)(time + validity), (double)result.getExpires(),
+                (double)tolerance);
         assertEquals(HttpStatus.SC_OK, result.getHttpStatusCode());
         assertNotNull(result.getEncoding());
 
@@ -170,17 +105,5 @@ public class CacheManager_CacheResultTest
 
         result.setInputStream(null);
         assertNull(result.getInputStream());
-    }
-
-    private void loadUrl(String url){
-        mWebView.loadUrl(url);
-        // check whether loadURL successfully
-        new DelayedCheck(NETWORK_OPERATION_DELAY) {
-            @Override
-            protected boolean check() {
-                return mWebView.getProgress() == 100;
-            }
-        }.run();
-        assertEquals(100, mWebView.getProgress());
     }
 }

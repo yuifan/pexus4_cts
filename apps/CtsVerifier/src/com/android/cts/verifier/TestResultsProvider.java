@@ -16,7 +16,9 @@
 
 package com.android.cts.verifier;
 
+import android.app.backup.BackupManager;
 import android.content.ContentProvider;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.UriMatcher;
@@ -40,23 +42,19 @@ public class TestResultsProvider extends ContentProvider {
         return Uri.withAppendedPath(RESULTS_CONTENT_URI, testName);
     }
 
-    public static final String _ID = "_id";
+    static final String _ID = "_id";
 
     /** String name of the test like "com.android.cts.verifier.foo.FooTestActivity" */
-    public static final String COLUMN_TEST_NAME = "testname";
+    static final String COLUMN_TEST_NAME = "testname";
 
     /** Integer test result corresponding to constants in {@link TestResult}. */
-    public static final String COLUMN_TEST_RESULT = "testresult";
+    static final String COLUMN_TEST_RESULT = "testresult";
 
     /** Boolean indicating whether the test info has been seen. */
-    public static final String COLUMN_TEST_INFO_SEEN = "testinfoseen";
+    static final String COLUMN_TEST_INFO_SEEN = "testinfoseen";
 
-    public static final String[] ALL_COLUMNS = {
-        _ID,
-        COLUMN_TEST_NAME,
-        COLUMN_TEST_RESULT,
-        COLUMN_TEST_INFO_SEEN,
-    };
+    /** String containing the test's details. */
+    static final String COLUMN_TEST_DETAILS = "testdetails";
 
     private static final UriMatcher URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
     private static final int RESULTS_ALL = 1;
@@ -72,9 +70,12 @@ public class TestResultsProvider extends ContentProvider {
 
     private SQLiteOpenHelper mOpenHelper;
 
+    private BackupManager mBackupManager;
+
     @Override
     public boolean onCreate() {
         mOpenHelper = new TestResultsOpenHelper(getContext());
+        mBackupManager = new BackupManager(getContext());
         return false;
     }
 
@@ -82,7 +83,7 @@ public class TestResultsProvider extends ContentProvider {
 
         private static final String DATABASE_NAME = "results.db";
 
-        private static final int DATABASE_VERSION = 5;
+        private static final int DATABASE_VERSION = 6;
 
         TestResultsOpenHelper(Context context) {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -94,7 +95,8 @@ public class TestResultsProvider extends ContentProvider {
                     + _ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                     + COLUMN_TEST_NAME + " TEXT, "
                     + COLUMN_TEST_RESULT + " INTEGER,"
-                    + COLUMN_TEST_INFO_SEEN + " INTEGER DEFAULT 0);");
+                    + COLUMN_TEST_INFO_SEEN + " INTEGER DEFAULT 0,"
+                    + COLUMN_TEST_DETAILS + " TEXT);");
         }
 
         @Override
@@ -140,14 +142,12 @@ public class TestResultsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         long id = db.insert(TABLE_NAME, null, values);
         getContext().getContentResolver().notifyChange(uri, null);
+        mBackupManager.dataChanged();
         return Uri.withAppendedPath(RESULTS_CONTENT_URI, "" + id);
-
     }
 
     @Override
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
-
         int match = URI_MATCHER.match(uri);
         switch (match) {
             case RESULTS_ALL:
@@ -176,9 +176,11 @@ public class TestResultsProvider extends ContentProvider {
                 throw new IllegalArgumentException("Unknown URI: " + uri);
         }
 
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int numUpdated = db.update(TABLE_NAME, values, selection, selectionArgs);
         if (numUpdated > 0) {
             getContext().getContentResolver().notifyChange(uri, null);
+            mBackupManager.dataChanged();
         }
         return numUpdated;
     }
@@ -189,6 +191,7 @@ public class TestResultsProvider extends ContentProvider {
         int numDeleted = db.delete(TABLE_NAME, selection, selectionArgs);
         if (numDeleted > 0) {
             getContext().getContentResolver().notifyChange(uri, null);
+            mBackupManager.dataChanged();
         }
         return numDeleted;
     }
@@ -197,4 +200,22 @@ public class TestResultsProvider extends ContentProvider {
     public String getType(Uri uri) {
         return null;
     }
+
+    static void setTestResult(Context context, String testName, int testResult,
+            String testDetails) {
+        ContentValues values = new ContentValues(2);
+        values.put(TestResultsProvider.COLUMN_TEST_RESULT, testResult);
+        values.put(TestResultsProvider.COLUMN_TEST_NAME, testName);
+        values.put(TestResultsProvider.COLUMN_TEST_DETAILS, testDetails);
+
+        ContentResolver resolver = context.getContentResolver();
+        int numUpdated = resolver.update(TestResultsProvider.RESULTS_CONTENT_URI, values,
+                TestResultsProvider.COLUMN_TEST_NAME + " = ?",
+                new String[] {testName});
+
+        if (numUpdated == 0) {
+            resolver.insert(TestResultsProvider.RESULTS_CONTENT_URI, values);
+        }
+    }
+
 }

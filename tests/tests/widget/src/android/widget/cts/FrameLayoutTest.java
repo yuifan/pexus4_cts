@@ -18,18 +18,13 @@ package android.widget.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
-
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.cts.util.PollingCheck;
 import android.graphics.Rect;
 import android.graphics.Region;
 import android.graphics.drawable.BitmapDrawable;
@@ -42,13 +37,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.FrameLayout.LayoutParams;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.FrameLayout.LayoutParams;
 
 import java.io.IOException;
 
-@TestTargetClass(FrameLayout.class)
 public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayoutStubActivity> {
     private Activity mActivity;
     private Instrumentation mInstrumentation;
@@ -70,24 +64,6 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         assertNotNull(mFrameLayout);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "FrameLayout",
-            args = {android.content.Context.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "FrameLayout",
-            args = {android.content.Context.class, android.util.AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "FrameLayout",
-            args = {android.content.Context.class, android.util.AttributeSet.class, int.class}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testConstructor() throws XmlPullParserException, IOException {
         AttributeSet attrs = getAttributeSet();
 
@@ -96,28 +72,6 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         new FrameLayout(mActivity, attrs, 0);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setForegroundGravity",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setForeground",
-            args = {android.graphics.drawable.Drawable.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getForeground",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "draw",
-            args = {android.graphics.Canvas.class}
-        )
-    })
     public void testSetForegroundGravity() {
         final BitmapDrawable foreground
                 = (BitmapDrawable) mActivity.getResources().getDrawable(R.drawable.size_48x48);
@@ -136,9 +90,14 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         assertSame(foreground, mFrameLayout.getForeground());
         // check the default gravity FILL, it completely fills its container
         assertTrue(foreground.isVisible());
-        Rect rect = foreground.getBounds();
+        final Rect rect = foreground.getBounds();
         // foreground has been stretched
-        assertEquals(mFrameLayout.getHeight(), rect.bottom - rect.top);
+        new PollingCheck() {
+            @Override
+            protected boolean check() {
+                return mFrameLayout.getHeight() == rect.bottom - rect.top;
+            }
+        }.run();
         assertEquals(mFrameLayout.getWidth(), rect.right - rect.left);
 
         // should get a new foreground again, because former foreground has been stretched
@@ -158,18 +117,13 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         mInstrumentation.waitForIdleSync();
         assertSame(newForeground, mFrameLayout.getForeground());
         assertTrue(newForeground.isVisible());
-        rect = newForeground.getBounds();
+        Rect rect2 = newForeground.getBounds();
         // not changing its size
-        assertEquals(foreground.getIntrinsicHeight(), rect.bottom - rect.top);
-        assertEquals(foreground.getIntrinsicWidth(), rect.right - rect.left);
+        assertEquals(foreground.getIntrinsicHeight(), rect2.bottom - rect2.top);
+        assertEquals(foreground.getIntrinsicWidth(), rect2.right - rect2.left);
         assertCenterAligned(mFrameLayout, newForeground);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "gatherTransparentRegion",
-        args = {android.graphics.Region.class}
-    )
     public void testGatherTransparentRegion() {
         final LinearLayout container
                 = (LinearLayout) mActivity.findViewById(R.id.framelayout_container);
@@ -194,18 +148,6 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         assertTrue(mFrameLayout.gatherTransparentRegion(region));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setMeasureAllChildren",
-            args = {boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getConsiderGoneChildrenWhenMeasuring",
-            args = {}
-        )
-    })
     public void testAccessMeasureAllChildren() {
         final FrameLayout frameLayout
                 = (FrameLayout) mActivity.findViewById(R.id.framelayout_measureall);
@@ -253,11 +195,6 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         WidgetTestUtils.assertScaledPixels(expected, actual, getActivity());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "generateLayoutParams",
-        args = {android.view.ViewGroup.LayoutParams.class}
-    )
     public void testGenerateLayoutParams1() {
         MyFrameLayout myFrameLayout = new MyFrameLayout(mActivity);
         ViewGroup.LayoutParams p = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -270,11 +207,6 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         assertEquals(ViewGroup.LayoutParams.WRAP_CONTENT, params.height);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "generateLayoutParams",
-        args = {android.util.AttributeSet.class}
-    )
     public void testGenerateLayoutParams2() throws XmlPullParserException, IOException {
         AttributeSet attrs = getAttributeSet();
 
@@ -285,12 +217,6 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         assertEquals(Gravity.BOTTOM, params.gravity);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "checkLayoutParams",
-        args = {android.view.ViewGroup.LayoutParams.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testCheckLayoutParams() {
         MyFrameLayout myFrameLayout = new MyFrameLayout(mActivity);
         assertFalse(myFrameLayout.checkLayoutParams(null));
@@ -304,20 +230,10 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         assertTrue(myFrameLayout.checkLayoutParams(params2));
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "drawableStateChanged",
-        args = {}
-    )
     public void testDrawableStateChanged() {
         // drawableStateChanged() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "generateDefaultLayoutParams",
-        args = {}
-    )
     public void testGenerateDefaultLayoutParams() {
         MyFrameLayout frameLayout = new MyFrameLayout(mActivity);
         FrameLayout.LayoutParams params = frameLayout.generateDefaultLayoutParams();
@@ -327,38 +243,18 @@ public class FrameLayoutTest extends ActivityInstrumentationTestCase2<FrameLayou
         assertEquals(LayoutParams.MATCH_PARENT, params.height);
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onLayout",
-        args = {boolean.class, int.class, int.class, int.class, int.class}
-    )
     public void testOnLayout() {
         // onLayout() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onMeasure",
-        args = {int.class, int.class}
-    )
     public void testOnMeasure() {
         // onMeasure() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.NOT_NECESSARY,
-        method = "onSizeChanged",
-        args = {int.class, int.class, int.class, int.class}
-    )
     public void testOnSizeChanged() {
         // onSizeChanged() is implementation details, do NOT test
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "verifyDrawable",
-        args = {android.graphics.drawable.Drawable.class}
-    )
     public void testVerifyDrawable() {
         MyFrameLayout myFrameLayout = new MyFrameLayout(mActivity);
 

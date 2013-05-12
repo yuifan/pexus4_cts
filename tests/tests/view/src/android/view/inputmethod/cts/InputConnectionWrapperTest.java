@@ -16,137 +16,21 @@
 
 package android.view.inputmethod.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.os.Bundle;
 import android.test.AndroidTestCase;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.inputmethod.CompletionInfo;
+import android.view.inputmethod.CorrectionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputConnectionWrapper;
 
-@TestTargetClass(InputConnectionWrapper.class)
 public class InputConnectionWrapperTest extends AndroidTestCase {
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "InputConnectionWrapper",
-            args = {InputConnection.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setTarget",
-            args = {InputConnection.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "beginBatchEdit",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "commitCompletion",
-            args = {CompletionInfo.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "endBatchEdit",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getExtractedText",
-            args = {ExtractedTextRequest.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "performContextMenuAction",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "performEditorAction",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "performPrivateCommand",
-            args = {String.class, Bundle.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setSelection",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTextAfterCursor",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTextBeforeCursor",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-                level = TestLevel.COMPLETE,
-                method = "getSelectedText",
-                args = {int.class}
-            ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getCursorCapsMode",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "clearMetaKeyStates",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "commitText",
-            args = {CharSequence.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "deleteSurroundingText",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "finishComposingText",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setComposingText",
-            args = {CharSequence.class, int.class}
-        ),
-        @TestTargetNew(
-                level = TestLevel.COMPLETE,
-                method = "setComposingRegion",
-                args = {int.class, int.class}
-            ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "sendKeyEvent",
-            args = {KeyEvent.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "reportFullscreenMode",
-            args = {boolean.class}
-        )
-    })
     public void testInputConnectionWrapper() {
         MockInputConnection inputConnection = new MockInputConnection();
         InputConnectionWrapper wrapper = new InputConnectionWrapper(null, true);
@@ -164,6 +48,8 @@ public class InputConnectionWrapperTest extends AndroidTestCase {
         assertTrue(inputConnection.isClearMetaKeyStatesCalled);
         wrapper.commitCompletion(new CompletionInfo(1, 1, "testText"));
         assertTrue(inputConnection.isCommitCompletionCalled);
+        wrapper.commitCorrection(new CorrectionInfo(0, "oldText", "newText"));
+        assertTrue(inputConnection.isCommitCorrectionCalled);
         wrapper.commitText("Text", 1);
         assertTrue(inputConnection.isCommitTextCalled);
         wrapper.deleteSurroundingText(10, 100);
@@ -204,6 +90,7 @@ public class InputConnectionWrapperTest extends AndroidTestCase {
         public boolean isBeginBatchEditCalled;
         public boolean isClearMetaKeyStatesCalled;
         public boolean isCommitCompletionCalled;
+        public boolean isCommitCorrectionCalled;
         public boolean isCommitTextCalled;
         public boolean isDeleteSurroundingTextCalled;
         public boolean isEndBatchEditCalled;
@@ -237,12 +124,17 @@ public class InputConnectionWrapperTest extends AndroidTestCase {
             return false;
         }
 
+        public boolean commitCorrection(CorrectionInfo info) {
+            isCommitCorrectionCalled = true;
+            return false;
+        }
+
         public boolean commitText(CharSequence text, int newCursorPosition) {
             isCommitTextCalled = true;
             return false;
         }
 
-        public boolean deleteSurroundingText(int leftLength, int rightLength) {
+        public boolean deleteSurroundingText(int beforeLength, int afterLength) {
             isDeleteSurroundingTextCalled = true;
             return false;
         }

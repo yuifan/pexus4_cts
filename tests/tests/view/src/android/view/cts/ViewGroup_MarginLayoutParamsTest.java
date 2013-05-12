@@ -18,60 +18,31 @@ package android.view.cts;
 
 import android.content.Context;
 import android.content.res.XmlResourceParser;
-import android.test.AndroidTestCase;
-import android.util.AttributeSet;
+import android.test.InstrumentationTestCase;
+import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewGroup.LayoutParams;
 import android.view.ViewGroup.MarginLayoutParams;
 
+import android.widget.LinearLayout;
 import com.android.internal.util.XmlUtils;
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargetClass;
 
-@TestTargetClass(ViewGroup.MarginLayoutParams.class)
-public class ViewGroup_MarginLayoutParamsTest extends AndroidTestCase {
+public class ViewGroup_MarginLayoutParamsTest extends InstrumentationTestCase {
 
     private ViewGroup.MarginLayoutParams mMarginLayoutParams;
+    private Context mContext;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
         mMarginLayoutParams = null;
+        mContext = getInstrumentation().getTargetContext();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test MarginLayoutParams constructor",
-            method = "ViewGroup.MarginLayoutParams",
-            args = {android.content.Context.class, android.util.AttributeSet.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test MarginLayoutParams constructor",
-            method = "ViewGroup.MarginLayoutParams",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test MarginLayoutParams constructor",
-            method = "ViewGroup.MarginLayoutParams",
-            args = {android.view.ViewGroup.LayoutParams.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            notes = "Test MarginLayoutParams constructor",
-            method = "ViewGroup.MarginLayoutParams",
-            args = {android.view.ViewGroup.MarginLayoutParams.class}
-        )
-    })
     public void testConstructor() {
         mMarginLayoutParams = null;
-        // new the MarginLayoutParams instance
+        // create a new MarginLayoutParams instance
         XmlResourceParser p = mContext.getResources().getLayout(
                 R.layout.viewgroup_margin_layout);
         try {
@@ -83,39 +54,119 @@ public class ViewGroup_MarginLayoutParamsTest extends AndroidTestCase {
         assertNotNull(mMarginLayoutParams);
 
         mMarginLayoutParams = null;
-        // new the MarginLayoutParams instance
+        // create a new MarginLayoutParams instance
         mMarginLayoutParams = new ViewGroup.MarginLayoutParams(320, 480);
         assertNotNull(mMarginLayoutParams);
 
         mMarginLayoutParams = null;
-        // new the MarginLayoutParams instance
+        // create a new MarginLayoutParams instance
         MarginLayoutParams temp = new ViewGroup.MarginLayoutParams(320, 480);
         mMarginLayoutParams = new ViewGroup.MarginLayoutParams(temp);
         assertNotNull(mMarginLayoutParams);
 
         mMarginLayoutParams = null;
-        // new the MarginLayoutParams instance
+        // create a new MarginLayoutParams instance
         ViewGroup.LayoutParams lp = new ViewGroup.LayoutParams(320, 480);
         mMarginLayoutParams = new ViewGroup.MarginLayoutParams(lp);
         assertNotNull(mMarginLayoutParams);
 
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        notes = "Test setMargins function",
-        method = "setMargins",
-        args = {int.class, int.class, int.class, int.class}
-    )
     public void testSetMargins() {
-
-        // new the MarginLayoutParams instance
+        // create a new MarginLayoutParams instance
         mMarginLayoutParams = new ViewGroup.MarginLayoutParams(320, 480);
         mMarginLayoutParams.setMargins(20, 30, 120, 140);
         assertEquals(20, mMarginLayoutParams.leftMargin);
         assertEquals(30, mMarginLayoutParams.topMargin);
         assertEquals(120, mMarginLayoutParams.rightMargin);
         assertEquals(140, mMarginLayoutParams.bottomMargin);
+
+        assertEquals(20, mMarginLayoutParams.getMarginStart());
+        assertEquals(120, mMarginLayoutParams.getMarginEnd());
+
+        assertEquals(false, mMarginLayoutParams.isMarginRelative());
     }
 
+    public void testSetMarginsRelative() {
+        // create a new MarginLayoutParams instance
+        mMarginLayoutParams = new ViewGroup.MarginLayoutParams(320, 480);
+        mMarginLayoutParams.setMarginsRelative(20, 30, 120, 140);
+        assertEquals(20, mMarginLayoutParams.getMarginStart());
+        assertEquals(30, mMarginLayoutParams.topMargin);
+        assertEquals(120, mMarginLayoutParams.getMarginEnd());
+        assertEquals(140, mMarginLayoutParams.bottomMargin);
+
+        assertEquals(0, mMarginLayoutParams.leftMargin);
+        assertEquals(0, mMarginLayoutParams.rightMargin);
+
+        assertEquals(true, mMarginLayoutParams.isMarginRelative());
+    }
+
+    public void testResolveMarginsRelative() {
+        ViewGroup vg = new LinearLayout(mContext);
+
+        // LTR / normal margin case
+        mMarginLayoutParams = new ViewGroup.MarginLayoutParams(320, 480);
+        mMarginLayoutParams.setMargins(20, 30, 120, 140);
+        vg.setLayoutParams(mMarginLayoutParams);
+        vg.requestLayout();
+
+        assertEquals(20, mMarginLayoutParams.leftMargin);
+        assertEquals(30, mMarginLayoutParams.topMargin);
+        assertEquals(120, mMarginLayoutParams.rightMargin);
+        assertEquals(140, mMarginLayoutParams.bottomMargin);
+
+        assertEquals(20, mMarginLayoutParams.getMarginStart());
+        assertEquals(120, mMarginLayoutParams.getMarginEnd());
+
+        assertEquals(false, mMarginLayoutParams.isMarginRelative());
+
+        // LTR / relative margin case
+        mMarginLayoutParams.setMarginsRelative(20, 30, 120, 140);
+        vg.setLayoutParams(mMarginLayoutParams);
+        vg.requestLayout();
+
+        assertEquals(20, mMarginLayoutParams.getMarginStart());
+        assertEquals(30, mMarginLayoutParams.topMargin);
+        assertEquals(120, mMarginLayoutParams.getMarginEnd());
+        assertEquals(140, mMarginLayoutParams.bottomMargin);
+
+        assertEquals(20, mMarginLayoutParams.leftMargin);
+        assertEquals(120, mMarginLayoutParams.rightMargin);
+
+        assertEquals(true, mMarginLayoutParams.isMarginRelative());
+
+        // RTL / normal margin case
+        vg.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+
+        mMarginLayoutParams = new ViewGroup.MarginLayoutParams(320, 480);
+        mMarginLayoutParams.setMargins(20, 30, 120, 140);
+        vg.setLayoutParams(mMarginLayoutParams);
+        vg.requestLayout();
+
+        assertEquals(20, mMarginLayoutParams.leftMargin);
+        assertEquals(30, mMarginLayoutParams.topMargin);
+        assertEquals(120, mMarginLayoutParams.rightMargin);
+        assertEquals(140, mMarginLayoutParams.bottomMargin);
+
+        assertEquals(120, mMarginLayoutParams.getMarginStart());
+        assertEquals(20, mMarginLayoutParams.getMarginEnd());
+
+        assertEquals(false, mMarginLayoutParams.isMarginRelative());
+
+        // RTL / relative margin case
+        mMarginLayoutParams.setMarginsRelative(20, 30, 120, 140);
+        vg.setLayoutParams(mMarginLayoutParams);
+        vg.requestLayout();
+
+        assertEquals(20, mMarginLayoutParams.getMarginStart());
+        assertEquals(30, mMarginLayoutParams.topMargin);
+        assertEquals(120, mMarginLayoutParams.getMarginEnd());
+        assertEquals(140, mMarginLayoutParams.bottomMargin);
+
+        assertEquals(120, mMarginLayoutParams.leftMargin);
+        assertEquals(20, mMarginLayoutParams.rightMargin);
+
+        assertEquals(true, mMarginLayoutParams.isMarginRelative());
+    }
 }

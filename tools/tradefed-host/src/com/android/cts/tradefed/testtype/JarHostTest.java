@@ -15,59 +15,114 @@
  */
 package com.android.cts.tradefed.testtype;
 
+import com.android.cts.tradefed.build.CtsBuildHelper;
 import com.android.ddmlib.Log;
 import com.android.ddmlib.testrunner.TestIdentifier;
+import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.result.ITestInvocationListener;
-import com.android.tradefed.result.JUnitToInvocationResultForwarder;
-import com.android.tradefed.testtype.AbstractRemoteTest;
+import com.android.tradefed.testtype.DeviceTestResult.RuntimeDeviceNotAvailableException;
+import com.android.tradefed.testtype.IBuildReceiver;
 import com.android.tradefed.testtype.IDeviceTest;
 import com.android.tradefed.testtype.IRemoteTest;
+import com.android.tradefed.testtype.JUnitRunUtil;
 import com.android.tradefed.util.CommandStatus;
-import com.android.tradefed.util.RunUtil;
 import com.android.tradefed.util.IRunUtil.IRunnableResult;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import com.android.tradefed.util.RunUtil;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestResult;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Collection;
+
 /**
- * A {@link IRemoteTest} that can run a set of JUnit tests from a jar.
+ * A {@link IRemoteTest} that can run a set of JUnit tests from a CTS jar.
  */
-public class JarHostTest extends AbstractRemoteTest implements IDeviceTest {
+public class JarHostTest implements IDeviceTest, IRemoteTest, IBuildReceiver, Test {
 
     private static final String LOG_TAG = "JarHostTest";
 
     private ITestDevice mDevice;
-    private File mJarFile;
+    private String mJarFileName;
     private Collection<TestIdentifier> mTests;
     private long mTimeoutMs = 10 * 60 * 1000;
     private String mRunName;
-    private String mTestAppPath;
+    private CtsBuildHelper mCtsBuild = null;
+    private IBuildInfo mBuildInfo = null;
+
+    private ClassLoader mClassLoader;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setBuild(IBuildInfo buildInfo) {
+        mBuildInfo = buildInfo;
+        mCtsBuild = CtsBuildHelper.createBuildHelper(buildInfo);
+    }
+
+    /**
+     * Set the CTS build container.
+     * <p/>
+     * Exposed so unit tests can mock the provided build.
+     *
+     * @param buildHelper
+     */
+    void setBuildHelper(CtsBuildHelper buildHelper) {
+        mCtsBuild = buildHelper;
+    }
+
+    /**
+     * Get the CTS build container.
+     *
+     * @return {@link CtsBuildHelper}
+     */
+    CtsBuildHelper getBuildHelper() {
+        return mCtsBuild;
+    }
 
     /**
      * Set the jar file to load tests from.
-     * @param jarFile
+     *
+     * @param jarFileName the file name of the CTS host test jar to use
      */
-    void setJarFile(File jarFile) {
-        mJarFile = jarFile;
+    void setJarFileName(String jarFileName) {
+        mJarFileName = jarFileName;
+    }
+
+    /**
+     * Gets the jar file to load tests from.
+     *
+     * @return jarFileName the file name of the CTS host test jar to use
+     */
+    String getJarFileName() {
+        return mJarFileName;
     }
 
     /**
      * Sets the collection of tests to run
+     *
      * @param tests
      */
     void setTests(Collection<TestIdentifier> tests) {
         mTests = tests;
+    }
+
+    /**
+     * Gets the collection of tests to run
+     *
+     * @return Collection<{@link TestIdentifier}>
+     */
+    Collection<TestIdentifier> getTests() {
+        return mTests;
     }
 
     /**
@@ -92,17 +147,6 @@ public class JarHostTest extends AbstractRemoteTest implements IDeviceTest {
     }
 
     /**
-     * Set the filesystem path to test app artifacts needed to run tests.
-     *
-     * @see {@link com.android.hosttest.DeviceTest#setTestAppPath(String)}
-     *
-     * @param testAppPath
-     */
-    void setTestAppPath(String testAppPath) {
-        mTestAppPath = testAppPath;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -121,47 +165,25 @@ public class JarHostTest extends AbstractRemoteTest implements IDeviceTest {
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     @Override
-    public int countTestCases() {
-        if (mTests == null) {
-            throw new IllegalStateException();
-        }
-        return mTests.size();
+    public void run(ITestInvocationListener listener) throws DeviceNotAvailableException {
+        checkFields();
+        Log.i(LOG_TAG, String.format("Running %s test package from jar, contains %d tests.",
+                mRunName, mTests.size()));
+        JUnitRunUtil.runTest(listener, this, mRunName);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void run(List<ITestInvocationListener> listeners) throws DeviceNotAvailableException {
-        checkFields();
-        Log.i(LOG_TAG, String.format("Running %s test package from jar, contains %d tests.",
-                mRunName, countTestCases()));
-        // create a junit listener to forward the JUnit test results to the
-        // {@link ITestInvocationListener}s
-        JUnitToInvocationResultForwarder resultForwarder =
-                new JUnitToInvocationResultForwarder(listeners);
-        TestResult junitResult = new TestResult();
-        junitResult.addListener(resultForwarder);
-        long startTime = System.currentTimeMillis();
-        reportRunStarted(listeners);
+    public void run(TestResult junitResult) {
         for (TestIdentifier testId : mTests) {
             Test junitTest = loadTest(testId.getClassName(), testId.getTestName());
             if (junitTest != null) {
                 runTest(testId, junitTest, junitResult);
             }
-        }
-        reportRunEnded(System.currentTimeMillis() - startTime, listeners);
-    }
-
-    /**
-     * Report the start of the test run.
-     *
-     * @param listeners
-     */
-    private void reportRunStarted(List<ITestInvocationListener> listeners) {
-        for (ITestInvocationListener listener : listeners) {
-            listener.testRunStarted(mRunName, countTestCases());
         }
     }
 
@@ -176,38 +198,58 @@ public class JarHostTest extends AbstractRemoteTest implements IDeviceTest {
             // all host tests are converted to use tradefed
             com.android.hosttest.DeviceTest deviceTest = (com.android.hosttest.DeviceTest)junitTest;
             deviceTest.setDevice(getDevice().getIDevice());
-            deviceTest.setTestAppPath(mTestAppPath);
+            deviceTest.setTestAppPath(mCtsBuild.getTestCasesDir().getAbsolutePath());
         }
-        CommandStatus status = RunUtil.getInstance().runTimed(mTimeoutMs, new IRunnableResult() {
+        if (junitTest instanceof IBuildReceiver) {
+            ((IBuildReceiver)junitTest).setBuild(mBuildInfo);
+        }
+        TestRunnable testRunnable = new TestRunnable(junitTest, junitResult);
 
-            @Override
-            public boolean run() throws Exception {
-                junitTest.run(junitResult);
-                return true;
-            }
-
-            @Override
-            public void cancel() {
-                // ignore
-            }
-        });
+        CommandStatus status = RunUtil.getDefault().runTimed(mTimeoutMs, testRunnable, true);
         if (status.equals(CommandStatus.TIMED_OUT)) {
             junitResult.addError(junitTest, new TestTimeoutException());
             junitResult.endTest(junitTest);
         }
+        if (testRunnable.getException() != null) {
+            throw testRunnable.getException();
+        }
     }
 
-    /**
-     * Report the end of the test run.
-     *
-     * @param elapsedTime
-     * @param listeners
-     */
-    @SuppressWarnings("unchecked")
-    private void reportRunEnded(long elapsedTime, List<ITestInvocationListener> listeners) {
-        for (ITestInvocationListener listener : listeners) {
-            listener.testRunEnded(elapsedTime, Collections.EMPTY_MAP);
+    private static class TestRunnable implements IRunnableResult {
+
+        private final Test mJunitTest;
+        private RuntimeDeviceNotAvailableException mException = null;
+        private TestResult mJunitResult;
+
+        TestRunnable(Test junitTest, TestResult junitResult) {
+            mJunitTest = junitTest;
+            mJunitResult = junitResult;
         }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean run() throws Exception {
+            try {
+                mJunitTest.run(mJunitResult);
+            } catch (RuntimeDeviceNotAvailableException e) {
+                mException = e;
+            }
+            return true;
+        }
+
+        public RuntimeDeviceNotAvailableException getException() {
+            return mException;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void cancel() {
+        }
+
     }
 
     /**
@@ -219,9 +261,10 @@ public class JarHostTest extends AbstractRemoteTest implements IDeviceTest {
      */
     private Test loadTest(String className, String testName) {
         try {
-            URL urls[] = {mJarFile.getCanonicalFile().toURI().toURL()};
-            Class<?> testClass = loadClass(className, urls);
-
+            Class<?> testClass = loadClass(className);
+            if (testClass == null) {
+                return null;
+            }
             if (TestCase.class.isAssignableFrom(testClass)) {
                 TestCase testCase = (TestCase)testClass.newInstance();
                 testCase.setName(testName);
@@ -231,16 +274,32 @@ public class JarHostTest extends AbstractRemoteTest implements IDeviceTest {
                 return test;
             } else {
                 Log.e(LOG_TAG, String.format("Class '%s' from jar '%s' is not a Test",
-                        className, mJarFile.getAbsolutePath()));
+                        className, mJarFileName));
             }
-        } catch (ClassNotFoundException e) {
-            reportLoadError(mJarFile, className, e);
         } catch (IllegalAccessException e) {
-            reportLoadError(mJarFile, className, e);
-        } catch (IOException e) {
-            reportLoadError(mJarFile, className, e);
+            reportLoadError(mJarFileName, className, e);
         } catch (InstantiationException e) {
-            reportLoadError(mJarFile, className, e);
+            reportLoadError(mJarFileName, className, e);
+        }
+        return null;
+    }
+
+    private Class<?> loadClass(String className) {
+        try {
+            if (mClassLoader == null) {
+                File jarFile = mCtsBuild.getTestApp(mJarFileName);
+                URL urls[] = {jarFile.getCanonicalFile().toURI().toURL()};
+                mClassLoader = new URLClassLoader(urls);
+            }
+            return mClassLoader.loadClass(className);
+        } catch (FileNotFoundException fnfe) {
+            reportLoadError(mJarFileName, className, fnfe);
+        } catch (MalformedURLException mue) {
+            reportLoadError(mJarFileName, className, mue);
+        } catch (IOException ioe) {
+            reportLoadError(mJarFileName, className, ioe);
+        } catch (ClassNotFoundException cnfe) {
+            reportLoadError(mJarFileName, className, cnfe);
         }
         return null;
     }
@@ -261,27 +320,45 @@ public class JarHostTest extends AbstractRemoteTest implements IDeviceTest {
         return testClass;
     }
 
-    private void reportLoadError(File jarFile, String className, Exception e) {
+    private void reportLoadError(String jarFileName, String className, Exception e) {
         Log.e(LOG_TAG, String.format("Failed to load test class '%s' from jar '%s'",
-                className, jarFile.getAbsolutePath()));
+                className, jarFileName));
         Log.e(LOG_TAG, e);
     }
 
     /**
      * Checks that all mandatory member fields has been set.
      */
-    private void checkFields() {
+    protected void checkFields() {
         if (mRunName == null) {
             throw new IllegalArgumentException("run name has not been set");
         }
         if (mDevice == null) {
             throw new IllegalArgumentException("Device has not been set");
         }
-        if (mJarFile == null) {
-            throw new IllegalArgumentException("jar file has not been set");
+        if (mJarFileName == null) {
+            throw new IllegalArgumentException("jar file name has not been set");
         }
         if (mTests == null) {
             throw new IllegalArgumentException("tests has not been set");
         }
+        if (mCtsBuild == null) {
+            throw new IllegalArgumentException("build has not been set");
+        }
+        try {
+            mCtsBuild.getTestApp(mJarFileName);
+        } catch (FileNotFoundException e) {
+            throw new IllegalArgumentException(String.format(
+                    "Could not find jar %s in CTS build %s", mJarFileName,
+                    mCtsBuild.getRootDir().getAbsolutePath()));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int countTestCases() {
+        return mTests.size();
     }
 }

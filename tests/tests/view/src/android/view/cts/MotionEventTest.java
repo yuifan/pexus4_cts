@@ -16,23 +16,21 @@
 
 package android.view.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
+import android.graphics.Matrix;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.SystemClock;
 import android.test.AndroidTestCase;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.MotionEvent.PointerCoords;
+import android.view.MotionEvent.PointerProperties;
 
 /**
  * Test {@link MotionEvent}.
  */
-@TestTargetClass(MotionEvent.class)
 public class MotionEventTest extends AndroidTestCase {
     private MotionEvent mMotionEvent1;
     private MotionEvent mMotionEvent2;
@@ -73,78 +71,6 @@ public class MotionEventTest extends AndroidTestCase {
         super.tearDown();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "obtain",
-            args = {long.class, long.class, int.class, float.class, float.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getX",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDownTime",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEventTime",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getX",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getY",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRawX",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getRawY",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMetaState",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDeviceId",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPressure",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getXPrecision",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getYPrecision",
-            args = {}
-        )
-    })
     public void testObtain1() {
         mMotionEvent1 = MotionEvent.obtain(mDownTime, mEventTime,
                 MotionEvent.ACTION_DOWN, X_3F, Y_4F, META_STATE);
@@ -165,11 +91,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(1.0f, mMotionEvent1.getYPrecision(), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "obtain",
-        args = {MotionEvent.class}
-    )
     public void testObtain2() {
         MotionEvent motionEvent = MotionEvent.obtain(mDownTime, mEventTime,
                 MotionEvent.ACTION_DOWN, X_3F, Y_4F, META_STATE);
@@ -191,12 +112,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(motionEvent.getYPrecision(), mMotionEvent1.getYPrecision(), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "obtain",
-        args = {long.class, long.class, int.class, float.class, float.class, float.class,
-                float.class, int.class, float.class, float.class, int.class, int.class}
-    )
     public void testObtain3() {
         mMotionEvent1 = null;
         mMotionEvent1 = MotionEvent.obtain(mDownTime, mEventTime,
@@ -219,18 +134,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(Y_PRECISION_4F, mMotionEvent1.getYPrecision(), DELTA);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getAction",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setAction",
-            args = {int.class}
-        )
-    })
     public void testAccessAction() {
         assertEquals(MotionEvent.ACTION_MOVE, mMotionEvent1.getAction());
 
@@ -247,29 +150,11 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(MotionEvent.ACTION_DOWN, mMotionEvent1.getAction());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "describeContents",
-        args = {}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testDescribeContents() {
         // make sure this method never throw any exception.
         mMotionEvent2.describeContents();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEdgeFlags",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setEdgeFlags",
-            args = {int.class}
-        )
-    })
     public void testAccessEdgeFlags() {
         assertEquals(EDGE_FLAGS, mMotionEvent2.getEdgeFlags());
 
@@ -278,11 +163,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(edgeFlags, mMotionEvent2.getEdgeFlags());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {Parcel.class, int.class}
-    )
     public void testWriteToParcel() {
         Parcel parcel = Parcel.obtain();
         mMotionEvent2.writeToParcel(parcel, Parcelable.PARCELABLE_WRITE_RETURN_VALUE);
@@ -300,21 +180,11 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(mMotionEvent2.getDeviceId(), motionEvent.getDeviceId());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "toString",
-        args = {}
-    )
     public void testToString() {
         // make sure this method never throw exception.
         mMotionEvent2.toString();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "offsetLocation",
-        args = {float.class, float.class}
-    )
     public void testOffsetLocation() {
         assertEquals(X_3F, mMotionEvent2.getX(), DELTA);
         assertEquals(Y_4F, mMotionEvent2.getY(), DELTA);
@@ -326,11 +196,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(Y_4F + offsetY, mMotionEvent2.getY(), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setLocation",
-        args = {float.class, float.class}
-    )
     public void testSetLocation() {
         assertEquals(X_3F, mMotionEvent2.getX(), DELTA);
         assertEquals(Y_4F, mMotionEvent2.getY(), DELTA);
@@ -348,11 +213,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(newLocationY, mMotionEvent2.getY(), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHistoricalX",
-        args = {int.class}
-    )
     public void testGetHistoricalX() {
         float x = X_3F + 5.0f;
         mMotionEvent2.addBatch(mEventTime, x, 5.0f, 1.0f, 0.0f, 0);
@@ -362,11 +222,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(x, mMotionEvent2.getHistoricalX(1), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHistoricalY",
-        args = {int.class}
-    )
     public void testGetHistoricalY() {
         float y = Y_4F + 5.0f;
         mMotionEvent2.addBatch(mEventTime, 5.0f, y, 1.0f, 0.0f, 0);
@@ -376,11 +231,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(y, mMotionEvent2.getHistoricalY(1), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHistoricalSize",
-        args = {int.class}
-    )
     public void testGetHistoricalSize() {
         float size = 0.5f;
         mMotionEvent2.addBatch(mEventTime, 5.0f, 5.0f, 1.0f, size, 0);
@@ -390,11 +240,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(size, mMotionEvent2.getHistoricalSize(1), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHistoricalPressure",
-        args = {int.class}
-    )
     public void testGetHistoricalPressure() {
         float pressure = 0.5f;
         mMotionEvent2.addBatch(mEventTime, 5.0f, 5.0f, pressure, 0.0f, 0);
@@ -404,11 +249,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(pressure, mMotionEvent2.getHistoricalPressure(1), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHistoricalEventTime",
-        args = {int.class}
-    )
     public void testGetHistoricalEventTime() {
         long eventTime = mEventTime + 5l;
         mMotionEvent2.addBatch(eventTime, 5.0f, 5.0f, 0.0f, 1.0f, 0);
@@ -418,12 +258,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(eventTime, mMotionEvent2.getHistoricalEventTime(1));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addBatch",
-        args = {long.class, float.class, float.class, float.class, float.class, int.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete")
     public void testAddBatch() {
         long eventTime = SystemClock.uptimeMillis();
         float x = 10.0f;
@@ -456,11 +290,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(size, mMotionEvent2.getHistoricalSize(1), DELTA);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHistorySize",
-        args = {}
-    )
     public void testGetHistorySize() {
         long eventTime = SystemClock.uptimeMillis();
         float x = 10.0f;
@@ -476,11 +305,6 @@ public class MotionEventTest extends AndroidTestCase {
         assertEquals(1, mMotionEvent2.getHistorySize());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "recycle",
-        args = {}
-    )
     public void testRecycle() {
         mMotionEvent2.setAction(MotionEvent.ACTION_MOVE);
         assertEquals(0, mMotionEvent2.getHistorySize());
@@ -496,5 +320,189 @@ public class MotionEventTest extends AndroidTestCase {
         }
         
         mMotionEvent2 = null; // since it was recycled, don't try to recycle again in tear down
+    }
+
+    public void testTransformShouldThrowWhenMatrixIsNull() {
+        try {
+            mMotionEvent1.transform(null);
+            fail("transform() should throw an exception when matrix is null.");
+        } catch (IllegalArgumentException ex) {
+        }
+    }
+
+    public void testTransformShouldApplyMatrixToPointsAndPreserveRawPosition() {
+        // Generate some points on a circle.
+        // Each point 'i' is a point on a circle of radius ROTATION centered at (3,2) at an angle
+        // of ARC * i degrees clockwise relative to the Y axis.
+        // The geometrical representation is irrelevant to the test, it's just easy to generate
+        // and check rotation.  We set the orientation to the same angle.
+        // Coordinate system: down is increasing Y, right is increasing X.
+        final float PI_180 = (float) (Math.PI / 180);
+        final float RADIUS = 10;
+        final float ARC = 36;
+        final float ROTATION = ARC * 2;
+
+        final int pointerCount = 11;
+        final int[] pointerIds = new int[pointerCount];
+        final PointerCoords[] pointerCoords = new PointerCoords[pointerCount];
+        for (int i = 0; i < pointerCount; i++) {
+            final PointerCoords c = new PointerCoords();
+            final float angle = (float) (i * ARC * PI_180);
+            pointerIds[i] = i;
+            pointerCoords[i] = c;
+            c.x = (float) (Math.sin(angle) * RADIUS + 3);
+            c.y = (float) (- Math.cos(angle) * RADIUS + 2);
+            c.orientation = angle;
+        }
+        final MotionEvent event = MotionEvent.obtain(0, 0, MotionEvent.ACTION_MOVE,
+                pointerCount, pointerIds, pointerCoords, 0, 0, 0, 0, 0, 0, 0);
+        final float originalRawX = 0 + 3;
+        final float originalRawY = - RADIUS + 2;
+        dump("Original points.", event);
+
+        // Check original raw X and Y assumption.
+        assertEquals(originalRawX, event.getRawX(), 0.001);
+        assertEquals(originalRawY, event.getRawY(), 0.001);
+
+        // Now translate the motion event so the circle's origin is at (0,0).
+        event.offsetLocation(-3, -2);
+        dump("Translated points.", event);
+
+        // Offsetting the location should preserve the raw X and Y of the first point.
+        assertEquals(originalRawX, event.getRawX(), 0.001);
+        assertEquals(originalRawY, event.getRawY(), 0.001);
+
+        // Apply a rotation about the origin by ROTATION degrees clockwise.
+        Matrix matrix = new Matrix();
+        matrix.setRotate(ROTATION);
+        event.transform(matrix);
+        dump("Rotated points.", event);
+
+        // Check the points.
+        for (int i = 0; i < pointerCount; i++) {
+            final PointerCoords c = pointerCoords[i];
+            event.getPointerCoords(i, c);
+
+            final float angle = (float) ((i * ARC + ROTATION) * PI_180);
+            assertEquals(Math.sin(angle) * RADIUS, c.x, 0.001);
+            assertEquals(- Math.cos(angle) * RADIUS, c.y, 0.001);
+            assertEquals(Math.tan(angle), Math.tan(c.orientation), 0.1);
+        }
+
+        // Applying the transformation should preserve the raw X and Y of the first point.
+        assertEquals(originalRawX, event.getRawX(), 0.001);
+        assertEquals(originalRawY, event.getRawY(), 0.001);
+    }
+
+    private void dump(String label, MotionEvent ev) {
+        if (false) {
+            StringBuilder msg = new StringBuilder();
+            msg.append(label).append("\n");
+
+            msg.append("  Raw: (").append(ev.getRawX()).append(",").append(ev.getRawY()).append(")\n");
+            int pointerCount = ev.getPointerCount();
+            for (int i = 0; i < pointerCount; i++) {
+                msg.append("  Pointer[").append(i).append("]: (")
+                        .append(ev.getX(i)).append(",").append(ev.getY(i)).append("), orientation=")
+                        .append(ev.getOrientation(i) * 180 / Math.PI).append(" deg\n");
+            }
+
+            android.util.Log.i("TEST", msg.toString());
+        }
+    }
+
+    public void testPointerCoordsDefaultConstructor() {
+        PointerCoords coords = new PointerCoords();
+
+        assertEquals(0f, coords.x);
+        assertEquals(0f, coords.y);
+        assertEquals(0f, coords.pressure);
+        assertEquals(0f, coords.size);
+        assertEquals(0f, coords.touchMajor);
+        assertEquals(0f, coords.touchMinor);
+        assertEquals(0f, coords.toolMajor);
+        assertEquals(0f, coords.toolMinor);
+        assertEquals(0f, coords.orientation);
+    }
+
+    public void testPointerCoordsCopyConstructor() {
+        PointerCoords coords = new PointerCoords();
+        coords.x = 1;
+        coords.y = 2;
+        coords.pressure = 3;
+        coords.size = 4;
+        coords.touchMajor = 5;
+        coords.touchMinor = 6;
+        coords.toolMajor = 7;
+        coords.toolMinor = 8;
+        coords.orientation = 9;
+        coords.setAxisValue(MotionEvent.AXIS_GENERIC_1, 10);
+
+        PointerCoords copy = new PointerCoords(coords);
+        assertEquals(1f, copy.x);
+        assertEquals(2f, copy.y);
+        assertEquals(3f, copy.pressure);
+        assertEquals(4f, copy.size);
+        assertEquals(5f, copy.touchMajor);
+        assertEquals(6f, copy.touchMinor);
+        assertEquals(7f, copy.toolMajor);
+        assertEquals(8f, copy.toolMinor);
+        assertEquals(9f, copy.orientation);
+        assertEquals(10f, coords.getAxisValue(MotionEvent.AXIS_GENERIC_1));
+    }
+
+    public void testPointerCoordsCopyFrom() {
+        PointerCoords coords = new PointerCoords();
+        coords.x = 1;
+        coords.y = 2;
+        coords.pressure = 3;
+        coords.size = 4;
+        coords.touchMajor = 5;
+        coords.touchMinor = 6;
+        coords.toolMajor = 7;
+        coords.toolMinor = 8;
+        coords.orientation = 9;
+        coords.setAxisValue(MotionEvent.AXIS_GENERIC_1, 10);
+
+        PointerCoords copy = new PointerCoords();
+        copy.copyFrom(coords);
+        assertEquals(1f, copy.x);
+        assertEquals(2f, copy.y);
+        assertEquals(3f, copy.pressure);
+        assertEquals(4f, copy.size);
+        assertEquals(5f, copy.touchMajor);
+        assertEquals(6f, copy.touchMinor);
+        assertEquals(7f, copy.toolMajor);
+        assertEquals(8f, copy.toolMinor);
+        assertEquals(9f, copy.orientation);
+        assertEquals(10f, coords.getAxisValue(MotionEvent.AXIS_GENERIC_1));
+    }
+
+    public void testPointerPropertiesDefaultConstructor() {
+        PointerProperties properties = new PointerProperties();
+
+        assertEquals(MotionEvent.INVALID_POINTER_ID, properties.id);
+        assertEquals(MotionEvent.TOOL_TYPE_UNKNOWN, properties.toolType);
+    }
+
+    public void testPointerPropertiesCopyConstructor() {
+        PointerProperties properties = new PointerProperties();
+        properties.id = 1;
+        properties.toolType = MotionEvent.TOOL_TYPE_MOUSE;
+
+        PointerProperties copy = new PointerProperties(properties);
+        assertEquals(1, copy.id);
+        assertEquals(MotionEvent.TOOL_TYPE_MOUSE, copy.toolType);
+    }
+
+    public void testPointerPropertiesCopyFrom() {
+        PointerProperties properties = new PointerProperties();
+        properties.id = 1;
+        properties.toolType = MotionEvent.TOOL_TYPE_MOUSE;
+
+        PointerProperties copy = new PointerProperties();
+        copy.copyFrom(properties);
+        assertEquals(1, copy.id);
+        assertEquals(MotionEvent.TOOL_TYPE_MOUSE, copy.toolType);
     }
 }

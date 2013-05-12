@@ -22,6 +22,9 @@ import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.WindowManager;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Test for verifying a device's screen configuration.
  */
@@ -29,7 +32,7 @@ public class ConfigurationTest extends AndroidTestCase {
 
     public void testScreenConfiguration() {
         WindowManager windowManager =
-            (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+                (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
         Display display = windowManager.getDefaultDisplay();
         DisplayMetrics metrics = new DisplayMetrics();
         display.getMetrics(metrics);
@@ -43,11 +46,18 @@ public class ConfigurationTest extends AndroidTestCase {
         double density = 160.0d * metrics.density;
         assertTrue("Screen density must be at least 100 dpi: " + density, density >= 100.0d);
 
-        int max = Math.max(metrics.widthPixels, metrics.heightPixels);
-        int min = Math.min(metrics.widthPixels, metrics.heightPixels);
-        boolean format16x9 = Math.floor(max * 9.0d / 16.0d) <= min;
-        boolean format4x3 = Math.ceil(max * 3.0d / 4.0d) >= min;
-        assertTrue("Aspect ratio must be between 4:3 and 16:9. It was " + max + ":" + min,
-                format4x3 && format16x9);
+        Set<Integer> allowedDensities = new HashSet<Integer>();
+        allowedDensities.add(DisplayMetrics.DENSITY_LOW);
+        allowedDensities.add(DisplayMetrics.DENSITY_MEDIUM);
+        allowedDensities.add(DisplayMetrics.DENSITY_TV);
+        allowedDensities.add(DisplayMetrics.DENSITY_HIGH);
+        allowedDensities.add(DisplayMetrics.DENSITY_XHIGH);
+        allowedDensities.add(DisplayMetrics.DENSITY_XXHIGH);
+        assertTrue("DisplayMetrics#densityDpi must be one of the DisplayMetrics.DENSITY_* values: "
+                + allowedDensities, allowedDensities.contains(metrics.densityDpi));
+
+        assertEquals(metrics.density,
+                (float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT,
+                0.5f / DisplayMetrics.DENSITY_DEFAULT);
     }
 }

@@ -23,51 +23,9 @@ import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.test.AndroidTestCase;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
-@TestTargetClass(Sensor.class)
 public class SensorTest extends AndroidTestCase {
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getType",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getName",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getPower",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getResolution",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getVendor",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getVersion",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.PARTIAL,
-            method = "getMaximumRange",
-            args = {}
-        )
-    })
     public void testSensorOperations() {
         // Because we can't know every sensors unit details, so we can't assert
         // get values with specified values.
@@ -118,5 +76,24 @@ public class SensorTest extends AndroidTestCase {
         assertTrue(sensor.getResolution() >= 0);
         assertNotNull(sensor.getVendor());
         assertTrue(sensor.getVersion() > 0);
+    }
+
+    @SuppressWarnings("deprecation")
+    public void testLegacySensorOperations() {
+        final SensorManager mSensorManager =
+                (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
+
+        // We expect the set of sensors reported by the new and legacy APIs to be consistent.
+        int sensors = 0;
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
+            sensors |= SensorManager.SENSOR_ACCELEROMETER;
+        }
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null) {
+            sensors |= SensorManager.SENSOR_MAGNETIC_FIELD;
+        }
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION) != null) {
+            sensors |= SensorManager.SENSOR_ORIENTATION | SensorManager.SENSOR_ORIENTATION_RAW;
+        }
+        assertEquals(sensors, mSensorManager.getSensors());
     }
 }

@@ -16,11 +16,6 @@
 
 package android.text.style.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.ToBeFixed;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -29,34 +24,7 @@ import android.test.AndroidTestCase;
 import android.text.TextPaint;
 import android.text.style.TextAppearanceSpan;
 
-@TestTargetClass(TextAppearanceSpan.class)
 public class TextAppearanceSpanTest extends AndroidTestCase {
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "TextAppearanceSpan",
-            args = {android.content.Context.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "TextAppearanceSpan",
-            args = {android.content.Context.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "TextAppearanceSpan",
-            args = {java.lang.String.class, int.class, int.class,
-                    android.content.res.ColorStateList.class,
-                    android.content.res.ColorStateList.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "TextAppearanceSpan",
-            args = {android.os.Parcel.class}
-        )
-    })
-    @ToBeFixed(bug = "1695243", explanation = "should add @throws NullPointerException clause" +
-            " into javadoc when input Context is null")
     public void testConstructor() {
         new TextAppearanceSpan(mContext, 1);
         new TextAppearanceSpan(mContext, 1, 1);
@@ -67,10 +35,13 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
 
         TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan("sans", 1, 6, csl, csl);
         Parcel p = Parcel.obtain();
-        textAppearanceSpan.writeToParcel(p, 0);
-        p.setDataPosition(0);
-        new TextAppearanceSpan(p);
-
+        try {
+            textAppearanceSpan.writeToParcel(p, 0);
+            p.setDataPosition(0);
+            new TextAppearanceSpan(p);
+        } finally {
+            p.recycle();
+        }
         try {
             new TextAppearanceSpan(null, -1);
             fail("should throw NullPointerException.");
@@ -88,11 +59,6 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         new TextAppearanceSpan(null, -1, -1, null, null);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getFamily",
-        args = {}
-    )
     public void testGetFamily() {
         TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan(mContext, 1);
         assertNull(textAppearanceSpan.getFamily());
@@ -108,12 +74,6 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         assertEquals("sans", textAppearanceSpan.getFamily());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "updateMeasureState",
-        args = {android.text.TextPaint.class}
-    )
-    @ToBeFixed(bug="1695243", explanation="miss javadoc")
     public void testUpdateMeasureState() {
         int[][] states = new int[][] { new int[0], new int[0] };
         int[] colors = new int[] { Color.rgb(0, 0, 255), Color.BLACK };
@@ -136,11 +96,6 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getTextColor",
-        args = {}
-    )
     public void testGetTextColor() {
         int[][] states = new int[][] { new int[0], new int[0] };
         int[] colors = new int[] { Color.rgb(0, 0, 255), Color.BLACK };
@@ -153,11 +108,6 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         assertNull(textAppearanceSpan.getTextColor());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getTextSize",
-        args = {}
-    )
     public void testGetTextSize() {
         TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan(mContext, 1);
         assertEquals(-1, textAppearanceSpan.getTextSize());
@@ -173,11 +123,6 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         assertEquals(6, textAppearanceSpan.getTextSize());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getTextStyle",
-        args = {}
-    )
     public void testGetTextStyle() {
         TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan(mContext, 1);
         assertEquals(0, textAppearanceSpan.getTextStyle());
@@ -193,11 +138,6 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         assertEquals(1, textAppearanceSpan.getTextStyle());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getLinkTextColor",
-        args = {}
-    )
     public void testGetLinkTextColor() {
         int[][] states = new int[][] { new int[0], new int[0] };
         int[] colors = new int[] { Color.rgb(0, 0, 255), Color.BLACK };
@@ -210,12 +150,6 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         assertNull(textAppearanceSpan.getLinkTextColor());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "updateDrawState",
-        args = {android.text.TextPaint.class}
-    )
-    @ToBeFixed(bug="1695243", explanation="miss javadoc")
     public void testUpdateDrawState() {
         int[][] states = new int[][] { new int[0], new int[0] };
         int[] colors = new int[] { Color.rgb(0, 0, 255), Color.BLACK };
@@ -241,31 +175,16 @@ public class TextAppearanceSpanTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "describeContents",
-        args = {}
-    )
     public void testDescribeContents() {
         TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan(mContext, 1);
         textAppearanceSpan.describeContents();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSpanTypeId",
-        args = {}
-    )
     public void testGetSpanTypeId() {
         TextAppearanceSpan textAppearanceSpan = new TextAppearanceSpan(mContext, 1);
         textAppearanceSpan.getSpanTypeId();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {Parcel.class, int.class}
-    )
     public void testWriteToParcel() {
         Parcel p = Parcel.obtain();
         String family = "sans";

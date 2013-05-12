@@ -16,36 +16,25 @@
 
 package android.graphics.drawable.shapes.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Bitmap.Config;
+import android.graphics.Paint.Style;
+import android.graphics.drawable.shapes.RoundRectShape;
 import android.graphics.drawable.shapes.Shape;
 
 import junit.framework.TestCase;
 
-@TestTargetClass(android.graphics.drawable.shapes.Shape.class)
 public class ShapeTest extends TestCase {
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getWidth",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getHeight",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "resize",
-            args = {float.class, float.class}
-        )
-    })
+    private static final int TEST_WIDTH  = 100;
+    private static final int TEST_HEIGHT = 200;
+
+    private static final int TEST_COLOR_1 = 0xFF00FF00;
+    private static final int TEST_COLOR_2 = 0xFFFF0000;
+
     public void testSize() {
         MockShape mockShape = new MockShape();
         assertFalse(mockShape.hasCalledOnResize());
@@ -68,11 +57,6 @@ public class ShapeTest extends TestCase {
         assertEquals(0f, mockShape.getHeight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "onResize",
-        args = {float.class, float.class}
-    )
     public void testOnResize() {
         MockShape mockShape = new MockShape();
         assertFalse(mockShape.hasCalledOnResize());
@@ -91,11 +75,6 @@ public class ShapeTest extends TestCase {
         assertTrue(mockShape.hasCalledOnResize());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "clone",
-        args = {}
-    )
     public void testClone() throws CloneNotSupportedException {
         Shape shape = new MockShape();
         shape.resize(100f, 200f);
@@ -108,13 +87,26 @@ public class ShapeTest extends TestCase {
         assertEquals(shape.getHeight(), clonedShape.getHeight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "hasAlpha",
-        args = {}
-    )
     public void testHasAlpha() {
-        assertTrue(new MockShape().hasAlpha());
+        Shape shape = new MockShape();
+        assertTrue(shape.hasAlpha());
+    }
+
+    public void testDraw() {
+        Shape shape = new MockShape();
+        Bitmap bitmap = Bitmap.createBitmap(TEST_WIDTH, TEST_HEIGHT, Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint();
+        paint.setStyle(Style.FILL);
+        paint.setColor(TEST_COLOR_1);
+        shape.resize(TEST_WIDTH, TEST_HEIGHT);
+
+        shape.draw(canvas, paint);
+        assertEquals(0, bitmap.getPixel(0, 0));
+
+        paint.setColor(TEST_COLOR_2);
+        shape.draw(canvas, paint);
+        assertEquals(0, bitmap.getPixel(0, 0));
     }
 
     private static class MockShape extends Shape {

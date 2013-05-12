@@ -16,35 +16,34 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
+
+import com.android.cts.stub.R;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.cts.FileUtils;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Video.Media;
-import android.test.InstrumentationTestCase;
+import android.provider.MediaStore.Video.VideoColumns;
+import android.test.AndroidTestCase;
 
-@TestTargetClass(MediaStore.Video.Media.class)
-public class MediaStore_Video_MediaTest extends InstrumentationTestCase {
+import java.io.File;
+import java.io.IOException;
+
+public class MediaStore_Video_MediaTest extends AndroidTestCase {
     private ContentResolver mContentResolver;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
 
-        mContentResolver = getInstrumentation().getContext().getContentResolver();
+        mContentResolver = getContext().getContentResolver();
     }
 
-    @TestTargetNew(
-      level = TestLevel.COMPLETE,
-      method = "getContentUri",
-      args = {String.class}
-    )
     public void testGetContentUri() {
         assertNotNull(mContentResolver.query(Media.getContentUri("internal"), null, null, null,
                 null));
@@ -56,11 +55,16 @@ public class MediaStore_Video_MediaTest extends InstrumentationTestCase {
         assertNull(mContentResolver.query(Media.getContentUri(volume), null, null, null, null));
     }
 
-    public void testStoreVideoMediaExternal() {
+    public void testStoreVideoMediaExternal() throws Exception {
         final String externalVideoPath = Environment.getExternalStorageDirectory().getPath() +
                  "/video/testvideo.3gp";
         final String externalVideoPath2 = Environment.getExternalStorageDirectory().getPath() +
                 "/video/testvideo1.3gp";
+
+        int numBytes = 1337;
+        File videoFile = new File(externalVideoPath);
+        FileUtils.createFile(videoFile, numBytes);
+
         ContentValues values = new ContentValues();
         values.put(Media.ALBUM, "cts");
         values.put(Media.ARTIST, "cts team");
@@ -79,11 +83,11 @@ public class MediaStore_Video_MediaTest extends InstrumentationTestCase {
         values.put(Media.DATA, externalVideoPath);
         values.put(Media.DISPLAY_NAME, "testvideo");
         values.put(Media.MIME_TYPE, "video/3gpp");
-        values.put(Media.SIZE, 86853);
+        values.put(Media.SIZE, numBytes);
         values.put(Media.TITLE, "testvideo");
-        long dateAdded = System.currentTimeMillis();
+        long dateAdded = System.currentTimeMillis() / 1000;
         values.put(Media.DATE_ADDED, dateAdded);
-        long dateModified = System.currentTimeMillis();
+        long dateModified = videoFile.lastModified() / 1000;
         values.put(Media.DATE_MODIFIED, dateModified);
 
         // insert
@@ -115,9 +119,9 @@ public class MediaStore_Video_MediaTest extends InstrumentationTestCase {
             assertEquals("testvideo.3gp", c.getString(c.getColumnIndex(Media.DISPLAY_NAME)));
             assertEquals("video/3gpp", c.getString(c.getColumnIndex(Media.MIME_TYPE)));
             assertEquals("testvideo", c.getString(c.getColumnIndex(Media.TITLE)));
-            assertEquals(86853, c.getInt(c.getColumnIndex(Media.SIZE)));
+            assertEquals(numBytes, c.getInt(c.getColumnIndex(Media.SIZE)));
             long realDateAdded = c.getLong(c.getColumnIndex(Media.DATE_ADDED));
-            assertTrue(realDateAdded > 0);
+            assertTrue(realDateAdded >= dateAdded);
             assertEquals(dateModified, c.getLong(c.getColumnIndex(Media.DATE_MODIFIED)));
             c.close();
 
@@ -177,6 +181,24 @@ public class MediaStore_Video_MediaTest extends InstrumentationTestCase {
             // delete
             assertEquals(1, mContentResolver.delete(uri, null, null));
         }
+
+        // check that the video file is removed when deleting the database entry
+        Context context = getContext();
+        Uri videoUri = insertVideo(context);
+        File videofile = new File(Environment.getExternalStorageDirectory(), "testVideo.3gp");
+        assertTrue(videofile.exists());
+        mContentResolver.delete(videoUri, null, null);
+        assertFalse(videofile.exists());
+
+        // insert again, then delete with the "delete data" parameter set to false
+        videoUri = insertVideo(context);
+        assertTrue(videofile.exists());
+        Uri.Builder builder = videoUri.buildUpon();
+        builder.appendQueryParameter(MediaStore.PARAM_DELETE_DATA, "false");
+        mContentResolver.delete(builder.build(), null, null);
+        assertTrue(videofile.exists());
+        videofile.delete();
+
     }
 
     public void testStoreVideoMediaInternal() {
@@ -188,5 +210,14 @@ public class MediaStore_Video_MediaTest extends InstrumentationTestCase {
         } catch (UnsupportedOperationException e) {
             // expected
         }
+    }
+
+    private Uri insertVideo(Context context) throws IOException {
+        File file = new File(Environment.getExternalStorageDirectory(), "testVideo.3gp");
+        new FileCopyHelper(context).copyToExternalStorage(R.raw.testvideo, file);
+
+        ContentValues values = new ContentValues();
+        values.put(VideoColumns.DATA, file.getAbsolutePath());
+        return context.getContentResolver().insert(Media.EXTERNAL_CONTENT_URI, values);
     }
 }

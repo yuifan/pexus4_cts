@@ -16,6 +16,7 @@
 
 package com.android.cts.verifier.suid;
 
+import com.android.cts.verifier.PassFailButtons;
 import com.android.cts.verifier.R;
 import com.android.cts.verifier.TestResult;
 import com.android.cts.verifier.os.FileUtils;
@@ -23,7 +24,6 @@ import com.android.cts.verifier.os.FileUtils.FileStatus;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ListActivity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
@@ -45,7 +45,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /** {@link Activity} that tries to find suid files. */
-public class SuidFilesActivity extends ListActivity {
+public class SuidFilesActivity extends PassFailButtons.ListActivity {
 
     private static final String TAG = SuidFilesActivity.class.getSimpleName();
 
@@ -63,7 +63,9 @@ public class SuidFilesActivity extends ListActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setResult(RESULT_CANCELED);
+        setContentView(R.layout.pass_fail_list);
+        setPassFailButtonClickListeners();
+        getPassButton().setEnabled(false);
 
         mAdapter = new SuidFilesAdapter();
         setListAdapter(mAdapter);
@@ -73,16 +75,19 @@ public class SuidFilesActivity extends ListActivity {
             .setTitle(R.string.suid_files)
             .setMessage(R.string.suid_files_info)
             .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                @Override
                 public void onClick(DialogInterface dialog, int which) {
                     startScan();
                 }
             })
             .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                @Override
                 public void onClick(DialogInterface dialog, int which) {
                     finish();
                 }
             })
             .setOnCancelListener(new OnCancelListener() {
+                @Override
                 public void onCancel(DialogInterface dialog) {
                     finish();
                 }
@@ -94,6 +99,7 @@ public class SuidFilesActivity extends ListActivity {
         mProgressDialog = new ProgressDialog(this);
         mProgressDialog.setTitle(getString(R.string.scanning_directory));
         mProgressDialog.setOnCancelListener(new OnCancelListener() {
+            @Override
             public void onCancel(DialogInterface dialog) {
                 // If the scanning dialog is cancelled, then stop the task and finish the activity
                 // to prevent the user from just seeing a blank listview.
@@ -205,6 +211,7 @@ public class SuidFilesActivity extends ListActivity {
 
             private final FileStatus status = new FileStatus();
 
+            @Override
             public boolean accept(File pathname) {
                 // Don't follow symlinks to avoid infinite looping.
                 if (FileUtils.getFileStatus(pathname.getPath(), status, true)) {
@@ -221,11 +228,14 @@ public class SuidFilesActivity extends ListActivity {
 
             private final FileStatus status = new FileStatus();
 
+            @Override
             public boolean accept(File pathname) {
                 if (FileUtils.getFileStatus(pathname.getPath(), status, true)) {
+                    // only files with setUid which can be executable by CTS are reported.
                     return !status.isDirectory()
                             && !status.isSymbolicLink()
-                            && status.isSetUid();
+                            && status.isSetUid()
+                            && status.isExecutableByCTS();
                 } else {
                     Log.w(TAG, "Could not stat " + pathname);
                     return false;
@@ -250,18 +260,17 @@ public class SuidFilesActivity extends ListActivity {
 
                 // Alert the user that nothing was found rather than showing an empty list view.
                 if (passed) {
-                    TestResult.setPassedResult(SuidFilesActivity.this);
+                    getPassButton().setEnabled(true);
                     new AlertDialog.Builder(SuidFilesActivity.this)
                             .setTitle(R.string.congratulations)
                             .setMessage(R.string.no_suid_files)
                             .setPositiveButton(android.R.string.ok, new OnClickListener() {
+                                @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     dialog.dismiss();
                                 }
                             })
                             .show();
-                } else {
-                    TestResult.setFailedResult(SuidFilesActivity.this);
                 }
             }
         }

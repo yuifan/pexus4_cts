@@ -16,24 +16,18 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
 
 import android.content.ContentResolver;
-import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.RemoteException;
 import android.provider.UserDictionary;
 import android.test.AndroidTestCase;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
-@TestTargetClass(android.provider.UserDictionary.Words.class)
 public class UserDictionary_WordsTest extends AndroidTestCase {
 
-    private Context mContext;
     private ContentResolver mContentResolver;
     private ArrayList<Uri> mAddedBackup;
 
@@ -51,10 +45,7 @@ public class UserDictionary_WordsTest extends AndroidTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-
-        mContext = getContext();
         mContentResolver = mContext.getContentResolver();
-
         mAddedBackup = new ArrayList<Uri>();
     }
 
@@ -68,28 +59,47 @@ public class UserDictionary_WordsTest extends AndroidTestCase {
         super.tearDown();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "addWord",
-        args = {Context.class, String.class, int.class, int.class}
-    )
-    public void testAddWord() throws RemoteException {
-        Cursor cursor;
-
+    @SuppressWarnings("deprecation")
+    public void testAddWord_deprecated() throws Exception {
         String word = "UserDictionary_WordsTest";
         int frequency = 1;
         UserDictionary.Words.addWord(getContext(), word, frequency,
                 UserDictionary.Words.LOCALE_TYPE_ALL);
-        cursor = mContentResolver.query(
-                UserDictionary.Words.CONTENT_URI,
-                WORDS_PROJECTION,
+
+        Cursor cursor = mContentResolver.query(UserDictionary.Words.CONTENT_URI, WORDS_PROJECTION,
                 UserDictionary.Words.WORD + "='" + word + "'", null, null);
+        assertTrue(cursor.moveToFirst());
+        mAddedBackup.add(Uri.withAppendedPath(UserDictionary.Words.CONTENT_URI,
+                cursor.getString(ID_INDEX)));
+
         assertEquals(1, cursor.getCount());
-        cursor.moveToFirst();
         assertEquals(word, cursor.getString(WORD_INDEX));
         assertEquals(frequency, cursor.getInt(FREQUENCY_INDEX));
         assertNull(cursor.getString(LOCALE_INDEX));
-        mAddedBackup.add(
-                Uri.withAppendedPath(UserDictionary.Words.CONTENT_URI, cursor.getString(ID_INDEX)));
+        cursor.close();
+    }
+
+    public void testAddWord() throws Exception {
+        assertWord("testWord1", 42, null, Locale.KOREA, 42);
+        assertWord("testWord2", -3007, "tw2", Locale.JAPAN, 0);
+        assertWord("testWord3", 1337, "tw3", Locale.US, 255);
+    }
+
+    private void assertWord(String word, int frequency, String shortcut, Locale locale,
+            int expectedFrequency) {
+
+        UserDictionary.Words.addWord(mContext, word, frequency, shortcut, locale);
+
+        Cursor cursor = mContentResolver.query(UserDictionary.Words.CONTENT_URI, WORDS_PROJECTION,
+                UserDictionary.Words.WORD + "='" + word + "'", null, null);
+        assertTrue(cursor.moveToFirst());
+        mAddedBackup.add(Uri.withAppendedPath(UserDictionary.Words.CONTENT_URI,
+                cursor.getString(ID_INDEX)));
+
+        assertEquals(1, cursor.getCount());
+        assertEquals(word, cursor.getString(WORD_INDEX));
+        assertEquals(expectedFrequency, cursor.getInt(FREQUENCY_INDEX));
+        assertEquals(locale.toString(), cursor.getString(LOCALE_INDEX));
+        cursor.close();
     }
 }

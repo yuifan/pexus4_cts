@@ -17,19 +17,18 @@
 package android.provider.cts;
 
 
-import dalvik.annotation.TestTargetClass;
 
+import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.IContentProvider;
 import android.database.Cursor;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.RemoteException;
 import android.provider.CallLog;
-import android.provider.Contacts;
 import android.provider.CallLog.Calls;
+import android.provider.Contacts;
 import android.provider.Contacts.ContactMethods;
 import android.provider.Contacts.Extensions;
 import android.provider.Contacts.GroupMembership;
@@ -48,18 +47,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 
-@TestTargetClass(android.provider.Contacts.class)
 public class ContactsTest extends InstrumentationTestCase {
     private ContentResolver mContentResolver;
-    private IContentProvider mProvider;
-    private IContentProvider mCallLogProvider;
+    private ContentProviderClient mProvider;
+    private ContentProviderClient mCallLogProvider;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
         mContentResolver = getInstrumentation().getTargetContext().getContentResolver();
-        mProvider = mContentResolver.acquireProvider(Contacts.AUTHORITY);
-        mCallLogProvider = mContentResolver.acquireProvider(CallLog.AUTHORITY);
+        mProvider = mContentResolver.acquireContentProviderClient(Contacts.AUTHORITY);
+        mCallLogProvider = mContentResolver.acquireContentProviderClient(CallLog.AUTHORITY);
     }
 
     /**
@@ -100,7 +98,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Uri uri = mProvider.insert(People.CONTENT_URI, value);
             Cursor cursor = mProvider.query(People.CONTENT_URI,
                     PEOPLE_PROJECTION, PeopleColumns.NAME + " = ?",
-                    new String[] {insertPeopleName}, null);
+                    new String[] {insertPeopleName}, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(insertPeopleName, cursor.getString(NAME_INDEX));
             assertEquals(insertPeopleNotes, cursor.getString(NOTES_INDEX));
@@ -122,7 +120,7 @@ public class ContactsTest extends InstrumentationTestCase {
 
             mProvider.update(uri, value, null, null);
             cursor = mProvider.query(People.CONTENT_URI, PEOPLE_PROJECTION,
-                    "people._id" + " = " + id, null, null);
+                    "people._id" + " = " + id, null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(updatePeopleName, cursor.getString(NAME_INDEX));
             assertEquals(updatePeopleNotes, cursor.getString(NOTES_INDEX));
@@ -137,7 +135,7 @@ public class ContactsTest extends InstrumentationTestCase {
             // Test: delete
             mProvider.delete(uri, null, null);
             cursor = mProvider.query(People.CONTENT_URI, PEOPLE_PROJECTION,
-                    "people._id" + " = " + id, null, null);
+                    "people._id" + " = " + id, null, null, null);
             assertEquals(0, cursor.getCount());
         } catch (RemoteException e) {
             fail("Unexpected RemoteException");
@@ -172,7 +170,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Uri uri = mProvider.insert(Groups.CONTENT_URI, value);
             Cursor cursor = mProvider.query(Groups.CONTENT_URI,
                     GROUPS_PROJECTION, Groups._ID + " = ?",
-                    new String[] {uri.getPathSegments().get(1)}, null);
+                    new String[] {uri.getPathSegments().get(1)}, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(insertGroupsName, cursor.getString(NAME_INDEX));
             assertEquals(insertGroupsNotes, cursor.getString(NOTES_INDEX));
@@ -187,7 +185,7 @@ public class ContactsTest extends InstrumentationTestCase {
 
             assertEquals(1, mProvider.update(uri, value, null, null));
             cursor = mProvider.query(Groups.CONTENT_URI, GROUPS_PROJECTION,
-                    Groups._ID + " = " + id, null, null);
+                    Groups._ID + " = " + id, null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(updateGroupsNotes, cursor.getString(NOTES_INDEX));
             assertEquals(updateGroupsSystemId, cursor.getString(SYSTEM_ID_INDEX));
@@ -281,7 +279,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Uri uri = mProvider.insert(Phones.CONTENT_URI, value);
             Cursor cursor = mProvider.query(Phones.CONTENT_URI,
                     PHONES_PROJECTION, Phones.PERSON_ID + " = " + peopleId,
-                    null, null);
+                    null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(peopleId, cursor.getInt(PERSON_ID_INDEX));
             assertEquals(Phones.TYPE_HOME, cursor.getInt(TYPE_INDEX));
@@ -301,7 +299,7 @@ public class ContactsTest extends InstrumentationTestCase {
 
             mProvider.update(uri, value, null, null);
             cursor = mProvider.query(Phones.CONTENT_URI, PHONES_PROJECTION,
-                    "phones._id = " + id, null, null);
+                    "phones._id = " + id, null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(peopleId, cursor.getInt(PERSON_ID_INDEX));
             assertEquals(Phones.TYPE_CUSTOM, cursor.getInt(TYPE_INDEX));
@@ -315,7 +313,7 @@ public class ContactsTest extends InstrumentationTestCase {
             // Test: delete
             mProvider.delete(uri, null, null);
             cursor = mProvider.query(Phones.CONTENT_URI, PHONES_PROJECTION,
-                    Phones.PERSON_ID + " = " + peopleId, null, null);
+                    Phones.PERSON_ID + " = " + peopleId, null, null, null);
             assertEquals(0, cursor.getCount());
 
             mProvider.delete(peopleUri, null, null);
@@ -365,7 +363,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Cursor cursor = mProvider.query(
                     Organizations.CONTENT_URI, ORGANIZATIONS_PROJECTION,
                     Organizations.PERSON_ID + " = " + peopleId,
-                    null, null);
+                    null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(insertOrganizationsCompany, cursor.getString(COMPANY_INDEX));
             assertEquals(insertOrganizationsTitle, cursor.getString(TITLE_INDEX));
@@ -385,7 +383,7 @@ public class ContactsTest extends InstrumentationTestCase {
 
             mProvider.update(uri, value, null, null);
             cursor = mProvider.query(Organizations.CONTENT_URI, ORGANIZATIONS_PROJECTION,
-                    "organizations._id" + " = " + id, null, null);
+                    "organizations._id" + " = " + id, null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(updateOrganizationsCompany, cursor.getString(COMPANY_INDEX));
             assertEquals(updateOrganizationsTitle, cursor.getString(TITLE_INDEX));
@@ -398,7 +396,7 @@ public class ContactsTest extends InstrumentationTestCase {
             // Test: delete
             mProvider.delete(uri, null, null);
             cursor = mProvider.query(Organizations.CONTENT_URI, ORGANIZATIONS_PROJECTION,
-                    Organizations.PERSON_ID + " = " + peopleId, null, null);
+                    Organizations.PERSON_ID + " = " + peopleId, null, null, null);
             assertEquals(0, cursor.getCount());
 
             mProvider.delete(peopleUri, null, null);
@@ -452,7 +450,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Cursor cursor = mCallLogProvider.query(
                     Calls.CONTENT_URI, CALLS_PROJECTION,
                     Calls.NUMBER + " = ?",
-                    new String[] {insertCallsNumber}, null);
+                    new String[] {insertCallsNumber}, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(insertCallsNumber, cursor.getString(NUMBER_INDEX));
             assertEquals(insertDate, cursor.getInt(DATE_INDEX));
@@ -479,7 +477,7 @@ public class ContactsTest extends InstrumentationTestCase {
 
             mCallLogProvider.update(uri, value, null, null);
             cursor = mCallLogProvider.query(Calls.CONTENT_URI, CALLS_PROJECTION,
-                    Calls._ID + " = " + id, null, null);
+                    Calls._ID + " = " + id, null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(updateCallsNumber, cursor.getString(NUMBER_INDEX));
             assertEquals(now, cursor.getInt(DATE_INDEX));
@@ -494,7 +492,7 @@ public class ContactsTest extends InstrumentationTestCase {
             // Test: delete
             mCallLogProvider.delete(Calls.CONTENT_URI, Calls._ID + " = " + id, null);
             cursor = mCallLogProvider.query(Calls.CONTENT_URI, CALLS_PROJECTION,
-                    Calls._ID + " = " + id, null, null);
+                    Calls._ID + " = " + id, null, null, null);
             assertEquals(0, cursor.getCount());
             cursor.close();
         } catch (RemoteException e) {
@@ -546,7 +544,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Cursor cursor = mProvider.query(
                     ContactMethods.CONTENT_URI, CONTACT_METHODS_PROJECTION,
                     ContactMethods.PERSON_ID + " = " + peopleId,
-                    null, null);
+                    null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(peopleId, cursor.getInt(PERSON_ID_INDEX));
             assertEquals(insertKind, cursor.getInt(KIND_INDEX));
@@ -569,7 +567,7 @@ public class ContactsTest extends InstrumentationTestCase {
             mProvider.update(uri, value, null, null);
             cursor = mProvider.query(ContactMethods.CONTENT_URI,
                     CONTACT_METHODS_PROJECTION,
-                    "contact_methods._id" + " = " + id, null, null);
+                    "contact_methods._id" + " = " + id, null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(peopleId, cursor.getInt(PERSON_ID_INDEX));
             assertEquals(updateData, cursor.getString(DATA_INDEX));
@@ -583,7 +581,7 @@ public class ContactsTest extends InstrumentationTestCase {
             mProvider.delete(uri, null, null);
             cursor = mProvider.query(ContactMethods.CONTENT_URI,
                     CONTACT_METHODS_PROJECTION,
-                    "contact_methods._id" + " = " + id, null, null);
+                    "contact_methods._id" + " = " + id, null, null, null);
             assertEquals(0, cursor.getCount());
             cursor.close();
 
@@ -631,7 +629,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Cursor cursor = mProvider.query(
                     Settings.CONTENT_URI, SETTINGS_PROJECTION,
                     Settings.KEY + " = ?",
-                    new String[] {insertKey}, null);
+                    new String[] {insertKey}, null, null);
             assertTrue(cursor.moveToNext());
             assertNull(cursor.getString(SYNC_ACCOUNT_NAME_INDEX));
             assertNull(cursor.getString(SYNC_ACCOUNT_TYPE_INDEX));
@@ -650,7 +648,7 @@ public class ContactsTest extends InstrumentationTestCase {
             cursor = mProvider.query(
                     Settings.CONTENT_URI, SETTINGS_PROJECTION,
                     Settings.KEY + " = ?",
-                    new String[] {updateKey}, null);
+                    new String[] {updateKey}, null, null);
             assertTrue(cursor.moveToNext());
             assertNull(cursor.getString(SYNC_ACCOUNT_NAME_INDEX));
             assertNull(cursor.getString(SYNC_ACCOUNT_TYPE_INDEX));
@@ -660,7 +658,7 @@ public class ContactsTest extends InstrumentationTestCase {
             cursor = mProvider.query(
                     Settings.CONTENT_URI, SETTINGS_PROJECTION,
                     Settings.KEY + " = ?",
-                    new String[] {insertKey}, null);
+                    new String[] {insertKey}, null, null);
             assertTrue(cursor.moveToNext());
             assertNull(cursor.getString(SYNC_ACCOUNT_NAME_INDEX));
             assertNull(cursor.getString(SYNC_ACCOUNT_TYPE_INDEX));
@@ -678,7 +676,7 @@ public class ContactsTest extends InstrumentationTestCase {
             cursor = mProvider.query(
                     Settings.CONTENT_URI, SETTINGS_PROJECTION,
                     Settings.KEY + " = ?",
-                    new String[] {insertKey}, null);
+                    new String[] {insertKey}, null, null);
             assertTrue(cursor.moveToNext());
             assertNull(cursor.getString(SYNC_ACCOUNT_NAME_INDEX));
             assertNull(cursor.getString(SYNC_ACCOUNT_TYPE_INDEX));
@@ -688,7 +686,7 @@ public class ContactsTest extends InstrumentationTestCase {
             cursor = mProvider.query(
                     Settings.CONTENT_URI, SETTINGS_PROJECTION,
                     Settings.KEY + " = ?",
-                    new String[] {updateKey}, null);
+                    new String[] {updateKey}, null, null);
             assertTrue(cursor.moveToNext());
             assertNull(cursor.getString(SYNC_ACCOUNT_NAME_INDEX));
             assertNull(cursor.getString(SYNC_ACCOUNT_TYPE_INDEX));
@@ -744,7 +742,7 @@ public class ContactsTest extends InstrumentationTestCase {
             Cursor cursor = mProvider.query(
                     Extensions.CONTENT_URI, EXTENSIONS_PROJECTION,
                     Extensions.PERSON_ID + " = " + peopleId,
-                    null, null);
+                    null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(insertName, cursor.getString(NAME_INDEX));
             assertEquals(insertValue, cursor.getString(VALUE_INDEX));
@@ -760,7 +758,7 @@ public class ContactsTest extends InstrumentationTestCase {
             cursor = mProvider.query(Extensions.CONTENT_URI,
                     EXTENSIONS_PROJECTION,
                     Extensions.PERSON_ID + " = " + peopleId,
-                    null, null);
+                    null, null, null);
             assertTrue(cursor.moveToNext());
             assertEquals(updateName, cursor.getString(NAME_INDEX));
             assertEquals(updateValue, cursor.getString(VALUE_INDEX));
@@ -772,7 +770,7 @@ public class ContactsTest extends InstrumentationTestCase {
             cursor = mProvider.query(Extensions.CONTENT_URI,
                     EXTENSIONS_PROJECTION,
                     Extensions.PERSON_ID + " = " + peopleId,
-                    null, null);
+                    null, null, null);
             assertEquals(0, cursor.getCount());
             cursor.close();
         } catch (RemoteException e) {
@@ -819,11 +817,21 @@ public class ContactsTest extends InstrumentationTestCase {
             Cursor cursor = mProvider.query(
                     GroupMembership.CONTENT_URI, GROUP_MEMBERSHIP_PROJECTION,
                     GroupMembership.PERSON_ID + " = " + peopleId,
-                    null, null);
-            assertTrue(cursor.moveToNext());
-            assertEquals(peopleId, cursor.getInt(PERSON_ID_INDEX));
-            assertEquals(groupId1, cursor.getInt(GROUP_ID_INDEX));
-            int id = cursor.getInt(ID_INDEX);
+                    null, null, null);
+
+            // Check that the person has been associated with the group. The person may be in
+            // additional groups by being added automatically.
+            int id = -1;
+            while(true) {
+                assertTrue(cursor.moveToNext());
+                assertEquals(peopleId, cursor.getInt(PERSON_ID_INDEX));
+                int cursorGroupId = cursor.getInt(GROUP_ID_INDEX);
+                if (groupId1 == cursorGroupId) {
+                    id = cursor.getInt(ID_INDEX);
+                    break;
+                }
+            }
+            assertTrue(id != -1);
             cursor.close();
 
             // Test: update
@@ -842,7 +850,7 @@ public class ContactsTest extends InstrumentationTestCase {
             cursor = mProvider.query(GroupMembership.CONTENT_URI,
                     GROUP_MEMBERSHIP_PROJECTION,
                     "groupmembership._id" + " = " + id,
-                    null, null);
+                    null, null, null);
             assertEquals(0, cursor.getCount());
             cursor.close();
 

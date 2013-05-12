@@ -16,6 +16,7 @@
 
 package android.text.cts;
 
+
 import android.test.AndroidTestCase;
 import android.text.InputFilter;
 import android.text.SpannableString;
@@ -24,16 +25,10 @@ import android.text.Spanned;
 import android.text.style.StrikethroughSpan;
 import android.text.style.TabStopSpan;
 import android.text.style.UnderlineSpan;
-import dalvik.annotation.TestTargets;
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.ToBeFixed;
 
 /**
  * Test {@link SpannableStringBuilder}.
  */
-@TestTargetClass(SpannableStringBuilder.class)
 public class SpannableStringBuilderTest extends AndroidTestCase {
 
     private StrikethroughSpan mStrikethroughSpan;
@@ -46,65 +41,46 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         mStrikethroughSpan = new StrikethroughSpan();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "SpannableStringBuilder",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "SpannableStringBuilder",
-            args = {java.lang.CharSequence.class}
-        )
-    })
-    @ToBeFixed(bug = "1371108", explanation = "an unexpected NullPointerException thrown here")
     public void testConstructor1() {
-        new SpannableStringBuilder();
-        new SpannableStringBuilder("test");
+        @SuppressWarnings("unused")
+        SpannableStringBuilder dummy = new SpannableStringBuilder();
+        dummy = new SpannableStringBuilder("test");
 
         try {
-            new SpannableStringBuilder(null);
+            dummy = new SpannableStringBuilder(null);
             fail("should throw NullPointerException");
         } catch (NullPointerException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "SpannableStringBuilder",
-        args = {CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1417734",
-            explanation = "an unexpected StringIndexOutOfBoundsException thrown here")
     public void testConstructor2() {
-        new SpannableStringBuilder("Text", 0, "Text".length());
-        new SpannableStringBuilder(new SpannableString("test"), 0, "Text".length());
+        @SuppressWarnings("unused")
+        SpannableStringBuilder dummy = new SpannableStringBuilder("Text", 0, "Text".length());
+        dummy = new SpannableStringBuilder(new SpannableString("test"), 0, "Text".length());
 
         try {
-            new SpannableStringBuilder("Text", 0, 10);
+            dummy = new SpannableStringBuilder("Text", 0, 10);
             fail("should throw StringIndexOutOfBoundsException");
         } catch (StringIndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
-            new SpannableStringBuilder("Text", -3, 3);
+            dummy = new SpannableStringBuilder("Text", -3, 3);
             fail("should throw StringIndexOutOfBoundsException");
         } catch (StringIndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
-            new SpannableStringBuilder("Text", 3, 0);
+            dummy = new SpannableStringBuilder("Text", 3, 0);
             fail("should throw StringIndexOutOfBoundsException");
         } catch (StringIndexOutOfBoundsException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSpanFlags",
-        args = {Object.class}
-    )
     public void testGetSpanFlags() {
         SpannableStringBuilder builder = new SpannableStringBuilder("spannable string");
         assertEquals(0, builder.getSpanFlags(mUnderlineSpan));
@@ -118,11 +94,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals(0, builder.getSpanFlags(new Object()));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "nextSpanTransition",
-        args = {int.class, int.class, Class.class}
-    )
     public void testNextSpanTransition() {
         SpannableStringBuilder builder = new SpannableStringBuilder("spannable string");
 
@@ -138,25 +109,20 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals(1, builder.nextSpanTransition(3, 1, UnderlineSpan.class));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setSpan",
-        args = {Object.class, int.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1417734",
-            explanation = "an unexpected IndexOutOfBoundsException thrown here")
     public void testSetSpan() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello, world");
         try {
             builder.setSpan(mUnderlineSpan, 4, 1, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.setSpan(mUnderlineSpan, -1, 100, Spanned.SPAN_POINT_POINT);
             fail("should throw ..IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         builder.setSpan(null, 1, 4, Spanned.SPAN_POINT_POINT);
@@ -170,23 +136,19 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals(Spanned.SPAN_EXCLUSIVE_EXCLUSIVE, builder.getSpanFlags(mUnderlineSpan));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "valueOf",
-        args = {CharSequence.class}
-    )
-    @ToBeFixed(bug = "1371108", explanation = "an unexpected NullPointerException thrown here")
     public void testValueOf() {
         try {
             SpannableStringBuilder.valueOf(null);
             fail("should throw NullPointerException here");
         } catch (NullPointerException e) {
+            // expected exception
         }
 
         try {
             SpannableStringBuilder.valueOf((SpannableStringBuilder) null);
             fail("should throw NullPointerException here");
         } catch (NullPointerException e) {
+            // expected exception
         }
 
         assertNotNull(SpannableStringBuilder.valueOf("hello, string"));
@@ -195,12 +157,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertSame(builder, SpannableStringBuilder.valueOf(builder));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "replace",
-        args = {int.class, int.class, CharSequence.class}
-    )
-    @ToBeFixed(bug = "1417734", explanation = "should add throws into javadoc")
     public void testReplace1() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello, world!");
         CharSequence text = "hi";
@@ -215,27 +171,24 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.replace(4, 2, text);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.replace(-4, 100, text);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.replace(0, 1, null);
             fail("should throw NullPointerException here");
         } catch (NullPointerException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "replace",
-        args = {int.class, int.class, CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1417734", explanation = "should add throws into javadoc")
     public void testReplace2() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello, world");
         CharSequence text = "ahiabc";
@@ -250,28 +203,54 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         builder.replace(0, 5, text, 0, text.length());
         assertEquals("ahiabc, world", builder.toString());
 
+        // Replacing by an empty string (identical target indexes)
+        builder = new SpannableStringBuilder("hello, world");
+        builder.replace(4, 6, "", 0, 0);
+        assertEquals("hell world", builder.toString());
+
+        builder = new SpannableStringBuilder("hello, world");
+        builder.replace(4, 6, "any string", 5, 5);
+        assertEquals("hell world", builder.toString());
+
+        // Inserting in place (no deletion)
+        builder = new SpannableStringBuilder("hello, world");
+        builder.replace(3, 3, "any string", 0, 0);
+        assertEquals("hello, world", builder.toString());
+
+        builder = new SpannableStringBuilder("hello, world");
+        builder.replace(7, 7, "nice ", 0, 5);
+        assertEquals("hello, nice world", builder.toString());
+
+        builder = new SpannableStringBuilder("hello, world");
+        builder.replace(0, 0, "say ", 1, 4);
+        assertEquals("ay hello, world", builder.toString());
+
         try {
             builder.replace(0, 5, text, 10, 3);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.replace(0, 5, text, -1, 100);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.replace(-1, 100, text, 10, 3);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.replace(3, 1, text, -1, 100);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         // unexpected IndexOutOfBoundsException
@@ -279,16 +258,10 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.replace(0, 5, null, 1, 2);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "subSequence",
-        args = {int.class, int.class}
-    )
-    @ToBeFixed(bug = "1417734",
-            explanation = "an unexpected IndexOutOfBoundsException thrown here")
     public void testSubSequence() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello, world");
         CharSequence text = builder.subSequence(0, 2);
@@ -299,15 +272,10 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.subSequence(2, 0);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getChars",
-        args = {int.class, int.class, char[].class, int.class}
-    )
-    @ToBeFixed(bug = "1417734", explanation = "should add throws into javadoc")
     public void testGetChars() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         char[] buf = new char[4];
@@ -323,27 +291,24 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.getChars(-1, 10, buf, 1);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.getChars(3, 2, buf, 0);
             fail("should throw IndexOutOfBoundsException here");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.getChars(1, 2, null, 0);
             fail("should throw NullPointerException here");
         } catch (NullPointerException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "append",
-        args = {CharSequence.class}
-    )
-    @ToBeFixed(bug = "1371108", explanation = "an unexpected NullPointerException thrown here")
     public void testAppend1() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         builder.append(",world");
@@ -352,15 +317,10 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.append(null);
             fail("should throw NullPointerException here");
         } catch (NullPointerException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "append",
-        args = {CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1371108", explanation = "an unexpected NullPointerException thrown here")
     public void testAppend2() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         builder.append(",world", 1, 3);
@@ -374,27 +334,24 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.append(null, 0, 1);
             fail("should throw NullPointerException here");
         } catch (NullPointerException e) {
+            // expected exception
         }
 
         try {
             builder.append(",world", -1, 10);
             fail("should throw StringIndexOutOfBoundsException here");
         } catch (StringIndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.append(",world", 4, 1);
             fail("should throw StringIndexOutOfBoundsException here");
         } catch (StringIndexOutOfBoundsException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "append",
-        args = {char.class}
-    )
-    @ToBeFixed(bug = "1371108", explanation = "an unexpected NullPointerException thrown here")
     public void testAppend3() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         builder.append('a');
@@ -406,14 +363,10 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.append(null);
             fail("should throw NullPointerException here");
         } catch (NullPointerException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "clearSpans",
-        args = {}
-    )
     public void testClearSpans() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello, world");
 
@@ -428,11 +381,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals(0, builder.getSpanFlags(mUnderlineSpan));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSpanStart",
-        args = {Object.class}
-    )
     public void testGetSpanStart() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         builder.setSpan(mUnderlineSpan, 1, 3, 0);
@@ -441,18 +389,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals(-1, builder.getSpanStart(null));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getFilters",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setFilters",
-            args = {InputFilter[].class}
-        )
-    })
     public void testAccessFilters() {
         InputFilter[] filters = new InputFilter[100];
         SpannableStringBuilder builder = new SpannableStringBuilder();
@@ -463,14 +399,10 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.setFilters(null);
             fail("should throw IllegalArgumentException here");
         } catch (IllegalArgumentException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "removeSpan",
-        args = {Object.class}
-    )
     public void testRemoveSpan() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello, world");
 
@@ -493,11 +425,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         builder.removeSpan(null);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "toString",
-        args = {}
-    )
     public void testToString() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         assertEquals("hello", builder.toString());
@@ -506,11 +433,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals("", builder.toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSpanEnd",
-        args = {Object.class}
-    )
     public void testGetSpanEnd() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         builder.setSpan(mUnderlineSpan, 1, 3, 0);
@@ -519,12 +441,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals(-1, builder.getSpanEnd(null));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "charAt",
-        args = {int.class}
-    )
-    @ToBeFixed(bug = "1417734", explanation = "should add throws into javadoc")
     public void testCharAt() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         assertEquals('h', builder.charAt(0));
@@ -533,21 +449,17 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.charAt(10);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.charAt(-1);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "insert",
-        args = {int.class, CharSequence.class, int.class, int.class}
-    )
-    @ToBeFixed(bug = "1417734", explanation = "should add throws into javadoc")
     public void testInsert1() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         builder.insert(1, "abcd", 1, 3);
@@ -561,39 +473,38 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.insert(-1, "abcd", 1, 3);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.insert(100, "abcd", 1, 3);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.insert(1, "abcd", 3, 2);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.insert(1, "abcd", -3, 2);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.insert(0, null, 0, 1);
             fail("should throw NullPointerException");
         } catch (NullPointerException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "insert",
-        args = {int.class, CharSequence.class}
-    )
-    @ToBeFixed(bug = "1417734", explanation = "should add throws into javadoc")
     public void testInsert2() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         builder.insert(1, "abcd");
@@ -607,26 +518,24 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.insert(-1, "abcd");
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.insert(100, "abcd");
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.insert(0, null);
             fail("should throw NullPointerException");
         } catch (NullPointerException e) {
+            // expected exception
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "clear",
-        args = {}
-    )
     public void testClear() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         assertEquals("hello", builder.toString());
@@ -634,11 +543,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals("", builder.toString());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getSpans",
-        args = {int.class, int.class, Class.class}
-    )
     public void testGetSpans() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello, world");
         UnderlineSpan span1 = new UnderlineSpan();
@@ -658,11 +562,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         builder.getSpans(4, 1, UnderlineSpan.class);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "length",
-        args = {}
-    )
     public void testLength() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello");
         assertEquals(5, builder.length());
@@ -670,13 +569,6 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
         assertEquals(0, builder.length());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "delete",
-        args = {int.class, int.class}
-    )
-    @ToBeFixed(bug = "1417734",
-            explanation = "an unexpected IndexOutOfBoundsException thrown here")
     public void testDelete() {
         SpannableStringBuilder builder = new SpannableStringBuilder("hello,world");
         assertEquals("hello,world", builder.toString());
@@ -692,12 +584,14 @@ public class SpannableStringBuilderTest extends AndroidTestCase {
             builder.delete(-1, 100);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
 
         try {
             builder.delete(4, 1);
             fail("should throw IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException e) {
+            // expected exception
         }
     }
 }

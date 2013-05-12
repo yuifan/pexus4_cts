@@ -17,14 +17,11 @@ package android.graphics.cts;
 
 import com.android.cts.stub.R;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -32,6 +29,7 @@ import android.graphics.Bitmap.CompressFormat;
 import android.graphics.Bitmap.Config;
 import android.os.Parcel;
 import android.test.AndroidTestCase;
+import android.util.DisplayMetrics;
 import android.widget.cts.WidgetTestUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -40,7 +38,6 @@ import java.nio.CharBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
-@TestTargetClass(Bitmap.class)
 public class BitmapTest extends AndroidTestCase {
     private Resources mRes;
     private Bitmap mBitmap;
@@ -56,11 +53,6 @@ public class BitmapTest extends AndroidTestCase {
         mBitmap = BitmapFactory.decodeResource(mRes, R.drawable.start, mOptions);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "compress",
-        args = {android.graphics.Bitmap.CompressFormat.class, int.class, java.io.OutputStream.class}
-    )
     public void testCompress(){
         mBitmap.recycle();
 
@@ -98,11 +90,6 @@ public class BitmapTest extends AndroidTestCase {
         assertTrue(mBitmap.compress(CompressFormat.JPEG, 50, new ByteArrayOutputStream()));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "copy",
-        args = {android.graphics.Bitmap.Config.class, boolean.class}
-    )
     public void testCopy(){
         mBitmap.recycle();
 
@@ -119,18 +106,6 @@ public class BitmapTest extends AndroidTestCase {
         WidgetTestUtils.assertEquals(mBitmap, bitmap);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "copyPixelsToBuffer",
-            args = {java.nio.Buffer.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "copyPixelsFromBuffer",
-            args = {java.nio.Buffer.class}
-        )
-    })
     public void testCopyPixelsToBuffer(){
         final int pixSize = mBitmap.getRowBytes() * mBitmap.getHeight();
         final int tooSmall = pixSize / 2;
@@ -183,31 +158,21 @@ public class BitmapTest extends AndroidTestCase {
 
         Bitmap bitmap = Bitmap.createBitmap(mBitmap.getWidth(), mBitmap.getHeight(),
                 mBitmap.getConfig());
+        intBuf1.position(0); // copyPixelsToBuffer adjusted the position, so rewind to start
         bitmap.copyPixelsFromBuffer(intBuf1);
         IntBuffer intBuf2 = IntBuffer.allocate(pixSize);
         bitmap.copyPixelsToBuffer(intBuf2);
 
+        assertEquals(pixSize >> 2, intBuf2.position());
         assertEquals(intBuf1.position(), intBuf2.position());
         int size = intBuf1.position();
         intBuf1.position(0);
         intBuf2.position(0);
         for (int i = 0; i < size; i++) {
-            assertEquals(intBuf1.get(), intBuf2.get());
+            assertEquals("mismatching pixels at position " + i, intBuf1.get(), intBuf2.get());
         }
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "createBitmap",
-            args = {android.graphics.Bitmap.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "createBitmap",
-            args = {int[].class, int.class, int.class, android.graphics.Bitmap.Config.class}
-        )
-    })
     public void testCreateBitmap1(){
         int[] colors = createColors(100);
         Bitmap bitmap = Bitmap.createBitmap(colors, 10, 10, Config.RGB_565);
@@ -218,11 +183,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(Config.RGB_565, ret.getConfig());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "createBitmap",
-        args = {android.graphics.Bitmap.class, int.class, int.class, int.class, int.class}
-    )
     public void testCreateBitmap2(){
         //abnormal case: Illegal Argument
         try{
@@ -244,12 +204,6 @@ public class BitmapTest extends AndroidTestCase {
         assertFalse(mBitmap.equals(ret));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "createBitmap",
-        args = {android.graphics.Bitmap.class, int.class, int.class, int.class, int.class,
-                android.graphics.Matrix.class, boolean.class}
-    )
     public void testCreateBitmap3(){
         mBitmap = Bitmap.createBitmap(100, 100, Config.ARGB_8888);
 
@@ -294,11 +248,6 @@ public class BitmapTest extends AndroidTestCase {
         assertFalse(mBitmap.equals(ret));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "createBitmap",
-        args = {int.class, int.class, android.graphics.Bitmap.Config.class}
-    )
     public void testCreateBitmap4(){
         Bitmap ret = Bitmap.createBitmap(100, 200, Config.RGB_565);
         assertNotNull(ret);
@@ -307,12 +256,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(Config.RGB_565, ret.getConfig());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "createBitmap",
-        args = {int[].class, int.class, int.class, int.class, int.class,
-                android.graphics.Bitmap.Config.class}
-    )
     public void testCreateBitmap6(){
         int[] colors = createColors(100);
 
@@ -359,11 +302,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(Config.RGB_565, ret.getConfig());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "createScaledBitmap",
-        args = {android.graphics.Bitmap.class, int.class, int.class, boolean.class}
-    )
     public void testCreateScaledBitmap(){
         mBitmap = Bitmap.createBitmap(100, 200, Config.RGB_565);
         Bitmap ret = Bitmap.createScaledBitmap(mBitmap, 50, 100, false);
@@ -372,20 +310,10 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(100, ret.getHeight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "describeContents",
-        args = {}
-    )
     public void testDescribeContents(){
         assertEquals(0, mBitmap.describeContents());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "eraseColor",
-        args = {int.class}
-    )
     public void testEraseColor(){
         mBitmap.recycle();
 
@@ -412,11 +340,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(0xffff0000, mBitmap.getPixel(50, 50));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "extractAlpha",
-        args = {}
-    )
     public void testExtractAlpha1(){
         mBitmap.recycle();
 
@@ -435,11 +358,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(0x00, Color.alpha(color));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "extractAlpha",
-        args = {android.graphics.Paint.class, int[].class}
-    )
     public void testExtractAlpha2(){
         mBitmap.recycle();
 
@@ -458,11 +376,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(0x00, Color.alpha(color));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getConfig",
-        args = {}
-    )
     public void testGetConfig(){
         Bitmap bm0 = Bitmap.createBitmap(100, 200, Bitmap.Config.ALPHA_8);
         Bitmap bm1 = Bitmap.createBitmap(100, 200, Bitmap.Config.ARGB_8888);
@@ -475,31 +388,16 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(Bitmap.Config.ARGB_4444, bm3.getConfig());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getHeight",
-        args = {}
-    )
     public void testGetHeight(){
         assertEquals(31, mBitmap.getHeight());
         mBitmap = Bitmap.createBitmap(100, 200, Bitmap.Config.ARGB_8888);
         assertEquals(200, mBitmap.getHeight());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNinePatchChunk",
-        args = {}
-    )
     public void testGetNinePatchChunk(){
         assertNull(mBitmap.getNinePatchChunk());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getPixel",
-        args = {int.class, int.class}
-    )
     public void testGetPixel(){
         mBitmap.recycle();
 
@@ -531,11 +429,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(0xFF << 24, mBitmap.getPixel(10, 16));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getRowBytes",
-        args = {}
-    )
     public void testGetRowBytes(){
         Bitmap bm0 = Bitmap.createBitmap(100, 200, Bitmap.Config.ALPHA_8);
         Bitmap bm1 = Bitmap.createBitmap(100, 200, Bitmap.Config.ARGB_8888);
@@ -548,62 +441,30 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(200, bm3.getRowBytes());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getWidth",
-        args = {}
-    )
     public void testGetWidth(){
         assertEquals(31, mBitmap.getWidth());
         mBitmap = Bitmap.createBitmap(100, 200, Bitmap.Config.ARGB_8888);
         assertEquals(100, mBitmap.getWidth());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "hasAlpha",
-        args = {}
-    )
     public void testHasAlpha(){
         assertFalse(mBitmap.hasAlpha());
         mBitmap = Bitmap.createBitmap(100, 200, Bitmap.Config.ARGB_8888);
         assertTrue(mBitmap.hasAlpha());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isMutable",
-        args = {}
-    )
     public void testIsMutable(){
         assertFalse(mBitmap.isMutable());
         mBitmap = Bitmap.createBitmap(100, 100, Config.ARGB_8888);
         assertTrue(mBitmap.isMutable());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isRecycled",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "recycle",
-            args = {}
-        )
-    })
     public void testIsRecycled(){
         assertFalse(mBitmap.isRecycled());
         mBitmap.recycle();
         assertTrue(mBitmap.isRecycled());
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "setPixel",
-        args = {int.class, int.class, int.class}
-    )
     public void testSetPixel(){
         int color = 0xff << 24;
 
@@ -646,18 +507,6 @@ public class BitmapTest extends AndroidTestCase {
         assertEquals(0xFF << 24, mBitmap.getPixel(10, 16));
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "setPixels",
-            args = {int[].class, int.class, int.class, int.class, int.class, int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPixels",
-            args = {int[].class, int.class, int.class, int.class, int.class, int.class, int.class}
-        )
-    })
     public void testSetPixels(){
         int[] colors = createColors(100);
 
@@ -755,11 +604,6 @@ public class BitmapTest extends AndroidTestCase {
         }
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "writeToParcel",
-        args = {android.os.Parcel.class, int.class}
-    )
     public void testWriteToParcel(){
         mBitmap.recycle();
 
@@ -786,6 +630,68 @@ public class BitmapTest extends AndroidTestCase {
         mBitmap.writeToParcel(p, 0);
         p.setDataPosition(0);
         mBitmap.equals(Bitmap.CREATOR.createFromParcel(p));
+    }
+
+    public void testGetScaledHeight1() {
+        int dummyDensity = 5;
+        Bitmap ret = Bitmap.createBitmap(100, 200, Config.RGB_565);
+        int scaledHeight = scaleFromDensity(ret.getHeight(), ret.getDensity(), dummyDensity);
+        assertNotNull(ret);
+        assertEquals(scaledHeight, ret.getScaledHeight(dummyDensity));
+    }
+
+    public void testGetScaledHeight2() {
+        Bitmap ret = Bitmap.createBitmap(100, 200, Config.RGB_565);
+        DisplayMetrics metrics = new DisplayMetrics();
+        metrics = getContext().getResources().getDisplayMetrics();
+        int scaledHeight = scaleFromDensity(ret.getHeight(), ret.getDensity(), metrics.densityDpi);
+        assertEquals(scaledHeight, ret.getScaledHeight(metrics));
+    }
+
+    public void testGetScaledHeight3() {
+        Bitmap ret = Bitmap.createBitmap(100, 200, Config.RGB_565);
+        Bitmap mMutableBitmap = Bitmap.createBitmap(100, 200, Config.ARGB_8888);
+        Canvas mCanvas = new Canvas(mMutableBitmap);
+        // set Density
+        mCanvas.setDensity(DisplayMetrics.DENSITY_HIGH);
+        int scaledHeight = scaleFromDensity(
+                ret.getHeight(), ret.getDensity(), mCanvas.getDensity());
+        assertEquals(scaledHeight, ret.getScaledHeight(mCanvas));
+    }
+
+    public void testGetScaledWidth1() {
+        int dummyDensity = 5;
+        Bitmap ret = Bitmap.createBitmap(100, 200, Config.RGB_565);
+        int scaledWidth = scaleFromDensity(ret.getWidth(), ret.getDensity(), dummyDensity);
+        assertNotNull(ret);
+        assertEquals(scaledWidth, ret.getScaledWidth(dummyDensity));
+    }
+
+    public void testGetScaledWidth2() {
+        Bitmap ret = Bitmap.createBitmap(100, 200, Config.RGB_565);
+        DisplayMetrics metrics = new DisplayMetrics();
+        metrics = getContext().getResources().getDisplayMetrics();
+        int scaledWidth = scaleFromDensity(ret.getWidth(), ret.getDensity(), metrics.densityDpi);
+        assertEquals(scaledWidth, ret.getScaledWidth(metrics));
+    }
+
+    public void testGetScaledWidth3() {
+        Bitmap ret = Bitmap.createBitmap(100, 200, Config.RGB_565);
+        Bitmap mMutableBitmap = Bitmap.createBitmap(100, 200, Config.ARGB_8888);
+        Canvas mCanvas = new Canvas(mMutableBitmap);
+        // set Density
+        mCanvas.setDensity(DisplayMetrics.DENSITY_HIGH);
+        int scaledWidth = scaleFromDensity(ret.getWidth(), ret.getDensity(),  mCanvas.getDensity());
+        assertEquals(scaledWidth, ret.getScaledWidth(mCanvas));
+    }
+
+    private int scaleFromDensity(int size, int sdensity, int tdensity) {
+        if (sdensity == Bitmap.DENSITY_NONE || sdensity == tdensity) {
+            return size;
+        }
+
+        // Scale by tdensity / sdensity, rounding up.
+        return ((size * tdensity) + (sdensity >> 1)) / sdensity;
     }
 
     private int[] createColors(int size){

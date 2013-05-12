@@ -16,7 +16,6 @@
 
 package android.net.cts;
 
-import dalvik.annotation.TestTargetClass;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
@@ -25,7 +24,6 @@ import android.net.NetworkInfo.DetailedState;
 import android.net.NetworkInfo.State;
 import android.test.AndroidTestCase;
 
-@TestTargetClass(NetworkInfo.class)
 public class NetworkInfoTest extends AndroidTestCase {
 
     public static final int TYPE_MOBILE = ConnectivityManager.TYPE_MOBILE;
@@ -55,7 +53,7 @@ public class NetworkInfoTest extends AndroidTestCase {
     }
 
     private void assertNetworkInfo(NetworkInfo netInfo, String expectedTypeName) {
-        assertEquals(expectedTypeName, netInfo.getTypeName());
+        assertEquals(expectedTypeName.compareToIgnoreCase(netInfo.getTypeName()), 0);
         if(netInfo.isConnectedOrConnecting()) {
             assertTrue(netInfo.isAvailable());
             if (State.CONNECTED == netInfo.getState()) {

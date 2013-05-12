@@ -16,20 +16,17 @@
 
 package android.telephony.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
 import android.test.AndroidTestCase;
 
-@TestTargetClass(SmsMessage.class)
 public class SmsMessageTest extends AndroidTestCase{
 
     private TelephonyManager mTelephonyManager;
+    private PackageManager mPackageManager;
 
     private static final String DISPLAY_MESSAGE_BODY = "test subject /test body";
     private static final String DMB = "{ testBody[^~\\] }";
@@ -63,118 +60,25 @@ public class SmsMessageTest extends AndroidTestCase{
     private static final int STATUS_ON_ICC_DEF = -1;
     private static final int TPLAYER_LENGTH_FOR_PDU = 23;
     private static final long TIMESTAMP_MILLIS = 1149631383000l;
+    private static final int SEPTETS_SKT = 80;
+    private static final int SEPTETS_KT = 90;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
         mTelephonyManager =
             (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        assertNotNull(mTelephonyManager);
+        mPackageManager = getContext().getPackageManager();
     }
 
     @SuppressWarnings("deprecation")
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "createFromPdu",
-            args = {byte[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getServiceCenterAddress",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getOriginatingAddress",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTPLayerLengthForPDU",
-            args = {String.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMessageBody",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "calculateLength",
-            args = {CharSequence.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "calculateLength",
-            args = {String.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPdu",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isEmail",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isCphsMwiMessage",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isMwiDontStore",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isReplyPathPresent",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isStatusReportMessage",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getProtocolIdentifier",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getIndexOnSim",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getMessageClass",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStatus",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getStatusOnSim",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getTimestampMillis",
-            args = {}
-        )
-    })
     public void testCreateFromPdu() throws Exception {
-        if (mTelephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_CDMA) {
+        if (!mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+                || mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_CDMA)) {
             // TODO: temp workaround, need to adjust test to use CDMA pdus
             return;
         }
+
         String pdu = "07916164260220F0040B914151245584F600006060605130308A04D4F29C0E";
         SmsMessage sms = SmsMessage.createFromPdu(hexStringToByteArray(pdu));
         assertEquals(SCA1, sms.getServiceCenterAddress());
@@ -184,7 +88,7 @@ public class SmsMessageTest extends AndroidTestCase{
         int[] result = SmsMessage.calculateLength(sms.getMessageBody(), true);
         assertEquals(SMS_NUMBER1, result[0]);
         assertEquals(sms.getMessageBody().length(), result[1]);
-        assertEquals(SmsMessage.MAX_USER_DATA_SEPTETS - sms.getMessageBody().length(), result[2]);
+        assertRemaining(sms.getMessageBody().length(), result[2]);
         assertEquals(SmsMessage.ENCODING_7BIT, result[3]);
         assertEquals(pdu, toHexString(sms.getPdu()));
 
@@ -216,7 +120,7 @@ public class SmsMessageTest extends AndroidTestCase{
         result = SmsMessage.calculateLength(msgBody, false);
         assertEquals(SMS_NUMBER2, result[0]);
         assertEquals(sms.getMessageBody().length(), result[1]);
-        assertEquals(SmsMessage.MAX_USER_DATA_SEPTETS - sms.getMessageBody().length(), result[2]);
+        assertRemaining(sms.getMessageBody().length(), result[2]);
         assertEquals(SmsMessage.ENCODING_7BIT, result[3]);
 
         // Test createFromPdu Ucs to Sms
@@ -227,34 +131,29 @@ public class SmsMessageTest extends AndroidTestCase{
         result = SmsMessage.calculateLength(sms.getMessageBody(), true);
         assertEquals(SMS_NUMBER3, result[0]);
         assertEquals(sms.getMessageBody().length(), result[1]);
-        assertEquals(SmsMessage.MAX_USER_DATA_SEPTETS - sms.getMessageBody().length(), result[2]);
+        assertRemaining(sms.getMessageBody().length(), result[2]);
         assertEquals(SmsMessage.ENCODING_7BIT, result[3]);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isReplace",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isMWISetMessage",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isMWIClearMessage",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isMwiDontStore",
-            args = {}
-        )
-    })
+    private void assertRemaining(int messageLength, int remaining) {
+        if (TelephonyUtils.isSkt(mTelephonyManager)) {
+            assertTrue(checkRemaining(SEPTETS_SKT, messageLength, remaining)
+                    || checkRemaining(SmsMessage.MAX_USER_DATA_SEPTETS, messageLength, remaining));
+        } else if (TelephonyUtils.isKt(mTelephonyManager)) {
+            assertTrue(checkRemaining(SEPTETS_KT, messageLength, remaining)
+                    || checkRemaining(SmsMessage.MAX_USER_DATA_SEPTETS, messageLength, remaining));
+        } else {
+            assertTrue(checkRemaining(SmsMessage.MAX_USER_DATA_SEPTETS, messageLength, remaining));
+        }
+    }
+
+    private boolean checkRemaining(int total, int messageLength, int remaining) {
+        return total - messageLength == remaining;
+    }
+
     public void testCPHSVoiceMail() throws Exception {
-        if (mTelephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_CDMA) {
+        if (!mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+                || mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_CDMA)) {
             // TODO: temp workaround, need to adjust test to use CDMA pdus
             return;
         }
@@ -294,15 +193,9 @@ public class SmsMessageTest extends AndroidTestCase{
         assertTrue(sms.isMwiDontStore());
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getUserData",
-            args = {}
-        )
-    })
     public void testGetUserData() throws Exception {
-        if (mTelephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_CDMA) {
+        if (!mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+                || mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_CDMA)) {
             // TODO: temp workaround, need to adjust test to use CDMA pdus
             return;
         }
@@ -318,19 +211,11 @@ public class SmsMessageTest extends AndroidTestCase{
         assertNotNull(userData);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSubmitPdu",
-            args = {String.class, String.class, String.class, boolean.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getSubmitPdu",
-            args = {String.class, String.class, short.class, byte[].class, boolean.class}
-        )
-    })
     public void testGetSubmitPdu() throws Exception {
+        if (!mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) {
+            return;
+        }
+
         String scAddress = null, destinationAddress = null;
         String message = null;
         boolean statusReportRequested = false;
@@ -370,43 +255,13 @@ public class SmsMessageTest extends AndroidTestCase{
         assertNotNull(smsPdu);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEmailBody",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEmailFrom",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDisplayMessageBody",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getPseudoSubject",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getDisplayOriginatingAddress",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "isEmail",
-            args = {}
-        )
-    })
     public void testEmailGateway() throws Exception {
-        if (mTelephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_CDMA) {
+        if (!mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+                || mPackageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_CDMA)) {
             // TODO: temp workaround, need to adjust test to use CDMA pdus
             return;
         }
+
         String pdu = "07914151551512f204038105f300007011103164638a28e6f71b50c687db" +
                          "7076d9357eb7412f7a794e07cdeb6275794c07bde8e5391d247e93f3";
 

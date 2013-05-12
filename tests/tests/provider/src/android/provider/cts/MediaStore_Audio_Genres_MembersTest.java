@@ -16,10 +16,6 @@
 
 package android.provider.cts;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.ToBeFixed;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -33,7 +29,6 @@ import android.provider.cts.MediaStoreAudioTestHelper.Audio1;
 import android.provider.cts.MediaStoreAudioTestHelper.Audio2;
 import android.test.InstrumentationTestCase;
 
-@TestTargetClass(Members.class)
 public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase {
     private ContentResolver mContentResolver;
 
@@ -61,20 +56,14 @@ public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase
 
     @Override
     protected void tearDown() throws Exception {
+        // "jam" should already have been deleted as part of the test, but delete it again just
+        // in case the test failed and aborted before that.
         mContentResolver.delete(Media.EXTERNAL_CONTENT_URI, Media._ID + "=" + mAudioIdOfJam, null);
         mContentResolver.delete(Media.EXTERNAL_CONTENT_URI, Media._ID + "=" + mAudioIdOfJamLive,
                 null);
         super.tearDown();
     }
 
-    @TestTargetNew(
-      level = TestLevel.COMPLETE,
-      method = "getContentUri",
-      args = {String.class, long.class}
-    )
-    @ToBeFixed(bug = "1695243", explanation = "Android API javadocs are incomplete. There is no "
-            + "document related to the possible values of param volumeName. @throw clause "
-            + "should be added in to javadoc when getting uri for internal volume.")
     public void testGetContentUri() {
         assertNotNull(mContentResolver.query(
                 Members.getContentUri(MediaStoreAudioTestHelper.EXTERNAL_VOLUME_NAME, 1), null,
@@ -95,8 +84,6 @@ public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase
                 null));
     }
 
-    @ToBeFixed(bug = "", explanation = "The result cursor of query for all columns does not "
-            + "contain the column Members.ALBUM_ART, Members.GENRE_ID and  Members.AUDIO_ID.")
     public void testStoreAudioGenresMembersExternal() {
         ContentValues values = new ContentValues();
         values.put(Genres.NAME, Audio1.GENRE);
@@ -105,7 +92,11 @@ public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase
         c.moveToFirst();
 
         long genreId = c.getLong(c.getColumnIndex(Genres._ID));
+        long genre2Id = -1; // used later
         c.close();
+
+        // verify that the Uri has the correct format and genre value
+        assertEquals(uri.toString(), "content://media/external/audio/genres/" + genreId);
 
         // insert audio as the member of the genre
         values.clear();
@@ -115,36 +106,15 @@ public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase
         assertNotNull(mContentResolver.insert(membersUri, values));
 
         try {
-            // query
+            // query, slow path
             c = mContentResolver.query(membersUri, null, null, null, null);
-            // the ALBUM_ART column does not exist
-            try {
-                c.getColumnIndexOrThrow(Members.ALBUM_ART);
-                fail("Should throw IllegalArgumentException because there is no column with name"
-                        + " \"Members.ALBUM_ART\" in the table");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
-
-            try {
-                c.getColumnIndexOrThrow(Members.AUDIO_ID);
-                fail("Should throw IllegalArgumentException because there is no column with name"
-                        + " \"Members.AUDIO_ID\" in the table");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
-
-            try {
-                c.getColumnIndexOrThrow(Members.GENRE_ID);
-                fail("Should throw IllegalArgumentException because there is no column with name"
-                        + " \"Members.GENRE_ID\" in the table");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
 
             assertEquals(1, c.getCount());
             c.moveToFirst();
-            assertTrue(c.getLong(c.getColumnIndex(Members._ID)) > 0);
+
+            assertEquals(mAudioIdOfJam, c.getLong(c.getColumnIndex(Members.AUDIO_ID)));
+            assertEquals(genreId, c.getLong(c.getColumnIndex(Members.GENRE_ID)));
+            assertEquals(mAudioIdOfJam, c.getLong(c.getColumnIndex(Members._ID)));
             assertEquals(Audio1.EXTERNAL_DATA, c.getString(c.getColumnIndex(Members.DATA)));
             assertTrue(c.getLong(c.getColumnIndex(Members.DATE_ADDED)) > 0);
             assertEquals(Audio1.DATE_MODIFIED, c.getLong(c.getColumnIndex(Members.DATE_MODIFIED)));
@@ -153,6 +123,7 @@ public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase
             assertEquals(Audio1.SIZE, c.getInt(c.getColumnIndex(Members.SIZE)));
             assertEquals(Audio1.TITLE, c.getString(c.getColumnIndex(Members.TITLE)));
             assertEquals(Audio1.ALBUM, c.getString(c.getColumnIndex(Members.ALBUM)));
+            assertEquals(Audio1.IS_DRM, c.getInt(c.getColumnIndex(Members.IS_DRM)));
             String albumKey = c.getString(c.getColumnIndex(Members.ALBUM_KEY));
             assertNotNull(albumKey);
             long albumId = c.getLong(c.getColumnIndex(Members.ALBUM_ID));
@@ -175,6 +146,89 @@ public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase
             assertNotNull(titleKey);
             c.close();
 
+            // query again, fast path
+            c = mContentResolver.query(membersUri,
+                    new String[] { Members.AUDIO_ID, Members.GENRE_ID},
+                    null, null, null);
+            assertEquals(1, c.getCount());
+            c.moveToFirst();
+            assertEquals(mAudioIdOfJam, c.getLong(c.getColumnIndex(Members.AUDIO_ID)));
+            assertEquals(genreId, c.getLong(c.getColumnIndex(Members.GENRE_ID)));
+            c.close();
+
+            // Query with a constraint on _id. Note that _id corresponds to the _id
+            // column in the audio table, not the one in the audio_genres_map table.
+            // We need to preserve this behavior for backward compatibility.
+            c = mContentResolver.query(membersUri, null,
+                    Members._ID + "=?", new String[] {Long.toString(mAudioIdOfJam)}, null);
+            assertEquals(1, c.getCount());
+            c.moveToFirst();
+            assertEquals(mAudioIdOfJam, c.getLong(c.getColumnIndex(Members._ID)));
+            c.close();
+
+            // Query members across all genres
+            Uri allMembersUri = Uri.parse("content://media/external/audio/genres/all/members");
+            c = mContentResolver.query(allMembersUri, null, null, null, null);
+            int colidx = c.getColumnIndex(Members.AUDIO_ID);
+            int jamcnt = 0;
+            // The song should appear only once, for the genre we used when inserting it
+            while(c.moveToNext()) {
+                if (c.getLong(colidx) == mAudioIdOfJam) {
+                    jamcnt++;
+                    assertEquals(genreId, c.getLong(c.getColumnIndex(Members.GENRE_ID)));
+                }
+            }
+            assertEquals(1, jamcnt);
+            c.close();
+
+            // Query the same Uri, but add a where clause to restrict it to the one entry we added
+            c = mContentResolver.query(allMembersUri, null,
+                    Members.AUDIO_ID + "=?", new String[] {Long.toString(mAudioIdOfJam)}, null);
+            assertEquals(1, c.getCount());
+            c.moveToFirst();
+            assertEquals(genreId, c.getLong(c.getColumnIndex(Members.GENRE_ID)));
+            assertEquals(mAudioIdOfJam, c.getLong(c.getColumnIndex(Members.AUDIO_ID)));
+            c.close();
+
+            // create another genre
+            values.clear();
+            values.put(Genres.NAME, Audio1.GENRE + "-2");
+            uri = mContentResolver.insert(Genres.EXTERNAL_CONTENT_URI, values);
+            c = mContentResolver.query(uri, null, null, null, null);
+            c.moveToFirst();
+            genre2Id = c.getLong(c.getColumnIndex(Genres._ID));
+            c.close();
+
+            // insert the song into the second genre
+            values.clear();
+            values.put(Members.AUDIO_ID, mAudioIdOfJam);
+            Uri members2Uri = Members.getContentUri(MediaStoreAudioTestHelper.EXTERNAL_VOLUME_NAME,
+                genre2Id);
+            assertNotNull(mContentResolver.insert(members2Uri, values));
+
+            // Query members across all genres again
+            c = mContentResolver.query(allMembersUri, null, null, null, null);
+            colidx = c.getColumnIndex(Members.AUDIO_ID);
+            int jamcnt1 = 0;
+            int jamcnt2 = 0;
+            // This time the song should appear twice, once for each genre
+            while(c.moveToNext()) {
+                if (c.getLong(colidx) == mAudioIdOfJam) {
+                    long g = c.getLong(c.getColumnIndex(Members.GENRE_ID));
+                    if (g == genreId) {
+                        jamcnt1++;
+                    } else if (g == genre2Id) {
+                        jamcnt2++;
+                    } else {
+                        fail("wrong genre found");
+                    }
+                }
+            }
+            assertEquals(1, jamcnt1);
+            assertEquals(1, jamcnt2);
+            c.close();
+
+
             // update the member
             values.clear();
             values.put(Members.AUDIO_ID, mAudioIdOfJamLive);
@@ -186,17 +240,61 @@ public class MediaStore_Audio_Genres_MembersTest extends InstrumentationTestCase
                 // expected
             }
 
-            // delete the member
-            try {
-                mContentResolver.delete(membersUri, null, null);
-                fail("Should throw SQLException because there is no column with name "
-                        + "\"Members.GENRE_ID\" in the table");
-            } catch (SQLException e) {
-                // expected
+            // Delete the members, note that this does not delete the genre itself
+            assertEquals(1, mContentResolver.delete(membersUri, null, null)); // check number of rows deleted
+
+            // verify the genre is now empty
+            c = mContentResolver.query(membersUri, null, null, null, null);
+            assertEquals(0, c.getCount());
+            c.close();
+
+            // same for 2nd genre
+            assertEquals(1, mContentResolver.delete(members2Uri, null, null));
+            c = mContentResolver.query(members2Uri, null, null, null, null);
+            assertEquals(0, c.getCount());
+            c.close();
+
+            // insert again, then verify that deleting the audio entry cleans up its genre member
+            // entry as well
+            values.put(Members.AUDIO_ID, mAudioIdOfJam);
+            membersUri = Members.getContentUri(MediaStoreAudioTestHelper.EXTERNAL_VOLUME_NAME,
+                    genreId);
+            assertNotNull(mContentResolver.insert(membersUri, values));
+            // Query members across all genres
+            c = mContentResolver.query(allMembersUri,
+                    new String[] { Members.AUDIO_ID, Members.GENRE_ID}, null, null, null);
+            colidx = c.getColumnIndex(Members.AUDIO_ID);
+            jamcnt = 0;
+            // The song should appear only once, for the genre we used when inserting it
+            while(c.moveToNext()) {
+                if (c.getLong(colidx) == mAudioIdOfJam) {
+                    jamcnt++;
+                    assertEquals(genreId, c.getLong(c.getColumnIndex(Members.GENRE_ID)));
+                }
             }
+            assertEquals(1, jamcnt);
+            c.close();
+            mContentResolver.delete(Media.EXTERNAL_CONTENT_URI,
+                    Media._ID + "=" + mAudioIdOfJam, null);
+            // Query members across all genres
+            c = mContentResolver.query(allMembersUri,
+                    new String[] { Members.AUDIO_ID, Members.GENRE_ID}, null, null, null);
+            colidx = c.getColumnIndex(Members.AUDIO_ID);
+            jamcnt = 0;
+            // The song should no longer appear in the genre
+            while(c.moveToNext()) {
+                if (c.getLong(colidx) == mAudioIdOfJam) {
+                    jamcnt++;
+                }
+            }
+            assertEquals(0, jamcnt);
+            c.close();
         } finally {
             // the members are deleted when deleting the genre which they belong to
             mContentResolver.delete(Genres.EXTERNAL_CONTENT_URI, Genres._ID + "=" + genreId, null);
+            if (genre2Id >= 0) {
+                mContentResolver.delete(Genres.EXTERNAL_CONTENT_URI, Genres._ID + "=" + genre2Id, null);
+            }
             c = mContentResolver.query(membersUri, null, null, null, null);
             assertEquals(0, c.getCount());
             c.close();

@@ -17,18 +17,21 @@
 package android.accessibilityservice.cts;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.app.Service;
 import android.os.Parcel;
-import android.test.suitebuilder.annotation.SmallTest;
+import android.test.AndroidTestCase;
+import android.test.suitebuilder.annotation.MediumTest;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityManager;
 
-import junit.framework.TestCase;
+import java.util.List;
 
 /**
  * Class for testing {@link AccessibilityServiceInfo}.
  */
-public class AccessibilityServiceInfoTest extends TestCase {
+public class AccessibilityServiceInfoTest extends AndroidTestCase {
 
-    @SmallTest
+    @MediumTest
     public void testMarshalling() throws Exception {
 
         // fully populate the service info to marshal
@@ -44,6 +47,83 @@ public class AccessibilityServiceInfoTest extends TestCase {
 
         // make sure all fields properly marshaled
         assertAllFieldsProperlyMarshalled(sentInfo, receivedInfo);
+    }
+
+    /**
+     * Tests whether the service info describes its contents consistently.
+     */
+    @MediumTest
+    public void testDescribeContents() {
+        AccessibilityServiceInfo info = new AccessibilityServiceInfo();
+        assertSame("Accessibility service info always return 0 for this method.", 0,
+                info.describeContents());
+        fullyPopulateSentAccessibilityServiceInfo(info);
+        assertSame("Accessibility service infos always return 0 for this method.", 0,
+                info.describeContents());
+    }
+
+    /**
+     * Tests whether a feedback type is correctly transformed to a string.
+     */
+    @MediumTest
+    public void testFeedbackTypeToString() {
+        assertEquals("[FEEDBACK_AUDIBLE]", AccessibilityServiceInfo.feedbackTypeToString(
+                AccessibilityServiceInfo.FEEDBACK_AUDIBLE));
+        assertEquals("[FEEDBACK_GENERIC]", AccessibilityServiceInfo.feedbackTypeToString(
+                AccessibilityServiceInfo.FEEDBACK_GENERIC));
+        assertEquals("[FEEDBACK_HAPTIC]", AccessibilityServiceInfo.feedbackTypeToString(
+                AccessibilityServiceInfo.FEEDBACK_HAPTIC));
+        assertEquals("[FEEDBACK_SPOKEN]", AccessibilityServiceInfo.feedbackTypeToString(
+                AccessibilityServiceInfo.FEEDBACK_SPOKEN));
+        assertEquals("[FEEDBACK_VISUAL]", AccessibilityServiceInfo.feedbackTypeToString(
+                AccessibilityServiceInfo.FEEDBACK_VISUAL));
+        assertEquals("[FEEDBACK_BRAILLE]", AccessibilityServiceInfo.feedbackTypeToString(
+                AccessibilityServiceInfo.FEEDBACK_BRAILLE));
+        assertEquals("[FEEDBACK_SPOKEN, FEEDBACK_HAPTIC, FEEDBACK_AUDIBLE, FEEDBACK_VISUAL,"
+                + " FEEDBACK_GENERIC, FEEDBACK_BRAILLE]",
+                AccessibilityServiceInfo.feedbackTypeToString(
+                        AccessibilityServiceInfo.FEEDBACK_ALL_MASK));
+    }
+
+    /**
+     * Tests whether a flag is correctly transformed to a string.
+     */
+    @MediumTest
+    public void testFlagToString() {
+        assertEquals("DEFAULT", AccessibilityServiceInfo.flagToString(
+                AccessibilityServiceInfo.DEFAULT));
+    }
+
+    /**
+     * Tests whether a service can that requested it can retrieve
+     * window content.
+     */
+    @MediumTest
+    @SuppressWarnings("deprecation")
+    public void testAccessibilityServiceInfoForEnabledService() {
+        AccessibilityManager accessibilityManager = (AccessibilityManager)
+            getContext().getSystemService(Service.ACCESSIBILITY_SERVICE);
+        List<AccessibilityServiceInfo> enabledServices =
+            accessibilityManager.getEnabledAccessibilityServiceList(
+                    AccessibilityServiceInfo.FEEDBACK_GENERIC);
+        assertSame("There should be one generic service.", 1, enabledServices.size());
+        AccessibilityServiceInfo speakingService = enabledServices.get(0);
+        assertSame(AccessibilityEvent.TYPES_ALL_MASK, speakingService.eventTypes);
+        assertSame(AccessibilityServiceInfo.FEEDBACK_GENERIC, speakingService.feedbackType);
+        assertSame(AccessibilityServiceInfo.DEFAULT, speakingService.flags);
+        assertSame(50l, speakingService.notificationTimeout);
+        assertEquals("Delegating Accessibility Service", speakingService.getDescription());
+        assertNull(speakingService.packageNames /*all packages*/);
+        assertNotNull(speakingService.getId());
+        assertTrue(speakingService.getCanRetrieveWindowContent());
+        assertEquals("android.accessibilityservice.delegate.SomeActivity",
+                speakingService.getSettingsActivityName());
+        assertEquals("Delegating Accessibility Service",
+                speakingService.loadDescription(getContext().getPackageManager()));
+        assertEquals("android.accessibilityservice.delegate",
+                speakingService.getResolveInfo().serviceInfo.packageName);
+        assertEquals("android.accessibilityservice.delegate.DelegatingAccessibilityService",
+                speakingService.getResolveInfo().serviceInfo.name);
     }
 
     /**
@@ -63,7 +143,7 @@ public class AccessibilityServiceInfoTest extends TestCase {
 
     /**
      * Compares all properties of the <code>sentInfo</code> and the
-     * <code>receviedInfo</code> to make sure marshalling is correctly
+     * <code>receviedInfo</code> to make sure marshaling is correctly
      * implemented.
      */
     private void assertAllFieldsProperlyMarshalled(AccessibilityServiceInfo sentInfo,
@@ -72,8 +152,7 @@ public class AccessibilityServiceInfoTest extends TestCase {
                 receivedInfo.eventTypes);
         assertEquals("feedbackType not marshalled properly", sentInfo.feedbackType,
                 receivedInfo.feedbackType);
-        // This will fail here and is fixed in Froyo. Bug 2448479.
-        // assertEquals("flags not marshalled properly", sentInfo.flags, receivedInfo.flags);
+        assertEquals("flags not marshalled properly", sentInfo.flags, receivedInfo.flags);
         assertEquals("notificationTimeout not marshalled properly", sentInfo.notificationTimeout,
                 receivedInfo.notificationTimeout);
         assertEquals("packageNames not marshalled properly", sentInfo.packageNames.length,

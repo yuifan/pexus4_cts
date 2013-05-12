@@ -16,18 +16,13 @@
 
 package android.view.cts;
 
+
 import android.test.AndroidTestCase;
 import android.text.TextUtils;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.KeyCharacterMap.KeyData;
 
-import dalvik.annotation.TestLevel;
-import dalvik.annotation.TestTargetClass;
-import dalvik.annotation.TestTargetNew;
-import dalvik.annotation.TestTargets;
-
-@TestTargetClass(KeyCharacterMap.class)
 public class KeyCharacterMapTest extends AndroidTestCase {
 
     private KeyCharacterMap mKeyCharacterMap;
@@ -36,14 +31,9 @@ public class KeyCharacterMapTest extends AndroidTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        mKeyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.BUILT_IN_KEYBOARD);
+        mKeyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "isPrintingKey",
-        args = {int.class}
-    )
     public void testIsPrintingKey() throws Exception {
 
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_UNKNOWN));
@@ -113,6 +103,7 @@ public class KeyCharacterMapTest extends AndroidTestCase {
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SHIFT_RIGHT));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_TAB));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SPACE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SYM));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUM));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_EXPLORER));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_ENVELOPE));
@@ -133,29 +124,139 @@ public class KeyCharacterMapTest extends AndroidTestCase {
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUM));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_HEADSETHOOK));
 
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_FOCUS));
         assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PLUS));
-
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MENU));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NOTIFICATION));
         assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SEARCH));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_STOP));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_NEXT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_REWIND));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MUTE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PAGE_UP));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PAGE_DOWN));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PICTSYMBOLS));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SWITCH_CHARSET));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_A));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_B));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_C));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_X));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_Y));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_Z));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_L1));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_R1));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_L2));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_R2));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_THUMBL));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_THUMBR));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_START));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_SELECT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BUTTON_MODE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_ESCAPE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_FORWARD_DEL));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_CTRL_LEFT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_CTRL_RIGHT));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_CAPS_LOCK));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SCROLL_LOCK));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_META_LEFT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_META_RIGHT));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_FUNCTION));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SYSRQ));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BREAK));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MOVE_HOME));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MOVE_END));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_INSERT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_FORWARD));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_PLAY));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_PAUSE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_CLOSE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_EJECT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_MEDIA_RECORD));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F1));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F2));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F3));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F4));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F5));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F6));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F7));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F8));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F9));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F10));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F11));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_F12));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUM_LOCK));
+
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_0));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_1));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_2));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_3));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_4));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_5));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_6));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_7));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_8));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_9));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_DIVIDE));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_MULTIPLY));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_SUBTRACT));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_ADD));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_DOT));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_COMMA));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_ENTER));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_EQUALS));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_LEFT_PAREN));
+        assertTrue(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_NUMPAD_RIGHT_PAREN));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_VOLUME_MUTE));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_INFO));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_CHANNEL_UP));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_CHANNEL_DOWN));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_ZOOM_IN));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_ZOOM_OUT));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_TV));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_WINDOW));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_GUIDE));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_DVR));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_BOOKMARK));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_CAPTIONS));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_SETTINGS));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_TV_POWER));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_TV_INPUT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_STB_POWER));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_STB_INPUT));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_AVR_POWER));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_AVR_INPUT));
+
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PROG_RED));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PROG_GREEN));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PROG_YELLOW));
+        assertFalse(mKeyCharacterMap.isPrintingKey(KeyEvent.KEYCODE_PROG_BLUE));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "load",
-        args = {int.class}
-    )
     public void testLoad() throws Exception {
         mKeyCharacterMap = null;
         mKeyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.BUILT_IN_KEYBOARD);
         assertNotNull(mKeyCharacterMap);
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getNumber",
-        args = {int.class}
-    )
     public void testGetNumber() throws Exception {
         assertEquals('0', mKeyCharacterMap.getNumber(KeyEvent.KEYCODE_0));
         assertEquals('1', mKeyCharacterMap.getNumber(KeyEvent.KEYCODE_1));
@@ -171,11 +272,6 @@ public class KeyCharacterMapTest extends AndroidTestCase {
         assertEquals('#', mKeyCharacterMap.getNumber(KeyEvent.KEYCODE_POUND));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getMatch",
-        args = {int.class, char[].class}
-    )
     public void testGetMatch1() throws Exception {
         try {
             mKeyCharacterMap.getMatch(KeyEvent.KEYCODE_0, null);
@@ -195,11 +291,6 @@ public class KeyCharacterMapTest extends AndroidTestCase {
         return events[0].getKeyCode();
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getMatch",
-        args = {int.class, char[].class, int.class}
-    )
     public void testGetMatch2() throws Exception {
         try {
             mKeyCharacterMap.getMatch(KeyEvent.KEYCODE_0, null, 1);
@@ -213,27 +304,10 @@ public class KeyCharacterMapTest extends AndroidTestCase {
         assertEquals('B', mKeyCharacterMap.getMatch(getCharacterKeyCode('B'), chars));
     }
 
-    @TestTargetNew(
-        level = TestLevel.COMPLETE,
-        method = "getKeyboardType",
-        args = {}
-    )
     public void testGetKeyboardType() throws Exception {
         mKeyCharacterMap.getKeyboardType();
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getEvents",
-            args = {char[].class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "getDisplayLabel",
-            args = {int.class}
-        )
-    })
     public void testGetEvents() {
         try {
             mKeyCharacterMap.getEvents(null);
@@ -247,38 +321,6 @@ public class KeyCharacterMapTest extends AndroidTestCase {
         mKeyCharacterMap.getEvents(charsArray);
     }
 
-    @TestTargets({
-        @TestTargetNew(
-            level = TestLevel.COMPLETE,
-            method = "getKeyData",
-            args = {int.class, android.view.KeyCharacterMap.KeyData.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "get",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "finalize",
-            args = {}
-        ),
-        @TestTargetNew(
-            level = TestLevel.NOT_FEASIBLE,
-            method = "getDeadChar",
-            args = {int.class, int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "deviceHasKey",
-            args = {int.class}
-        ),
-        @TestTargetNew(
-            level = TestLevel.SUFFICIENT,
-            method = "deviceHasKeys",
-            args = {int[].class}
-        )
-    })
     public void testGetKeyData() throws Exception {
         KeyData result = new KeyData();
         result.meta = new char[2];
